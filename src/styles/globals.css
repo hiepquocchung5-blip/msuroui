@@ -1,0 +1,208 @@
+@import "tailwindcss";
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --foreground-rgb: 255, 255, 255;
+  --background-start-rgb: 0, 0, 0;
+  --background-end-rgb: 0, 0, 0;
+}
+
+body {
+  color: rgb(var(--foreground-rgb));
+  background: linear-gradient(
+      to bottom,
+      transparent,
+      rgb(var(--background-end-rgb))
+    )
+    rgb(var(--background-start-rgb));
+  overflow-x: hidden; /* Prevent horizontal scroll on mobile */
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Custom Scrollbar Hiding for Carousel */
+.hide-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.hide-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+/* 3D Transform Utilities */
+.perspective-1000 {
+  perspective: 1000px;
+}
+.transform-style-3d {
+  transform-style: preserve-3d;
+}
+
+/* Optional: Custom Clip Path for Bottom Dock if using fancy shape */
+.clip-path-dock {
+  clip-path: polygon(0 0, 100% 0, 100% 100%, 0% 100%);
+}
+
+/* Neon Text Utility */
+.text-neon-blue {
+  text-shadow: 0 0 10px rgba(0, 243, 255, 0.5), 0 0 20px rgba(0, 243, 255, 0.3);
+}
+.text-neon-pink {
+  text-shadow: 0 0 10px rgba(255, 0, 255, 0.5), 0 0 20px rgba(255, 0, 255, 0.3);
+}
+
+.symbol-idle {
+  animation: idlePulse 2.5s ease-in-out infinite;
+}
+
+.symbol-win {
+  animation: winPop 0.6s ease-out;
+}
+
+@keyframes idlePulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.04); }
+}
+
+@keyframes winPop {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.2) rotate(2deg); }
+  100% { transform: scale(1); }
+}
+
+.character {
+  transform-origin: center bottom;
+}
+
+/* IDLE LIFE */
+.character-idle .char-body {
+  animation: breathe 3s ease-in-out infinite;
+}
+
+.character-idle .hair-back {
+  animation: hairSway 4s ease-in-out infinite;
+  transform-origin: top center;
+}
+
+.character-idle .char-eyes {
+  animation: blink 5s infinite;
+}
+
+/* WIN */
+.character-win {
+  animation: jump 0.6s ease-out;
+}
+
+/* FX */
+.fx-pulse {
+  animation: pulseGlow 1.2s infinite;
+}
+
+.fx-spin {
+  animation: spin 6s linear infinite;
+}
+
+.fx-float {
+  animation: float 3s ease-in-out infinite;
+}
+
+/* KEYFRAMES */
+@keyframes breathe {
+  0%, 100% { transform: scaleY(1); }
+  50% { transform: scaleY(1.04); }
+}
+
+@keyframes hairSway {
+  0%, 100% { transform: rotate(0deg); }
+  50% { transform: rotate(2deg); }
+}
+
+@keyframes blink {
+  0%, 96%, 100% { transform: scaleY(1); }
+  97% { transform: scaleY(0.1); }
+}
+
+@keyframes jump {
+  0% { transform: translateY(0); }
+  40% { transform: translateY(-14px); }
+  100% { transform: translateY(0); }
+}
+
+@keyframes pulseGlow {
+  0%, 100% { opacity: 0.6; }
+  50% { opacity: 1; }
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-8px); }
+}
+
+/* 3dcabiner */
+/* 1. Gold Shimmer (Jackpot Hot State) */
+@keyframes shimmer {
+  0% { transform: translateX(-100%) skewX(-20deg); opacity: 0; }
+  50% { opacity: 0.5; }
+  100% { transform: translateX(200%) skewX(-20deg); opacity: 0; }
+}
+
+.animate-shimmer {
+  animation: shimmer 2s infinite linear;
+}
+
+/* 2. Neon Pulse (Cabinet Lights) */
+@keyframes neonPulse {
+  0%, 100% { opacity: 1; filter: drop-shadow(0 0 5px currentColor); }
+  50% { opacity: 0.5; filter: drop-shadow(0 0 2px currentColor); }
+}
+
+.animate-pulse {
+  animation: neonPulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+/* 3. Coin Shower (Big Win) */
+@keyframes fall {
+  0% { transform: translateY(-50px) rotate(0deg); opacity: 1; }
+  100% { transform: translateY(800px) rotate(720deg); opacity: 0; }
+}
+
+.animate-fall {
+  animation-name: fall;
+  animation-timing-function: ease-in;
+  animation-fill-mode: forwards;
+}
+
+/* 4. Marquee (Global Ticker) */
+@keyframes marquee {
+  0% { transform: translateX(100%); }
+  100% { transform: translateX(-100%); }
+}
+
+.animate-marquee {
+  animation: marquee 25s linear infinite;
+  min-width: 100%;
+}
+
+/* 5. Character Idles */
+@keyframes bounce-slow {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-10px); }
+}
+
+.animate-bounce-slow {
+  animation: bounce-slow 4s ease-in-out infinite;
+}
+
+.animate-spin-slow {
+  animation: spin 8s linear infinite;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
