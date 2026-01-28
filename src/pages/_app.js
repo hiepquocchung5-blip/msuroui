@@ -4,6 +4,7 @@ import { AuthProvider } from '../context/AuthContext';
 import { ToastProvider } from '../context/ToastContext';
 import ChatWidget from '../components/social/ChatWidget'; // NEW: Import Chat
 import '../styles/globals.css';
+import { Analytics } from "@vercel/analytics/next"
 
 function MyApp({ Component, pageProps }) {
   return (
@@ -21,6 +22,9 @@ function MyApp({ Component, pageProps }) {
             
             {/* Global Chat Overlay */}
             <ChatWidget />
+            
+            {/* Vercel Analytics */}
+            <Analytics />
         </main>
       </ToastProvider>
     </AuthProvider>
