@@ -1,40 +1,91 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/pages/api-reference/create-next-app).
+# Suro Frontend
 
-## Getting Started
+A modern, interactive frontend application for the Suro gaming platform, built with Next.js and React. This project provides a sleek user interface for casino-style games, including slot machines, tournaments, and social features.
 
-First, run the development server:
+## Features
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+- **Game Components**: Interactive slot machine, daily bonuses, and game views
+- **Social Integration**: Chat widgets, referral system, and user profiles
+- **UI/UX**: Glass card effects, global tickers, and responsive design with Tailwind CSS
+- **Animations**: Smooth animations powered by Framer Motion
+- **API Integration**: Axios for backend communication
+- **Sound Effects**: Integrated game sounds for enhanced user experience
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Tech Stack
 
-You can start editing the page by modifying `pages/index.js`. The page auto-updates as you edit the file.
+- **Framework**: Next.js 16.1.2
+- **UI Library**: React 19.2.3
+- **Styling**: Tailwind CSS v4
+- **Animations**: Framer Motion
+- **Icons**: Lucide React
+- **HTTP Client**: Axios
+- **Linting**: ESLint
 
-[API routes](https://nextjs.org/docs/pages/building-your-application/routing/api-routes) can be accessed on [http://localhost:3000/api/hello](http://localhost:3000/api/hello). This endpoint can be edited in `pages/api/hello.js`.
+## Installation
 
-The `pages/api` directory is mapped to `/api/*`. Files in this directory are treated as [API routes](https://nextjs.org/docs/pages/building-your-application/routing/api-routes) instead of React pages.
+1. Clone the repository:
+   ```bash
+   git clone <repository-url>
+   cd suro-frontend
+   ```
 
-This project uses [`next/font`](https://nextjs.org/docs/pages/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+2. Install dependencies:
+   ```bash
+   npm install
+   # or
+   yarn install
+   # or
+   pnpm install
+   ```
 
-## Learn More
+## Usage
 
-To learn more about Next.js, take a look at the following resources:
+1. Start the development server:
+   ```bash
+   npm run dev
+   # or
+   yarn dev
+   # or
+   pnpm dev
+   ```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn-pages-router) - an interactive Next.js tutorial.
+2. Open [http://localhost:3000](http://localhost:3000) in your browser.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+3. Build for production:
+   ```bash
+   npm run build
+   npm run start
+   ```
 
-## Deploy on Vercel
+## Project Structure
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+- `src/components/`: Reusable UI components
+  - `game/`: Game-specific components (HallView, PlayView, etc.)
+  - `layout/`: Layout components (BottomDock)
+  - `social/`: Social features (ChatWidget)
+  - `ui/`: UI elements (GlassCard, GlobalTicker)
+  - `visuals/`: SVG components (CabinetSVG, CharacterSVG, etc.)
+- `src/context/`: React contexts (AuthContext, ToastContext)
+- `src/hooks/`: Custom hooks (useGameSound, useSlotMachine)
+- `src/pages/`: Next.js pages (_app.js, index.js, etc.)
+- `src/services/`: API services
+- `src/styles/`: Global styles
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/pages/building-your-application/deploying) for more details.
+## Scripts
+
+- `npm run dev`: Start development server
+- `npm run build`: Build for production
+- `npm run start`: Start production server
+- `npm run lint`: Run ESLint
+
+## Contributing
+
+1. Fork the repository
+2. Create a feature branch
+3. Make your changes
+4. Run tests and linting
+5. Submit a pull request
+
+## License
+
+This project is private and proprietary.
