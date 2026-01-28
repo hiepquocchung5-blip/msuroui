@@ -4,7 +4,7 @@ import axios from 'axios';
 // 1. Create a file named '.env.local' in the root of 'Suropara Frontend'
 // 2. Add: NEXT_PUBLIC_API_URL=https://your-domain.com/api
 // If no env var is found, it falls back to localhost for development.
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://m.api.suropara.com';
+const API_URL = process.env.NEXT_PUBLIC_API_URL ;
 
 const api = axios.create({
     baseURL: API_URL,
