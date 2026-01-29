@@ -306,58 +306,71 @@ const PlayView = ({ machine, island, user, onLeave, updateBalance }) => {
                     </div>
 
                     {/* --- BUTTON DECK (Interactive) --- */}
-                    <div
-                        className="absolute bottom-[20%] left-1/2 -translate-x-1/2 w-[95vw] max-w-[500px] h-auto flex flex-col items-center z-50 pointer-events-auto touch-manipulation px-1 sm:px-2"
-                        style={{ perspective: '600px', transformStyle: 'preserve-3d' }}
-                    >
-                        <div
-                            className="w-full flex flex-row items-end justify-between gap-2 sm:gap-4"
-                            style={{ transform: 'rotateX(18deg)' }}
-                        >
-                            {/* Left: Bet Config */}
-                            <div className="flex flex-col items-start gap-2">
-                                <div className="flex flex-row gap-1">
-                                    <button
-                                        onClick={() => changeBet(-1)}
-                                        className="w-10 h-10 sm:w-12 sm:h-12 bg-gray-800 rounded-lg border-b-4 border-gray-950 text-white flex items-center justify-center active:border-b-0 active:translate-y-1 transition-all shadow-lg hover:bg-gray-700 pointer-events-auto cursor-pointer text-lg sm:text-xl"
-                                        aria-label="Decrease Bet"
-                                    >
-                                        <Minus size={18} />
-                                    </button>
-                                    <div className="bg-black border border-gray-600 w-16 h-10 sm:w-20 sm:h-12 flex items-center justify-center text-xs sm:text-sm text-yellow-400 font-mono tracking-tighter shadow-inner select-none">
-                                        {currentBet.toLocaleString()}
-                                    </div>
-                                    <button
-                                        onClick={() => changeBet(1)}
-                                        className="w-10 h-10 sm:w-12 sm:h-12 bg-gray-800 rounded-lg border-b-4 border-gray-950 text-white flex items-center justify-center active:border-b-0 active:translate-y-1 transition-all shadow-lg hover:bg-gray-700 pointer-events-auto cursor-pointer text-lg sm:text-xl"
-                                        aria-label="Increase Bet"
-                                    >
-                                        <Plus size={18} />
-                                    </button>
-                                </div>
-                                <button
-                                    onClick={handleMaxBet}
-                                    className="w-16 h-8 sm:w-20 sm:h-10 bg-orange-700 rounded-lg border-b-4 border-black text-[10px] sm:text-xs font-black text-white flex items-center justify-center active:border-b-0 active:translate-y-1 shadow-lg hover:bg-orange-600 pointer-events-auto cursor-pointer z-50 mt-1"
-                                    aria-label="Max Bet"
-                                >
-                                    MAX
-                                </button>
-                            </div>
+                    {/* --- BUTTON DECK (Interactive | FIXED) --- */}
+<div
+  className="absolute bottom-[20%] left-1/2 -translate-x-1/2 w-[95vw] max-w-[500px] z-50 pointer-events-none px-1 sm:px-2"
+>
+  {/* Visual tilt ONLY */}
+  <div
+    aria-hidden
+    className="absolute inset-0"
+    style={{
+      perspective: '600px',
+      transform: 'rotateX(18deg)',
+    }}
+  />
 
-                            {/* Center: SPIN Button */}
-                            <button
-                                onClick={handleSpin}
-                                disabled={isSpinning.some(s => s) || (winStage !== 'idle' && winStage !== 'celebrating')}
-                                className={`w-20 h-20 sm:w-24 sm:h-24 rounded-full border-b-[8px] shadow-2xl flex flex-col items-center justify-center active:border-b-0 active:translate-y-2 transition-all pointer-events-auto cursor-pointer z-50
-                                    ${isSpinning.some(s => s)
-                                        ? 'bg-gray-800 border-gray-950 opacity-50'
-                                        : 'bg-gradient-to-b from-red-600 to-red-800 border-red-950 text-white shadow-red-600/40 hover:brightness-110 hover:shadow-red-500/80'}
-                                `}
-                                aria-label="Spin"
-                            >
-                                <Gamepad2 size={36} strokeWidth={3} />
-                                <span className="text-xs sm:text-sm font-black tracking-widest mt-0.5">SPIN</span>
-                            </button>
+  {/* Actual interactive layer */}
+  <div className="relative flex flex-row items-end justify-between gap-2 sm:gap-4 pointer-events-auto">
+    
+    {/* Left: Bet Config */}
+    <div className="flex flex-col items-start gap-2">
+      <div className="flex gap-1">
+        <button
+          onClick={() => changeBet(-1)}
+          onPointerDown={(e) => e.stopPropagation()}
+          className="w-10 h-10 sm:w-12 sm:h-12 bg-gray-800 rounded-lg border-b-4 border-gray-950 text-white flex items-center justify-center active:border-b-0 active:translate-y-1 transition-all shadow-lg hover:bg-gray-700"
+        >
+          <Minus size={18} />
+        </button>
+
+        <div className="bg-black border border-gray-600 w-16 h-10 sm:w-20 sm:h-12 flex items-center justify-center text-xs sm:text-sm text-yellow-400 font-mono shadow-inner select-none">
+          {currentBet.toLocaleString()}
+        </div>
+
+        <button
+          onClick={() => changeBet(1)}
+          onPointerDown={(e) => e.stopPropagation()}
+          className="w-10 h-10 sm:w-12 sm:h-12 bg-gray-800 rounded-lg border-b-4 border-gray-950 text-white flex items-center justify-center active:border-b-0 active:translate-y-1 transition-all shadow-lg hover:bg-gray-700"
+        >
+          <Plus size={18} />
+        </button>
+      </div>
+
+      <button
+        onClick={handleMaxBet}
+        onPointerDown={(e) => e.stopPropagation()}
+        className="w-16 h-8 sm:w-20 sm:h-10 bg-orange-700 rounded-lg border-b-4 border-black text-[10px] sm:text-xs font-black text-white flex items-center justify-center active:border-b-0 active:translate-y-1 shadow-lg hover:bg-orange-600"
+      >
+        MAX
+      </button>
+    </div>
+
+    {/* Center: SPIN */}
+    <button
+      onClick={handleSpin}
+      onPointerDown={(e) => e.stopPropagation()}
+      disabled={isSpinning.some(Boolean) || winStage !== 'idle'}
+      className={`w-20 h-20 sm:w-24 sm:h-24 rounded-full border-b-[8px] shadow-2xl flex flex-col items-center justify-center active:border-b-0 active:translate-y-2 transition-all
+        ${
+          isSpinning.some(Boolean)
+            ? 'bg-gray-800 border-gray-950 opacity-50'
+            : 'bg-gradient-to-b from-red-600 to-red-800 border-red-950 text-white hover:brightness-110'
+        }`}
+    >
+      <Gamepad2 size={36} strokeWidth={3} />
+      <span className="text-xs sm:text-sm font-black tracking-widest">SPIN</span>
+    </button>
 
                             {/* Right: Toggles */}
                             <div className="flex flex-col gap-2 items-end">
