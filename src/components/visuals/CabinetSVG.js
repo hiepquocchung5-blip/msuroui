@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { memo } from 'react';
 import CharacterSVG from './CharacterSVG';
 
 const CabinetSVG = ({ 
@@ -22,24 +22,24 @@ const CabinetSVG = ({
     // --- 1. DEFINITIONS (Materials & Gradients) ---
     const renderDefs = () => (
         <defs>
-            {/* METALS */}
+            {/* COMMON METALS (Brightened for Dark Mode) */}
             <linearGradient id="chromeGradient" x1="0" y1="0" x2="1" y2="0">
-                <stop offset="0%" stopColor="#333" />
-                <stop offset="15%" stopColor="#888" />
-                <stop offset="25%" stopColor="#aaa" />
+                <stop offset="0%" stopColor="#444" />
+                <stop offset="15%" stopColor="#999" />
+                <stop offset="25%" stopColor="#bbb" />
                 <stop offset="50%" stopColor="#fff" />
-                <stop offset="75%" stopColor="#888" />
-                <stop offset="100%" stopColor="#333" />
+                <stop offset="75%" stopColor="#999" />
+                <stop offset="100%" stopColor="#444" />
             </linearGradient>
             <linearGradient id="goldGradient" x1="0" y1="0" x2="1" y2="1">
-                <stop offset="0%" stopColor="#B8860B" />
+                <stop offset="0%" stopColor="#C5A059" /> 
                 <stop offset="40%" stopColor="#FFD700" />
                 <stop offset="60%" stopColor="#FFFACD" />
                 <stop offset="100%" stopColor="#DAA520" />
             </linearGradient>
             <linearGradient id="darkMetal" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor="#2c3e50" />
-                <stop offset="100%" stopColor="#000" />
+                <stop offset="0%" stopColor="#374151" />
+                <stop offset="100%" stopColor="#111827" />
             </linearGradient>
             <linearGradient id="cylinderShine" x1="0" y1="0" x2="0" y2="1">
                 <stop offset="0%" stopColor="#000" stopOpacity="0.8" />
@@ -51,29 +51,38 @@ const CabinetSVG = ({
 
             {/* GLASS & LIGHTS */}
             <linearGradient id="glassGlare" x1="0" y1="0" x2="1" y2="1">
-                <stop offset="0%" stopColor="rgba(255,255,255,0.05)" />
-                <stop offset="45%" stopColor="rgba(255,255,255,0.2)" />
-                <stop offset="50%" stopColor="rgba(255,255,255,0)" />
-                <stop offset="100%" stopColor="rgba(255,255,255,0.05)" />
+                <stop offset="0%" stopColor="rgba(255,255,255,0.1)" />
+                <stop offset="45%" stopColor="rgba(255,255,255,0.3)" />
+                <stop offset="50%" stopColor="rgba(255,255,255,0.05)" />
+                <stop offset="100%" stopColor="rgba(255,255,255,0.1)" />
             </linearGradient>
             <filter id="neonBlur">
                 <feGaussianBlur stdDeviation="2.5" result="coloredBlur" />
                 <feMerge><feMergeNode in="coloredBlur" /><feMergeNode in="SourceGraphic" /></feMerge>
             </filter>
+            <pattern id="speakerMesh" width="4" height="4" patternUnits="userSpaceOnUse">
+                <rect width="4" height="4" fill="#111"/>
+                <circle cx="2" cy="2" r="1.5" fill="#333" />
+            </pattern>
             
             {/* ISLAND SKINS */}
-            <linearGradient id="skinVegas" x1="0" y1="0" x2="1" y2="0"><stop offset="0%" stopColor="#500"/><stop offset="50%" stopColor="#900"/><stop offset="100%" stopColor="#500"/></linearGradient>
-            <linearGradient id="skinMagma" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#FF4500"/><stop offset="100%" stopColor="#220000"/></linearGradient>
-            <linearGradient id="skinAloha" x1="0" y1="0" x2="1" y2="0"><stop offset="0%" stopColor="#5D4037"/><stop offset="50%" stopColor="#8D6E63"/><stop offset="100%" stopColor="#5D4037"/></linearGradient>
+            <linearGradient id="skinVegas" x1="0" y1="0" x2="1" y2="0"><stop offset="0%" stopColor="#900"/><stop offset="50%" stopColor="#D00"/><stop offset="100%" stopColor="#900"/></linearGradient>
+            <linearGradient id="skinMagma" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#FF4500"/><stop offset="100%" stopColor="#330000"/></linearGradient>
+            <linearGradient id="skinAloha" x1="0" y1="0" x2="1" y2="0"><stop offset="0%" stopColor="#8B4513"/><stop offset="50%" stopColor="#CD853F"/><stop offset="100%" stopColor="#8B4513"/></linearGradient>
             <linearGradient id="skinIce" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#E0FFFF"/><stop offset="100%" stopColor="#00BFFF"/></linearGradient>
-            <linearGradient id="skinSky" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stopColor="#FFF"/><stop offset="50%" stopColor="#F0F8FF"/><stop offset="100%" stopColor="#B0C4DE"/></linearGradient>
+            <linearGradient id="skinSky" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stopColor="#Eef2f3"/><stop offset="50%" stopColor="#FFFFFF"/><stop offset="100%" stopColor="#BDC3C7"/></linearGradient>
             <linearGradient id="skinBio" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#556B2F"/><stop offset="100%" stopColor="#004d00"/></linearGradient>
-            <linearGradient id="skinRust" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stopColor="#5a3a2a"/><stop offset="50%" stopColor="#8b4513"/><stop offset="100%" stopColor="#3e2723"/></linearGradient>
+            <linearGradient id="skinRust" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stopColor="#8B4513"/><stop offset="50%" stopColor="#A0522D"/><stop offset="100%" stopColor="#5D4037"/></linearGradient>
+            <linearGradient id="skinCyber" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stopColor="#2C3E50"/><stop offset="50%" stopColor="#34495E"/><stop offset="100%" stopColor="#2C3E50"/></linearGradient>
+            <linearGradient id="skinGold" x1="0" y1="0" x2="1" y2="0"><stop offset="0%" stopColor="#B8860B"/><stop offset="50%" stopColor="#FFD700"/><stop offset="100%" stopColor="#B8860B"/></linearGradient>
             <linearGradient id="skinVoid" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stopColor="#000"/><stop offset="50%" stopColor="#4B0082"/><stop offset="100%" stopColor="#000"/></linearGradient>
             
             {/* MASKS */}
             <clipPath id="screenCutout">
                 <rect x="40" y="85" width="160" height="115" rx="4" />
+            </clipPath>
+            <clipPath id="bellyClip">
+                <rect x="0" y="0" width="160" height="60" rx="4" />
             </clipPath>
         </defs>
     );
@@ -81,20 +90,23 @@ const CabinetSVG = ({
     // --- LAYER 1: ENVIRONMENT (Shadows & Glow) ---
     const renderLayerEnvironment = () => (
         <g id="layer-env">
-            <ellipse cx="120" cy="390" rx="100" ry="15" fill="black" opacity="0.7" filter="blur(6px)" />
-            {isHot && <ellipse cx="120" cy="390" rx="120" ry="20" fill="url(#goldGradient)" opacity="0.3" filter="blur(10px)" className="animate-pulse" />}
+            <ellipse cx="120" cy="390" rx="100" ry="15" fill="black" opacity="0.6" filter="blur(8px)" />
+            {isHot && <ellipse cx="120" cy="390" rx="130" ry="25" fill="url(#goldGradient)" opacity="0.4" filter="blur(15px)" className="animate-pulse" />}
         </g>
     );
 
-    // --- LAYER 2: CABINET FRAME (The Housing - 10 Variations) ---
+    // --- LAYER 2: CABINET FRAME (The Housing) ---
     const renderLayerFrame = () => {
+        // Dynamic styling based on Island
+        let bodyFill = "url(#darkMetal)";
+        
         switch(islandId) {
             case 1: // VEGAS (Neon/Red)
                 return (
                     <g>
                         <path d="M15,20 L225,20 L235,390 L5,390 Z" fill="url(#skinVegas)" stroke="#FFD700" strokeWidth="2" />
-                        <path d="M20,30 L10,380" stroke="#0FF" strokeWidth="2" className="animate-pulse" filter="url(#neonBlur)" opacity="0.8" />
-                        <path d="M220,30 L230,380" stroke="#FF00FF" strokeWidth="2" className="animate-pulse" filter="url(#neonBlur)" opacity="0.8" />
+                        <path d="M20,30 L10,380" stroke="#0FF" strokeWidth="3" className="animate-pulse" filter="url(#neonBlur)" opacity="0.9" />
+                        <path d="M220,30 L230,380" stroke="#FF00FF" strokeWidth="3" className="animate-pulse" filter="url(#neonBlur)" opacity="0.9" />
                     </g>
                 );
             case 2: // ALOHA (Bamboo)
@@ -109,7 +121,7 @@ const CabinetSVG = ({
                 return (
                     <g>
                         <path d="M15,20 L225,20 L235,390 L5,390 Z" fill="url(#skinMagma)" stroke="none" />
-                        <path d="M20,60 L60,100 M200,300 L180,250" stroke="#FF4500" strokeWidth="2" filter="url(#neonBlur)" className="animate-pulse" />
+                        <path d="M20,60 L60,100 M200,300 L180,250" stroke="#FF4500" strokeWidth="3" filter="url(#neonBlur)" className="animate-pulse" />
                     </g>
                 );
             case 4: // NOCTYRA (Gothic)
@@ -124,7 +136,8 @@ const CabinetSVG = ({
                 return (
                     <g>
                         <path d="M20,20 L220,20 L230,390 L10,390 Z" fill="url(#skinIce)" stroke="#fff" strokeWidth="1" opacity="0.9" />
-                        <path d="M20,20 L80,390 M220,20 L160,390" stroke="white" strokeWidth="1" opacity="0.5" />
+                        <path d="M20,20 L80,390 M220,20 L160,390" stroke="white" strokeWidth="1" opacity="0.7" />
+                        <circle cx="30" cy="40" r="2" fill="white" className="animate-ping" />
                     </g>
                 );
             case 6: // SKY (Marble)
@@ -138,23 +151,23 @@ const CabinetSVG = ({
             case 7: // BIO (Moss)
                  return (
                     <g>
-                        <path d="M20,30 Q120,10 220,30 L230,390 L10,390 Z" fill="url(#skinBio)" stroke="#228B22" strokeWidth="3" />
-                        <path d="M30,50 Q80,100 30,200" fill="none" stroke="#006400" strokeWidth="4" />
-                        <path d="M210,300 Q160,200 210,100" fill="none" stroke="#006400" strokeWidth="4" />
+                        <path d="M20,30 Q120,10 220,30 L230,390 L10,390 Z" fill="url(#skinBio)" stroke="#7CFC00" strokeWidth="3" />
+                        <path d="M30,50 Q80,100 30,200" fill="none" stroke="#32CD32" strokeWidth="4" />
+                        <path d="M210,300 Q160,200 210,100" fill="none" stroke="#32CD32" strokeWidth="4" />
                     </g>
                  );
             case 8: // CYBER (Rust/Tech)
                  return (
                     <g>
-                        <path d="M15,20 L225,20 L225,390 L15,390 Z" fill="url(#skinRust)" stroke="#000" strokeWidth="2" />
-                        <rect x="30" y="30" width="180" height="360" fill="none" stroke="#FFFF00" strokeWidth="2" strokeDasharray="10,5" />
+                        <path d="M15,20 L225,20 L225,390 L15,390 Z" fill="url(#skinCyber)" stroke="#000" strokeWidth="2" />
+                        <rect x="30" y="30" width="180" height="360" fill="none" stroke="#FFFF00" strokeWidth="2" strokeDasharray="10,5" className="animate-pulse" />
                         <text x="120" y="380" textAnchor="middle" fill="yellow" fontSize="8" fontFamily="monospace">HIGH VOLTAGE</text>
                     </g>
                  );
             case 9: // GOLD (Steampunk)
                  return (
                     <g>
-                        <path d="M20,20 L220,20 L220,390 L20,390 Z" fill="#3E2723" stroke="#B8860B" strokeWidth="4" />
+                        <path d="M20,20 L220,20 L220,390 L20,390 Z" fill="url(#skinGold)" stroke="#B8860B" strokeWidth="4" />
                         <circle cx="20" cy="20" r="10" fill="#B8860B" />
                         <circle cx="220" cy="20" r="10" fill="#B8860B" />
                         <path d="M20,390 L220,390" stroke="#B8860B" strokeWidth="4" strokeDasharray="5,5" />
@@ -163,23 +176,22 @@ const CabinetSVG = ({
             case 10: // VOID (Space)
                  return (
                     <g>
-                        <path d="M30,30 L210,30 L210,380 L30,380 Z" fill="url(#skinVoid)" stroke="#4B0082" strokeWidth="2" />
-                        <circle cx="120" cy="200" r="100" stroke="#8A2BE2" strokeWidth="1" fill="none" opacity="0.5" />
+                        <path d="M30,30 L210,30 L210,380 L30,380 Z" fill="url(#skinVoid)" stroke="#8A2BE2" strokeWidth="2" />
+                        <circle cx="120" cy="200" r="100" stroke="#8A2BE2" strokeWidth="2" fill="none" opacity="0.8" className="animate-pulse" />
                     </g>
                  );
             default: // Generic
-                return <path d="M15,20 L225,20 L235,390 L5,390 Z" fill="url(#darkMetal)" stroke="#555" strokeWidth="2" />;
+                return <path d="M15,20 L225,20 L235,390 L5,390 Z" fill="url(#darkMetal)" stroke="#999" strokeWidth="2" />;
         }
     };
 
     // --- 3. TOPPER (Data Counter & Manual) ---
-    // UPDATED: Now wider to include "Manual/PNG" area
     const renderTopper = () => (
-        <g transform="translate(45, 5)">
-            {/* Device Box */}
-            <rect x="0" y="0" width="150" height="35" fill="#080808" stroke="#333" rx="3" />
+        <g transform="translate(65, -5)">
+            {/* Main Unit */}
+            <rect x="0" y="0" width="110" height="35" fill="#080808" stroke="#333" rx="3" />
             
-            {/* LED Display Area (Left) */}
+            {/* LED Display Area (Spins) */}
             <g transform="translate(10, 5)">
                 <rect x="0" y="0" width="80" height="25" fill="#220000" />
                 <text x="75" y="20" textAnchor="end" fill="red" fontSize="14" fontFamily="monospace" fontWeight="bold" filter="url(#ledGlow)">
@@ -188,17 +200,18 @@ const CabinetSVG = ({
                 <text x="5" y="8" fill="#500" fontSize="5" fontWeight="bold">SPINS</text>
             </g>
             
-            {/* "Manual" / Promo Area (Right) - NEW */}
-            <g transform="translate(95, 2)">
-                <rect x="0" y="0" width="45" height="31" fill="#222" stroke="#444" />
-                {/* Simulated PNG/Art */}
-                <rect x="2" y="2" width="41" height="27" fill={isHot ? 'gold' : '#444'} />
-                <text x="22" y="18" textAnchor="middle" fill="#000" fontSize="5" fontWeight="bold">BONUS</text>
+            {/* Status Lights (Candle) */}
+            <g transform="translate(95, 5)">
+                <circle cx="4" cy="4" r="3" fill={isBroken ? 'red' : '#300'} className={isBroken ? "animate-pulse" : ""} />
+                <circle cx="4" cy="12" r="3" fill={isHot ? 'yellow' : '#330'} className={isHot ? 'animate-pulse' : ''} />
+                <circle cx="4" cy="20" r="3" fill={isBusy ? 'blue' : '#003'} className={isBusy ? "animate-pulse" : ""} />
             </g>
 
-            {/* Status Lights */}
-            <circle cx="5" cy="5" r="2" fill={isBroken ? 'red' : '#300'} />
-            <circle cx="145" cy="5" r="2" fill={isHot ? 'yellow' : '#330'} className={isHot ? 'animate-pulse' : ''} />
+            {/* Guide/Manual Holder (Left Side) */}
+            <g transform="translate(-20, 5)">
+                 <rect x="0" y="0" width="20" height="25" fill="#222" stroke="#444" rx="1"/>
+                 <text x="10" y="15" textAnchor="middle" fill="#666" fontSize="4" fontWeight="bold">INFO</text>
+            </g>
         </g>
     );
 
@@ -236,28 +249,26 @@ const CabinetSVG = ({
     const renderButtonDeck = () => (
         <g transform="translate(10, 230)">
              {/* Sloped Deck Body */}
-             <path d="M0,0 L220,0 L235,50 L-15,50 Z" fill="url(#blackPlastic)" stroke="#333" />
+             <path d="M0,0 L220,0 L235,50 L-15,50 Z" fill="url(#chromeGradient)" stroke="#111" />
              <path d="M-15,50 L235,50 L235,70 L-15,70 Z" fill="#111" /> {/* Front Lip */}
              
              {/* Coin Slot */}
              <rect x="190" y="15" width="5" height="20" rx="2" fill="#000" stroke="#888" />
-             <rect x="192" y="18" width="1" height="14" fill="#0F0" className="animate-pulse" filter="url(#ledGlow)"/>
+             <rect x="192" y="18" width="1" height="14" fill="#0F0" className="animate-pulse" filter="url(#neonBlur)"/>
              
-             {/* START LEVER (Left Knob - Iconic Pachislo Feature) */}
+             {/* START LEVER (Knob) */}
              <g transform="translate(15, 25)">
-                 <circle cx="0" cy="0" r="12" fill="#111" stroke="#333" />
-                 <circle cx="0" cy="0" r="8" fill="url(#chromeGradient)" />
-                 <circle cx="0" cy="-5" r="10" fill="red" className={isBusy ? "" : "animate-pulse"} /> {/* The Knob */}
+                 <circle cx="0" cy="0" r="14" fill="#111" stroke="#333" />
+                 <circle cx="0" cy="0" r="10" fill="url(#chromeGradient)" />
+                 <circle cx="0" cy="-6" r="12" fill="red" className={isBusy ? "" : "animate-pulse"} />
              </g>
 
-             {/* STOP BUTTONS (Center - 3 Buttons) */}
+             {/* STOP BUTTONS */}
              <g transform="translate(70, 15)">
                  <circle cx="0" cy="10" r="12" fill="#c0392b" stroke="#500" strokeWidth="2" />
                  <text x="0" y="13" textAnchor="middle" fill="white" fontSize="6" fontWeight="bold">1</text>
-                 
                  <circle cx="40" cy="10" r="12" fill="#c0392b" stroke="#500" strokeWidth="2" />
                  <text x="40" y="13" textAnchor="middle" fill="white" fontSize="6" fontWeight="bold">2</text>
-                 
                  <circle cx="80" cy="10" r="12" fill="#c0392b" stroke="#500" strokeWidth="2" />
                  <text x="80" y="13" textAnchor="middle" fill="white" fontSize="6" fontWeight="bold">3</text>
              </g>
@@ -272,18 +283,15 @@ const CabinetSVG = ({
              {/* Art Area */}
              <g clipPath="url(#screenCutout)">
                  <rect x="5" y="5" width="170" height="60" fill={islandId===3 ? '#300' : '#101'} />
+                 
                  {/* Character Sticker */}
                  <g transform="translate(140, 35) scale(0.25)">
                     <CharacterSVG type={charId} stickerMode={true} />
                  </g>
                  
-                 {/* Info Text */}
-                 <text x="15" y="25" fill="#FFF" fontSize="14" fontWeight="black" style={{textShadow:'0 0 5px white'}}>
-                     BIG BONUS
-                 </text>
-                 <text x="15" y="45" fill="gold" fontSize="10" fontFamily="monospace">
-                     WIN: {stats.wins}
-                 </text>
+                 {/* Text */}
+                 <text x="15" y="25" fill="#FFF" fontSize="14" fontWeight="black" style={{textShadow:'0 0 5px white'}}>BIG BONUS</text>
+                 <text x="15" y="45" fill="gold" fontSize="10" fontFamily="monospace">WIN: {stats.wins}</text>
              </g>
              
              {/* Glare */}
@@ -308,10 +316,10 @@ const CabinetSVG = ({
         <svg width="240" height="400" viewBox="0 0 240 400" className={`drop-shadow-2xl transition-transform group-hover:-translate-y-2 duration-300 ${isBroken ? 'animate-pulse' : ''}`}>
             {renderDefs()}
             
-            {/* Floor Shadow */}
-            <ellipse cx="120" cy="390" rx="110" ry="12" fill="#000" opacity="0.6" filter="blur(6px)" />
+            {/* Shadow */}
+            <ellipse cx="120" cy="390" rx="110" ry="12" fill="#000" opacity="0.7" filter="blur(6px)" />
             
-            {renderLayerFrame()}
+            {renderCabinetFrame()}
             {renderTopper()}
             {renderScreenArea()}
             {renderButtonDeck()}
@@ -328,4 +336,4 @@ const CabinetSVG = ({
     );
 };
 
-export default CabinetSVG;
+export default memo(CabinetSVG);

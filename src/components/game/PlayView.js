@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { ChevronLeft, Settings, Minus, Plus, Zap, StopCircle, Gamepad2, Sparkles, Gift, Info, Volume2, VolumeX, Maximize2, Repeat, Coins, LogOut, Wallet, Trophy } from 'lucide-react';
+import { ChevronLeft, Settings, Minus, Plus, Zap, StopCircle, Gamepad2, Sparkles, Gift, Info, Volume2, VolumeX, Maximize2, Repeat, Coins, LogOut, Wallet, Trophy, Lock, Flame } from 'lucide-react';
 import CabinetSVG from '../visuals/CabinetSVG';
 import CharacterSVG from '../visuals/CharacterSVG';
 import SymbolSVG from '../visuals/SymbolSVG';
@@ -11,20 +11,23 @@ import { useGameSound } from '../../hooks/useGameSound';
 import { game as gameApi } from '../../services/api';
 
 const PlayView = ({ machine, island, user, onLeave, updateBalance }) => {
-    // 1. Logic Hooks
+    // 1. Logic Hooks - Pass Island ID for special mechanics
     const slotLogic = useSlotMachine(machine.id, island.id);
     const { 
         reels, isSpinning, isTeaser, lastWin, mysteryItem, 
         autoPlay, spin, stopReel, setAutoPlay, setLastWin, 
-        turboMode, setTurboMode, 
-        expandedReels, lockedReels, avalancheTriggered 
+        turboMode, setTurboMode,
+        // Mechanics Flags from Hook
+        expandedReels = [false, false, false], 
+        lockedReels = [false, false, false], 
+        avalancheTriggered = false
     } = slotLogic;
     
     // 2. Local UI State
     const [betIndex, setBetIndex] = useState(0);
     const [winStage, setWinStage] = useState('idle'); // 'idle' | 'celebrating' | 'gambling'
     const [gamblePending, setGamblePending] = useState(false);
-    const [gambleLost, setGambleLost] = useState(false); // For "Boo" reaction
+    const [gambleLost, setGambleLost] = useState(false); // Triggers "Boo!" mood
     
     // Modals
     const [showPaytable, setShowPaytable] = useState(false);
@@ -60,16 +63,17 @@ const PlayView = ({ machine, island, user, onLeave, updateBalance }) => {
         return 'FREE';
     };
     
+    // Character Mood Logic
     const getMood = () => {
         if (gambleLost) return 'sad'; 
-        if (winStage === 'celebrating' || winStage === 'gambling') return 'win';
+        if (winStage === 'celebrating' || (winStage === 'gambling' && !gamblePending)) return 'win';
         return 'idle';
     };
 
     // --- 3. GAMEPLAY EFFECTS ---
     useEffect(() => {
         if (lastWin > 0) {
-            // Check if this is a fresh win from the hook (not a gamble update)
+            // Only handle fresh wins (not during gamble loop updates if we are already gambling)
             if (winStage === 'idle') {
                 const isBigWin = lastWin > currentBet * 10;
                 
@@ -81,12 +85,12 @@ const PlayView = ({ machine, island, user, onLeave, updateBalance }) => {
                     setWinStage('celebrating');
                     setGambleLost(false);
                     // Delay before showing Gamble option
-                    setTimeout(() => setWinStage('gambling'), isBigWin ? 3000 : 1500);
+                    setTimeout(() => setWinStage('gambling'), isBigWin ? 2500 : 1000);
                 }
             }
         } else {
-             // If win cleared (e.g. lost gamble), reset
-             if (winStage !== 'gambling') setWinStage('idle');
+             // If win cleared (e.g. lost gamble), reset to idle
+             if (winStage !== 'gambling' && winStage !== 'celebrating') setWinStage('idle');
         }
     }, [lastWin, autoPlay, currentBet, playSound]);
 
@@ -112,7 +116,7 @@ const PlayView = ({ machine, island, user, onLeave, updateBalance }) => {
             return;
         }
 
-        setGambleLost(false);
+        setGambleLost(false); // Reset sad state
         playSound('spin');
         if (navigator.vibrate) navigator.vibrate(50);
         spin(currentBet);
@@ -136,12 +140,6 @@ const PlayView = ({ machine, island, user, onLeave, updateBalance }) => {
         return () => window.removeEventListener('keydown', handleKeyDown);
     }, [isSpinning, showPaytable, showSettings, winStage, handleSpin, onLeave]);
 
-    const handleStopReel = (idx) => {
-      playSound('stop');
-      if (navigator.vibrate) navigator.vibrate(20);
-      stopReel(idx);
-    };
-
     const handleGamble = async (choice) => {
         playSound('click');
         setGamblePending(true);
@@ -149,17 +147,29 @@ const PlayView = ({ machine, island, user, onLeave, updateBalance }) => {
             const res = await gameApi.gamble(choice);
             if (res.data.status === 'success') {
                 if (res.data.won) {
+                    // WON: Celebrate then Close (One Shot)
                     setLastWin(res.data.new_win_amount); 
                     updateBalance(res.data.new_balance);
+                    
                     playSound('win');
                     triggerCoinShower();
-                    // Keep in gambling stage for streaks
+                    setWinStage('celebrating'); 
+                    
+                    // Auto close after celebration
+                    setTimeout(() => {
+                        setWinStage('idle');
+                    }, 3000);
                 } else {
+                    // LOST: Show Boo then Close
                     setLastWin(0); 
                     updateBalance(res.data.new_balance);
-                    setWinStage('idle');
-                    setGambleLost(true);
-                    playSound('stop');
+                    
+                    playSound('stop'); // Sad sound
+                    setGambleLost(true); // Character cries
+                    setWinStage('idle'); // Close modal immediately to show character
+                    
+                    // Reset Boo after 2s
+                    setTimeout(() => setGambleLost(false), 2000);
                 }
             } else {
                 alert(res.data.error || "Gamble Failed");
@@ -232,7 +242,7 @@ const PlayView = ({ machine, island, user, onLeave, updateBalance }) => {
                 
                 {/* 1. 3D PET */}
                 <div className="absolute top-[18%] right-[-5%] w-[42%] h-[42%] z-0 pointer-events-none transition-transform duration-500 md:right-0 md:w-[35%] md:h-[35%]" 
-                     style={{ transform: (winStage !== 'idle') ? 'scale(1.25) translateY(-20px)' : 'scale(1)' }}>
+                     style={{ transform: (winStage !== 'idle' && !gambleLost) ? 'scale(1.25) translateY(-20px)' : 'scale(1)' }}>
                     <CharacterSVG type={user.active_pet_id} mood={getMood()} />
                     {mysteryItem && (
                         <div className="absolute -top-20 -left-20 bg-gradient-to-r from-purple-600 to-pink-600 text-white p-4 rounded-2xl animate-bounce shadow-2xl z-50 border-2 border-white scale-75 md:scale-100">
@@ -242,8 +252,8 @@ const PlayView = ({ machine, island, user, onLeave, updateBalance }) => {
                     )}
                     {/* "BOO!" Reaction Bubble */}
                     {gambleLost && (
-                        <div className="absolute -top-10 -left-10 bg-white text-black font-black px-4 py-2 rounded-full rounded-bl-none animate-bounce z-50 shadow-lg border-2 border-red-500 text-sm transform -rotate-12">
-                            BOO!
+                        <div className="absolute top-10 left-0 bg-white text-black font-black px-6 py-3 rounded-3xl rounded-bl-none animate-bounce z-50 shadow-[0_0_20px_red] border-4 border-red-600 text-xl transform -rotate-12">
+                            BOO! 👻
                         </div>
                     )}
                 </div>
@@ -277,15 +287,17 @@ const PlayView = ({ machine, island, user, onLeave, updateBalance }) => {
                                     
                                     {/* Locked State Overlay (Noctyra) */}
                                     {lockedReels && lockedReels[i] && (
-                                        <div className="absolute inset-0 bg-yellow-400/10 z-30 pointer-events-none animate-pulse flex items-center justify-center">
-                                            <div className="absolute top-1 right-1 text-yellow-500"><Lock size={12}/></div>
+                                        <div className="absolute inset-0 bg-yellow-400/20 z-30 pointer-events-none animate-pulse flex flex-col items-center justify-center">
+                                            <Lock size={16} className="text-yellow-400 drop-shadow-md mb-8"/>
+                                            <div className="text-[8px] font-bold text-yellow-400 bg-black/50 px-1 rounded">HELD</div>
                                         </div>
                                     )}
 
                                     {/* Expanding Wild Overlay (Inferna) */}
                                     {expandedReels && expandedReels[i] && (
-                                        <div className="absolute inset-0 bg-gradient-to-t from-red-600 via-orange-500 to-yellow-400 z-40 flex items-center justify-center animate-in fade-in zoom-in duration-300">
-                                            <span className="text-white font-black text-xl rotate-90 tracking-widest drop-shadow-md">WILD</span>
+                                        <div className="absolute inset-0 bg-gradient-to-t from-red-600 via-orange-500 to-yellow-400 z-40 flex flex-col items-center justify-center animate-in fade-in zoom-in duration-300">
+                                            <Flame size={32} className="text-white animate-bounce" fill="white"/>
+                                            <span className="text-white font-black text-xl rotate-90 tracking-widest drop-shadow-md mt-2">WILD</span>
                                         </div>
                                     )}
 
@@ -306,90 +318,39 @@ const PlayView = ({ machine, island, user, onLeave, updateBalance }) => {
                     </div>
 
                     {/* --- BUTTON DECK (Interactive) --- */}
-                    {/* --- BUTTON DECK (Interactive | FIXED) --- */}
-<div
-  className="absolute bottom-[20%] left-1/2 -translate-x-1/2 w-[95vw] max-w-[500px] z-50 pointer-events-none px-1 sm:px-2"
->
-  {/* Visual tilt ONLY */}
-  <div
-    aria-hidden
-    className="absolute inset-0"
-    style={{
-      perspective: '600px',
-      transform: 'rotateX(18deg)',
-    }}
-  />
+                    <div className="absolute bottom-[23%] w-[82%] h-[15%] flex flex-col gap-2 p-1 z-50 pointer-events-auto touch-manipulation" style={{ perspective: '600px', transformStyle: 'preserve-3d' }}>
+                         <div className="w-full h-full flex flex-col justify-between" style={{ transform: 'rotateX(25deg)' }}>
+                             
+                             {/* Left: Bet Config */}
+                             <div className="absolute left-2 top-2 flex gap-1 z-50">
+                                 <button onClick={() => changeBet(-1)} className="w-10 h-9 bg-gray-800 rounded-lg border-b-4 border-gray-950 text-white flex items-center justify-center active:border-b-0 active:translate-y-1 transition-all shadow-lg hover:bg-gray-700 pointer-events-auto cursor-pointer"><Minus size={14}/></button>
+                                 <div className="bg-black border border-gray-600 w-16 h-9 flex items-center justify-center text-[10px] text-yellow-400 font-mono tracking-tighter shadow-inner">{currentBet.toLocaleString()}</div>
+                                 <button onClick={() => changeBet(1)} className="w-10 h-9 bg-gray-800 rounded-lg border-b-4 border-gray-950 text-white flex items-center justify-center active:border-b-0 active:translate-y-1 transition-all shadow-lg hover:bg-gray-700 pointer-events-auto cursor-pointer"><Plus size={14}/></button>
+                             </div>
+                             
+                             <button onClick={handleMaxBet} className="absolute left-2 top-14 w-12 h-9 bg-orange-700 rounded-lg border-b-4 border-black text-[7px] font-black text-white flex flex-col items-center justify-center active:border-b-0 active:translate-y-1 shadow-lg hover:bg-orange-600 pointer-events-auto cursor-pointer z-50">MAX</button>
 
-  {/* Actual interactive layer */}
-  <div className="relative flex flex-row items-end justify-between gap-2 sm:gap-4 pointer-events-auto">
-    
-    {/* Left: Bet Config */}
-    <div className="flex flex-col items-start gap-2">
-      <div className="flex gap-1">
-        <button
-          onClick={() => changeBet(-1)}
-          onPointerDown={(e) => e.stopPropagation()}
-          className="w-10 h-10 sm:w-12 sm:h-12 bg-gray-800 rounded-lg border-b-4 border-gray-950 text-white flex items-center justify-center active:border-b-0 active:translate-y-1 transition-all shadow-lg hover:bg-gray-700"
-        >
-          <Minus size={18} />
-        </button>
+                             {/* Right: SPIN Button */}
+                             <button 
+                                onClick={handleSpin} 
+                                disabled={isSpinning.some(s=>s) || (winStage !== 'idle' && winStage !== 'celebrating')} 
+                                className={`absolute right-2 top-1 w-20 h-20 rounded-full border-b-[8px] shadow-2xl flex flex-col items-center justify-center active:border-b-0 active:translate-y-2 transition-all pointer-events-auto cursor-pointer z-50
+                                ${isSpinning.some(s=>s) ? 'bg-gray-800 border-gray-950 opacity-50' : 'bg-gradient-to-b from-red-600 to-red-800 border-red-950 text-white shadow-red-600/40 hover:brightness-110 hover:shadow-red-500/80'}`}
+                             >
+                                 <Gamepad2 size={28} strokeWidth={3} />
+                                 <span className="text-[10px] font-black tracking-widest mt-0.5">SPIN</span>
+                             </button>
 
-        <div className="bg-black border border-gray-600 w-16 h-10 sm:w-20 sm:h-12 flex items-center justify-center text-xs sm:text-sm text-yellow-400 font-mono shadow-inner select-none">
-          {currentBet.toLocaleString()}
-        </div>
-
-        <button
-          onClick={() => changeBet(1)}
-          onPointerDown={(e) => e.stopPropagation()}
-          className="w-10 h-10 sm:w-12 sm:h-12 bg-gray-800 rounded-lg border-b-4 border-gray-950 text-white flex items-center justify-center active:border-b-0 active:translate-y-1 transition-all shadow-lg hover:bg-gray-700"
-        >
-          <Plus size={18} />
-        </button>
-      </div>
-
-      <button
-        onClick={handleMaxBet}
-        onPointerDown={(e) => e.stopPropagation()}
-        className="w-16 h-8 sm:w-20 sm:h-10 bg-orange-700 rounded-lg border-b-4 border-black text-[10px] sm:text-xs font-black text-white flex items-center justify-center active:border-b-0 active:translate-y-1 shadow-lg hover:bg-orange-600"
-      >
-        MAX
-      </button>
-    </div>
-
-    {/* Center: SPIN */}
-    <button
-      onClick={handleSpin}
-      onPointerDown={(e) => e.stopPropagation()}
-      disabled={isSpinning.some(Boolean) || winStage !== 'idle'}
-      className={`w-20 h-20 sm:w-24 sm:h-24 rounded-full border-b-[8px] shadow-2xl flex flex-col items-center justify-center active:border-b-0 active:translate-y-2 transition-all
-        ${
-          isSpinning.some(Boolean)
-            ? 'bg-gray-800 border-gray-950 opacity-50'
-            : 'bg-gradient-to-b from-red-600 to-red-800 border-red-950 text-white hover:brightness-110'
-        }`}
-    >
-      <Gamepad2 size={36} strokeWidth={3} />
-      <span className="text-xs sm:text-sm font-black tracking-widest">SPIN</span>
-    </button>
-
-                            {/* Right: Toggles */}
-                            <div className="flex flex-col gap-2 items-end">
-                                <button
-                                    onClick={toggleTurbo}
-                                    className={`w-10 h-10 sm:w-12 sm:h-12 rounded-lg border-b-4 border-black flex items-center justify-center active:border-b-0 active:translate-y-1 shadow-md transition-colors pointer-events-auto cursor-pointer ${turboMode ? 'bg-yellow-500 text-black shadow-[0_0_10px_gold]' : 'bg-gray-700 text-gray-400'}`}
-                                    aria-label="Turbo Mode"
-                                >
-                                    <Zap size={18} fill={turboMode ? 'currentColor' : 'none'} />
-                                </button>
-                                <button
-                                    onClick={toggleAuto}
-                                    className={`w-10 h-10 sm:w-12 sm:h-12 rounded-lg border-b-4 border-black flex items-center justify-center active:border-b-0 active:translate-y-1 shadow-md transition-colors pointer-events-auto cursor-pointer ${autoPlay ? 'bg-green-600 text-white shadow-[0_0_10px_green]' : 'bg-gray-700 text-gray-400'}`}
-                                    aria-label="Auto Play"
-                                >
-                                    {autoPlay ? <StopCircle size={18} /> : <Repeat size={18} />}
-                                </button>
-                            </div>
-                        </div>
+                             {/* Center-Right: Toggles */}
+                             <div className="absolute right-24 top-4 flex flex-col gap-2 z-50">
+                                 <button onClick={toggleTurbo} className={`w-9 h-9 rounded-lg border-b-4 border-black flex items-center justify-center active:border-b-0 active:translate-y-1 shadow-md transition-colors pointer-events-auto cursor-pointer ${turboMode ? 'bg-yellow-500 text-black' : 'bg-gray-700 text-gray-400'}`}>
+                                    <Zap size={14} fill={turboMode ? "currentColor" : "none"}/>
+                                 </button>
+                                 <button onClick={toggleAuto} className={`w-9 h-9 rounded-lg border-b-4 border-black flex items-center justify-center active:border-b-0 active:translate-y-1 shadow-md transition-colors pointer-events-auto cursor-pointer ${autoPlay ? 'bg-green-600 text-white' : 'bg-gray-700 text-gray-400'}`}>
+                                    {autoPlay ? <StopCircle size={14}/> : <Repeat size={14}/>}
+                                 </button>
+                             </div>
+                         </div>
                     </div>
                 </div>
             </div>
@@ -408,13 +369,21 @@ const PlayView = ({ machine, island, user, onLeave, updateBalance }) => {
                 <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/90 backdrop-blur-sm animate-in zoom-in-95 duration-200 p-4">
                     <GlassCard className="w-[90%] max-w-sm p-6 text-center border-yellow-500/50 shadow-[0_0_50px_rgba(234,179,8,0.2)]">
                         <h2 className="text-3xl font-black text-yellow-400 mb-2 italic tracking-tighter drop-shadow-md">DOUBLE UP?</h2>
-                        <div className="text-white text-lg font-mono mb-6 border-b border-white/10 pb-4">
-                            WIN: <span className="text-green-400">{lastWin.toLocaleString()}</span> MMK
+                        
+                        <div className="flex justify-between items-center text-xs font-mono text-gray-400 mb-4 px-2">
+                            <span>RISK: <b className="text-white">{lastWin.toLocaleString()}</b></span>
+                            <span className="text-green-400">TO WIN: <b className="text-xl">{(lastWin*2).toLocaleString()}</b></span>
                         </div>
                         
                         <div className="grid grid-cols-2 gap-4 mb-6">
-                            <button onClick={() => handleGamble('red')} disabled={gamblePending} className="h-32 bg-gradient-to-br from-red-600 to-red-900 rounded-2xl border-b-8 border-red-950 flex items-center justify-center shadow-lg active:border-b-0 active:translate-y-2 transition-all hover:brightness-110 group"><div className="w-16 h-16 bg-red-500 rotate-45 transform shadow-inner border-4 border-red-300 group-hover:scale-110 transition-transform rounded-sm"></div></button>
-                            <button onClick={() => handleGamble('black')} disabled={gamblePending} className="h-32 bg-gradient-to-br from-gray-800 to-black rounded-2xl border-b-8 border-black flex items-center justify-center shadow-lg active:border-b-0 active:translate-y-2 transition-all hover:brightness-110 group"><div className="w-16 h-16 bg-black border-4 border-gray-600 rotate-45 transform shadow-inner group-hover:scale-110 transition-transform rounded-sm"></div></button>
+                            <button onClick={() => handleGamble('red')} disabled={gamblePending} className="h-32 bg-gradient-to-br from-red-600 to-red-900 rounded-2xl border-b-8 border-red-950 flex flex-col items-center justify-center shadow-lg active:border-b-0 active:translate-y-2 transition-all hover:brightness-110 group">
+                                <div className="w-16 h-16 bg-red-500 rotate-45 transform shadow-inner border-4 border-red-300 group-hover:scale-110 transition-transform rounded-sm mb-2"></div>
+                                <span className="text-white font-black text-sm">RED</span>
+                            </button>
+                            <button onClick={() => handleGamble('black')} disabled={gamblePending} className="h-32 bg-gradient-to-br from-gray-800 to-black rounded-2xl border-b-8 border-black flex flex-col items-center justify-center shadow-lg active:border-b-0 active:translate-y-2 transition-all hover:brightness-110 group">
+                                <div className="w-16 h-16 bg-black border-4 border-gray-600 rotate-45 transform shadow-inner group-hover:scale-110 transition-transform rounded-sm mb-2"></div>
+                                <span className="text-white font-black text-sm">BLACK</span>
+                            </button>
                         </div>
                         
                         <button onClick={collectWin} className="text-gray-400 text-xs font-bold tracking-widest hover:text-white transition-colors uppercase border-b border-transparent hover:border-white">
