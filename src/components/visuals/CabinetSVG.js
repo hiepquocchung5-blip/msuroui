@@ -22,13 +22,13 @@ const CabinetSVG = ({
     // --- 1. DEFINITIONS (Materials & Gradients) ---
     const renderDefs = () => (
         <defs>
-            {/* COMMON METALS */}
+            {/* METALS */}
             <linearGradient id="chromeGradient" x1="0" y1="0" x2="1" y2="0">
                 <stop offset="0%" stopColor="#333" />
                 <stop offset="15%" stopColor="#888" />
                 <stop offset="25%" stopColor="#aaa" />
                 <stop offset="50%" stopColor="#fff" />
-                <stop offset="75%" stopColor="#aaa" />
+                <stop offset="75%" stopColor="#888" />
                 <stop offset="100%" stopColor="#333" />
             </linearGradient>
             <linearGradient id="goldGradient" x1="0" y1="0" x2="1" y2="1">
@@ -37,91 +37,149 @@ const CabinetSVG = ({
                 <stop offset="60%" stopColor="#FFFACD" />
                 <stop offset="100%" stopColor="#DAA520" />
             </linearGradient>
-            <linearGradient id="darkPlastic" x1="0" y1="0" x2="1" y2="0">
-                 <stop offset="0%" stopColor="#1a1a1a"/>
-                 <stop offset="20%" stopColor="#333"/>
-                 <stop offset="50%" stopColor="#222"/>
-                 <stop offset="80%" stopColor="#333"/>
-                 <stop offset="100%" stopColor="#1a1a1a"/>
+            <linearGradient id="darkMetal" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor="#2c3e50" />
+                <stop offset="100%" stopColor="#000" />
             </linearGradient>
-            
-            {/* GLASS EFFECTS */}
+            <linearGradient id="cylinderShine" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor="#000" stopOpacity="0.8" />
+                <stop offset="20%" stopColor="#000" stopOpacity="0.2" />
+                <stop offset="50%" stopColor="#FFF" stopOpacity="0.1" />
+                <stop offset="80%" stopColor="#000" stopOpacity="0.2" />
+                <stop offset="100%" stopColor="#000" stopOpacity="0.8" />
+            </linearGradient>
+
+            {/* GLASS & LIGHTS */}
             <linearGradient id="glassGlare" x1="0" y1="0" x2="1" y2="1">
                 <stop offset="0%" stopColor="rgba(255,255,255,0.05)" />
-                <stop offset="40%" stopColor="rgba(255,255,255,0.2)" />
-                <stop offset="45%" stopColor="rgba(255,255,255,0)" />
+                <stop offset="45%" stopColor="rgba(255,255,255,0.2)" />
+                <stop offset="50%" stopColor="rgba(255,255,255,0)" />
                 <stop offset="100%" stopColor="rgba(255,255,255,0.05)" />
             </linearGradient>
-
-            {/* LED DIGITS */}
-            <filter id="ledGlow">
-                <feGaussianBlur stdDeviation="1.5" result="coloredBlur" />
+            <filter id="neonBlur">
+                <feGaussianBlur stdDeviation="2.5" result="coloredBlur" />
                 <feMerge><feMergeNode in="coloredBlur" /><feMergeNode in="SourceGraphic" /></feMerge>
             </filter>
-
-            {/* SPEAKER MESH */}
-            <pattern id="speakerMesh" width="4" height="4" patternUnits="userSpaceOnUse">
-                <rect width="4" height="4" fill="#111"/>
-                <circle cx="2" cy="2" r="1.5" fill="#333" />
-            </pattern>
             
-            {/* --- ISLAND THEME SKINS --- */}
-            {/* 1. Vegas (Red/Gold) */}
+            {/* ISLAND SKINS */}
             <linearGradient id="skinVegas" x1="0" y1="0" x2="1" y2="0"><stop offset="0%" stopColor="#500"/><stop offset="50%" stopColor="#900"/><stop offset="100%" stopColor="#500"/></linearGradient>
-            {/* 2. Aloha (Wood) */}
+            <linearGradient id="skinMagma" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#FF4500"/><stop offset="100%" stopColor="#220000"/></linearGradient>
             <linearGradient id="skinAloha" x1="0" y1="0" x2="1" y2="0"><stop offset="0%" stopColor="#5D4037"/><stop offset="50%" stopColor="#8D6E63"/><stop offset="100%" stopColor="#5D4037"/></linearGradient>
-            {/* 3. Inferna (Magma) */}
-            <linearGradient id="skinMagma" x1="0" y1="1" x2="0" y2="0"><stop offset="0%" stopColor="#300"/><stop offset="50%" stopColor="#800"/><stop offset="100%" stopColor="#f00"/></linearGradient>
-            {/* 4. Noctyra (Purple) */}
-            <linearGradient id="skinNoctyra" x1="0" y1="0" x2="1" y2="0"><stop offset="0%" stopColor="#2d1b4e"/><stop offset="50%" stopColor="#4834d4"/><stop offset="100%" stopColor="#2d1b4e"/></linearGradient>
-            {/* 5. Glacia (Ice) */}
-            <linearGradient id="skinGlacia" x1="0" y1="0" x2="1" y2="0"><stop offset="0%" stopColor="#a2d9ff"/><stop offset="50%" stopColor="#e0ffff"/><stop offset="100%" stopColor="#a2d9ff"/></linearGradient>
-            {/* 6. Sky (White/Gold) */}
-            <linearGradient id="skinSky" x1="0" y1="0" x2="1" y2="0"><stop offset="0%" stopColor="#bdc3c7"/><stop offset="50%" stopColor="#ffffff"/><stop offset="100%" stopColor="#bdc3c7"/></linearGradient>
-            {/* 7. Bio (Green) */}
-            <linearGradient id="skinBio" x1="0" y1="0" x2="1" y2="0"><stop offset="0%" stopColor="#1e8449"/><stop offset="50%" stopColor="#2ecc71"/><stop offset="100%" stopColor="#1e8449"/></linearGradient>
-            {/* 8. Cyber (Teal/Black) */}
-            <linearGradient id="skinCyber" x1="0" y1="0" x2="1" y2="0"><stop offset="0%" stopColor="#2c3e50"/><stop offset="50%" stopColor="#34495e"/><stop offset="100%" stopColor="#2c3e50"/></linearGradient>
-            {/* 9. Gold (Bronze) */}
-            <linearGradient id="skinGold" x1="0" y1="0" x2="1" y2="0"><stop offset="0%" stopColor="#cd6133"/><stop offset="50%" stopColor="#e17055"/><stop offset="100%" stopColor="#cd6133"/></linearGradient>
-            {/* 10. Void (Black) */}
-            <linearGradient id="skinVoid" x1="0" y1="0" x2="1" y2="0"><stop offset="0%" stopColor="#000000"/><stop offset="50%" stopColor="#333"/><stop offset="100%" stopColor="#000000"/></linearGradient>
+            <linearGradient id="skinIce" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#E0FFFF"/><stop offset="100%" stopColor="#00BFFF"/></linearGradient>
+            <linearGradient id="skinSky" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stopColor="#FFF"/><stop offset="50%" stopColor="#F0F8FF"/><stop offset="100%" stopColor="#B0C4DE"/></linearGradient>
+            <linearGradient id="skinBio" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#556B2F"/><stop offset="100%" stopColor="#004d00"/></linearGradient>
+            <linearGradient id="skinRust" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stopColor="#5a3a2a"/><stop offset="50%" stopColor="#8b4513"/><stop offset="100%" stopColor="#3e2723"/></linearGradient>
+            <linearGradient id="skinVoid" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stopColor="#000"/><stop offset="50%" stopColor="#4B0082"/><stop offset="100%" stopColor="#000"/></linearGradient>
+            
+            {/* MASKS */}
+            <clipPath id="screenCutout">
+                <rect x="40" y="85" width="160" height="115" rx="4" />
+            </clipPath>
         </defs>
     );
 
-    // --- 2. CABINET HOUSING ---
-    const renderHousing = () => {
-        const themes = [null, 'skinVegas', 'skinAloha', 'skinMagma', 'skinNoctyra', 'skinGlacia', 'skinSky', 'skinBio', 'skinCyber', 'skinGold', 'skinVoid'];
-        const fillUrl = `url(#${themes[islandId] || 'darkPlastic'})`;
-        const accentColor = isHot ? '#FFD700' : (islandId === 3 ? '#FF4500' : '#00F3FF');
+    // --- LAYER 1: ENVIRONMENT (Shadows & Glow) ---
+    const renderLayerEnvironment = () => (
+        <g id="layer-env">
+            <ellipse cx="120" cy="390" rx="100" ry="15" fill="black" opacity="0.7" filter="blur(6px)" />
+            {isHot && <ellipse cx="120" cy="390" rx="120" ry="20" fill="url(#goldGradient)" opacity="0.3" filter="blur(10px)" className="animate-pulse" />}
+        </g>
+    );
 
-        return (
-            <g>
-                {/* Main Body with Curves */}
-                <path d="M10,40 Q120,20 230,40 L240,400 L0,400 Z" fill={fillUrl} stroke="#111" strokeWidth="1" />
-                
-                {/* Chrome Trim Lines */}
-                <path d="M15,45 L15,395" stroke="url(#chromeGradient)" strokeWidth="2" opacity="0.5" />
-                <path d="M225,45 L225,395" stroke="url(#chromeGradient)" strokeWidth="2" opacity="0.5" />
-
-                {/* Neon Strips */}
-                <path d="M20,50 L20,350" stroke={accentColor} strokeWidth="3" className="animate-pulse" filter="url(#ledGlow)" opacity="0.8"/>
-                <path d="M220,50 L220,350" stroke={accentColor} strokeWidth="3" className="animate-pulse" filter="url(#ledGlow)" opacity="0.8"/>
-
-                {/* Speaker Housings (Top Ears) */}
-                <path d="M5,40 L50,40 L45,70 L10,70 Z" fill="url(#speakerMesh)" stroke="#222" />
-                <path d="M235,40 L190,40 L195,70 L230,70 Z" fill="url(#speakerMesh)" stroke="#222" />
-            </g>
-        );
+    // --- LAYER 2: CABINET FRAME (The Housing - 10 Variations) ---
+    const renderLayerFrame = () => {
+        switch(islandId) {
+            case 1: // VEGAS (Neon/Red)
+                return (
+                    <g>
+                        <path d="M15,20 L225,20 L235,390 L5,390 Z" fill="url(#skinVegas)" stroke="#FFD700" strokeWidth="2" />
+                        <path d="M20,30 L10,380" stroke="#0FF" strokeWidth="2" className="animate-pulse" filter="url(#neonBlur)" opacity="0.8" />
+                        <path d="M220,30 L230,380" stroke="#FF00FF" strokeWidth="2" className="animate-pulse" filter="url(#neonBlur)" opacity="0.8" />
+                    </g>
+                );
+            case 2: // ALOHA (Bamboo)
+                return (
+                    <g>
+                        <path d="M10,20 L230,20 L235,400 L5,400 Z" fill="url(#skinAloha)" stroke="#DAA520" strokeWidth="2" />
+                        <rect x="5" y="20" width="15" height="380" fill="#8D6E63" rx="5" stroke="#3E2723" />
+                        <rect x="220" y="20" width="15" height="380" fill="#8D6E63" rx="5" stroke="#3E2723" />
+                    </g>
+                );
+            case 3: // MAGMA (Obsidian)
+                return (
+                    <g>
+                        <path d="M15,20 L225,20 L235,390 L5,390 Z" fill="url(#skinMagma)" stroke="none" />
+                        <path d="M20,60 L60,100 M200,300 L180,250" stroke="#FF4500" strokeWidth="2" filter="url(#neonBlur)" className="animate-pulse" />
+                    </g>
+                );
+            case 4: // NOCTYRA (Gothic)
+                 return (
+                    <g>
+                        <path d="M20,50 L120,10 L220,50 L220,390 L20,390 Z" fill="#2d3436" stroke="#6c5ce7" strokeWidth="2" />
+                        <path d="M30,60 L30,380 M210,60 L210,380" stroke="#000" strokeWidth="4" />
+                        <path d="M120,20 L120,60" stroke="#6c5ce7" strokeWidth="2" />
+                    </g>
+                 );
+            case 5: // GLACIA (Ice)
+                return (
+                    <g>
+                        <path d="M20,20 L220,20 L230,390 L10,390 Z" fill="url(#skinIce)" stroke="#fff" strokeWidth="1" opacity="0.9" />
+                        <path d="M20,20 L80,390 M220,20 L160,390" stroke="white" strokeWidth="1" opacity="0.5" />
+                    </g>
+                );
+            case 6: // SKY (Marble)
+                 return (
+                    <g>
+                        <path d="M20,20 L220,20 L220,390 L20,390 Z" fill="url(#skinSky)" stroke="#FFD700" strokeWidth="2" />
+                        <rect x="10" y="20" width="10" height="370" fill="#FFF" />
+                        <rect x="220" y="20" width="10" height="370" fill="#FFF" />
+                    </g>
+                 );
+            case 7: // BIO (Moss)
+                 return (
+                    <g>
+                        <path d="M20,30 Q120,10 220,30 L230,390 L10,390 Z" fill="url(#skinBio)" stroke="#228B22" strokeWidth="3" />
+                        <path d="M30,50 Q80,100 30,200" fill="none" stroke="#006400" strokeWidth="4" />
+                        <path d="M210,300 Q160,200 210,100" fill="none" stroke="#006400" strokeWidth="4" />
+                    </g>
+                 );
+            case 8: // CYBER (Rust/Tech)
+                 return (
+                    <g>
+                        <path d="M15,20 L225,20 L225,390 L15,390 Z" fill="url(#skinRust)" stroke="#000" strokeWidth="2" />
+                        <rect x="30" y="30" width="180" height="360" fill="none" stroke="#FFFF00" strokeWidth="2" strokeDasharray="10,5" />
+                        <text x="120" y="380" textAnchor="middle" fill="yellow" fontSize="8" fontFamily="monospace">HIGH VOLTAGE</text>
+                    </g>
+                 );
+            case 9: // GOLD (Steampunk)
+                 return (
+                    <g>
+                        <path d="M20,20 L220,20 L220,390 L20,390 Z" fill="#3E2723" stroke="#B8860B" strokeWidth="4" />
+                        <circle cx="20" cy="20" r="10" fill="#B8860B" />
+                        <circle cx="220" cy="20" r="10" fill="#B8860B" />
+                        <path d="M20,390 L220,390" stroke="#B8860B" strokeWidth="4" strokeDasharray="5,5" />
+                    </g>
+                 );
+            case 10: // VOID (Space)
+                 return (
+                    <g>
+                        <path d="M30,30 L210,30 L210,380 L30,380 Z" fill="url(#skinVoid)" stroke="#4B0082" strokeWidth="2" />
+                        <circle cx="120" cy="200" r="100" stroke="#8A2BE2" strokeWidth="1" fill="none" opacity="0.5" />
+                    </g>
+                 );
+            default: // Generic
+                return <path d="M15,20 L225,20 L235,390 L5,390 Z" fill="url(#darkMetal)" stroke="#555" strokeWidth="2" />;
+        }
     };
 
     // --- 3. TOPPER (Data Counter & Manual) ---
+    // UPDATED: Now wider to include "Manual/PNG" area
     const renderTopper = () => (
         <g transform="translate(45, 5)">
             {/* Device Box */}
             <rect x="0" y="0" width="150" height="35" fill="#080808" stroke="#333" rx="3" />
             
-            {/* LED Display Area */}
+            {/* LED Display Area (Left) */}
             <g transform="translate(10, 5)">
                 <rect x="0" y="0" width="80" height="25" fill="#220000" />
                 <text x="75" y="20" textAnchor="end" fill="red" fontSize="14" fontFamily="monospace" fontWeight="bold" filter="url(#ledGlow)">
@@ -130,7 +188,7 @@ const CabinetSVG = ({
                 <text x="5" y="8" fill="#500" fontSize="5" fontWeight="bold">SPINS</text>
             </g>
             
-            {/* "Manual" / Promo Area */}
+            {/* "Manual" / Promo Area (Right) - NEW */}
             <g transform="translate(95, 2)">
                 <rect x="0" y="0" width="45" height="31" fill="#222" stroke="#444" />
                 {/* Simulated PNG/Art */}
@@ -154,7 +212,6 @@ const CabinetSVG = ({
                     <path d="M40,85 H200 V205 H40 Z M10,40 H230 V380 H10 Z" fill="rgba(0,0,0,0.95)" fillRule="evenodd" />
                     {/* Chrome Inner Trim */}
                     <rect x="40" y="85" width="160" height="120" fill="none" stroke="url(#chromeGradient)" strokeWidth="4" rx="2" />
-                    <text x="120" y="220" textAnchor="middle" fill="#555" fontSize="6" fontFamily="monospace">{displaySerial}</text>
                 </g>
             );
         }
@@ -171,7 +228,6 @@ const CabinetSVG = ({
                 <text x="80" y="65" textAnchor="middle" fill={isBusy ? '#F00' : '#0F0'} fontWeight="bold" fontSize="18" className={!isBusy ? 'animate-pulse' : ''} style={{textShadow: '0 0 10px currentColor'}}>
                     {isBroken ? 'ERROR' : (isBusy ? 'PLAYING' : 'OPEN')}
                 </text>
-                <text x="80" y="200" textAnchor="middle" fill="#555" fontSize="6" fontFamily="monospace">{displaySerial}</text>
             </g>
         );
     };
@@ -180,15 +236,31 @@ const CabinetSVG = ({
     const renderButtonDeck = () => (
         <g transform="translate(10, 230)">
              {/* Sloped Deck Body */}
-             <path d="M0,0 L220,0 L235,50 L-15,50 Z" fill="url(#chromeGradient)" stroke="#111" />
+             <path d="M0,0 L220,0 L235,50 L-15,50 Z" fill="url(#blackPlastic)" stroke="#333" />
              <path d="M-15,50 L235,50 L235,70 L-15,70 Z" fill="#111" /> {/* Front Lip */}
              
              {/* Coin Slot */}
              <rect x="190" y="15" width="5" height="20" rx="2" fill="#000" stroke="#888" />
-             <rect x="192" y="18" width="1" height="14" fill="#0F0" className="animate-pulse" filter="url(#neonBlur)"/>
+             <rect x="192" y="18" width="1" height="14" fill="#0F0" className="animate-pulse" filter="url(#ledGlow)"/>
              
-             {/* Deck Texture */}
-             <rect x="15" y="5" width="160" height="40" fill="#000" opacity="0.2" rx="4" />
+             {/* START LEVER (Left Knob - Iconic Pachislo Feature) */}
+             <g transform="translate(15, 25)">
+                 <circle cx="0" cy="0" r="12" fill="#111" stroke="#333" />
+                 <circle cx="0" cy="0" r="8" fill="url(#chromeGradient)" />
+                 <circle cx="0" cy="-5" r="10" fill="red" className={isBusy ? "" : "animate-pulse"} /> {/* The Knob */}
+             </g>
+
+             {/* STOP BUTTONS (Center - 3 Buttons) */}
+             <g transform="translate(70, 15)">
+                 <circle cx="0" cy="10" r="12" fill="#c0392b" stroke="#500" strokeWidth="2" />
+                 <text x="0" y="13" textAnchor="middle" fill="white" fontSize="6" fontWeight="bold">1</text>
+                 
+                 <circle cx="40" cy="10" r="12" fill="#c0392b" stroke="#500" strokeWidth="2" />
+                 <text x="40" y="13" textAnchor="middle" fill="white" fontSize="6" fontWeight="bold">2</text>
+                 
+                 <circle cx="80" cy="10" r="12" fill="#c0392b" stroke="#500" strokeWidth="2" />
+                 <text x="80" y="13" textAnchor="middle" fill="white" fontSize="6" fontWeight="bold">3</text>
+             </g>
         </g>
     );
 
@@ -198,7 +270,7 @@ const CabinetSVG = ({
              <path d="M0,0 L180,0 L170,70 L10,70 Z" fill="#000" stroke="url(#chromeGradient)" strokeWidth="2" />
              
              {/* Art Area */}
-             <g clipPath="url(#bellyClip)">
+             <g clipPath="url(#screenCutout)">
                  <rect x="5" y="5" width="170" height="60" fill={islandId===3 ? '#300' : '#101'} />
                  {/* Character Sticker */}
                  <g transform="translate(140, 35) scale(0.25)">
@@ -206,7 +278,7 @@ const CabinetSVG = ({
                  </g>
                  
                  {/* Info Text */}
-                 <text x="15" y="25" fill="#FFF" fontSize="12" fontWeight="black" style={{textShadow:'0 0 5px white'}}>
+                 <text x="15" y="25" fill="#FFF" fontSize="14" fontWeight="black" style={{textShadow:'0 0 5px white'}}>
                      BIG BONUS
                  </text>
                  <text x="15" y="45" fill="gold" fontSize="10" fontFamily="monospace">
@@ -216,6 +288,10 @@ const CabinetSVG = ({
              
              {/* Glare */}
              <path d="M0,0 L180,0 L170,70 L10,70 Z" fill="url(#glassGlare)" opacity="0.3" pointerEvents="none" />
+             
+             {/* Serial Plate */}
+             <rect x="60" y="55" width="60" height="10" fill="#silver" stroke="black" rx="1" />
+             <text x="90" y="62" textAnchor="middle" fill="black" fontSize="5" fontFamily="monospace" fontWeight="bold">{displaySerial}</text>
         </g>
     );
 
@@ -235,7 +311,7 @@ const CabinetSVG = ({
             {/* Floor Shadow */}
             <ellipse cx="120" cy="390" rx="110" ry="12" fill="#000" opacity="0.6" filter="blur(6px)" />
             
-            {renderHousing()}
+            {renderLayerFrame()}
             {renderTopper()}
             {renderScreenArea()}
             {renderButtonDeck()}
