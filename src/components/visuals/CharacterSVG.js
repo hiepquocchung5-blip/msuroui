@@ -108,8 +108,8 @@ const CharacterSVG = ({
   );
 
   /* ===================== 3. CHARACTER STYLES ===================== */
-
-  const renderContent = () => {
+  // Renamed function to match return call
+  const renderCharacter = () => {
     switch(type) {
         // 1. LUNA (Nami Style - Pirate Bikini)
         case 'luna': return (
@@ -303,7 +303,7 @@ const CharacterSVG = ({
   }
 
   return (
-    <svg viewBox="0 0 512 800" className={`w-full h-full drop-shadow-2xl transition-all duration-500 ${isWin ? 'scale-105 drop-shadow-[0_0_30px_rgba(255,215,0,0.5)]' : ''}`} style={{transform: `scale(${scale})`}}>
+    <svg viewBox="0 0 512 800" className={`w-full h-full drop-shadow-2xl transition-all duration-500 ${isWin ? 'scale-110 drop-shadow-[0_0_30px_rgba(255,215,0,0.5)]' : ''}`} style={{transform: `scale(${scale})`}}>
       {renderDefs()}
       <g className={isWin ? 'animate-bounce' : 'animate-[pulse_6s_infinite]'}>
          {renderCharacter()}
