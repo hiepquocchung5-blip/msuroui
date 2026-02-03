@@ -19,314 +19,245 @@ const CabinetSVG = ({
     
     const displaySerial = serialNumber || `SN-${islandId}-${machineNumber.toString().padStart(3,'0')}`;
 
-    // --- 1. DEFINITIONS (Materials & Gradients) ---
+    // --- 1. DEFINITIONS (Advanced Materials) ---
     const renderDefs = () => (
         <defs>
-            {/* COMMON METALS (Brightened for Dark Mode) */}
+            {/* PLASTICS & METALS */}
+            <linearGradient id="plasticGloss" x1="0" y1="0" x2="1" y2="1">
+                <stop offset="0%" stopColor="rgba(255,255,255,0.8)" />
+                <stop offset="50%" stopColor="rgba(255,255,255,0)" />
+                <stop offset="100%" stopColor="rgba(255,255,255,0.4)" />
+            </linearGradient>
             <linearGradient id="chromeGradient" x1="0" y1="0" x2="1" y2="0">
-                <stop offset="0%" stopColor="#444" />
-                <stop offset="15%" stopColor="#999" />
-                <stop offset="25%" stopColor="#bbb" />
-                <stop offset="50%" stopColor="#fff" />
-                <stop offset="75%" stopColor="#999" />
-                <stop offset="100%" stopColor="#444" />
+                <stop offset="0%" stopColor="#333" />
+                <stop offset="20%" stopColor="#FFF" />
+                <stop offset="50%" stopColor="#999" />
+                <stop offset="80%" stopColor="#FFF" />
+                <stop offset="100%" stopColor="#333" />
             </linearGradient>
             <linearGradient id="goldGradient" x1="0" y1="0" x2="1" y2="1">
-                <stop offset="0%" stopColor="#C5A059" /> 
-                <stop offset="40%" stopColor="#FFD700" />
-                <stop offset="60%" stopColor="#FFFACD" />
-                <stop offset="100%" stopColor="#DAA520" />
-            </linearGradient>
-            <linearGradient id="darkMetal" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor="#374151" />
-                <stop offset="100%" stopColor="#111827" />
-            </linearGradient>
-            <linearGradient id="cylinderShine" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor="#000" stopOpacity="0.8" />
-                <stop offset="20%" stopColor="#000" stopOpacity="0.2" />
-                <stop offset="50%" stopColor="#FFF" stopOpacity="0.1" />
-                <stop offset="80%" stopColor="#000" stopOpacity="0.2" />
-                <stop offset="100%" stopColor="#000" stopOpacity="0.8" />
+                <stop offset="0%" stopColor="#BF953F" />
+                <stop offset="50%" stopColor="#FCF6BA" />
+                <stop offset="100%" stopColor="#AA771C" />
             </linearGradient>
 
-            {/* GLASS & LIGHTS */}
-            <linearGradient id="glassGlare" x1="0" y1="0" x2="1" y2="1">
-                <stop offset="0%" stopColor="rgba(255,255,255,0.1)" />
-                <stop offset="45%" stopColor="rgba(255,255,255,0.3)" />
-                <stop offset="50%" stopColor="rgba(255,255,255,0.05)" />
-                <stop offset="100%" stopColor="rgba(255,255,255,0.1)" />
-            </linearGradient>
-            <filter id="neonBlur">
-                <feGaussianBlur stdDeviation="2.5" result="coloredBlur" />
+            {/* LIGHTING FX */}
+            <filter id="ledGlow" x="-50%" y="-50%" width="200%" height="200%">
+                <feGaussianBlur stdDeviation="3" result="coloredBlur" />
                 <feMerge><feMergeNode in="coloredBlur" /><feMergeNode in="SourceGraphic" /></feMerge>
             </filter>
-            <pattern id="speakerMesh" width="4" height="4" patternUnits="userSpaceOnUse">
-                <rect width="4" height="4" fill="#111"/>
-                <circle cx="2" cy="2" r="1.5" fill="#333" />
+            
+            <pattern id="speakerMesh" width="3" height="3" patternUnits="userSpaceOnUse">
+                <rect width="3" height="3" fill="#111"/>
+                <circle cx="1.5" cy="1.5" r="1" fill="#333" />
             </pattern>
-            
-            {/* ISLAND SKINS */}
-            <linearGradient id="skinVegas" x1="0" y1="0" x2="1" y2="0"><stop offset="0%" stopColor="#900"/><stop offset="50%" stopColor="#D00"/><stop offset="100%" stopColor="#900"/></linearGradient>
-            <linearGradient id="skinMagma" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#FF4500"/><stop offset="100%" stopColor="#330000"/></linearGradient>
-            <linearGradient id="skinAloha" x1="0" y1="0" x2="1" y2="0"><stop offset="0%" stopColor="#8B4513"/><stop offset="50%" stopColor="#CD853F"/><stop offset="100%" stopColor="#8B4513"/></linearGradient>
-            <linearGradient id="skinIce" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#E0FFFF"/><stop offset="100%" stopColor="#00BFFF"/></linearGradient>
-            <linearGradient id="skinSky" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stopColor="#Eef2f3"/><stop offset="50%" stopColor="#FFFFFF"/><stop offset="100%" stopColor="#BDC3C7"/></linearGradient>
-            <linearGradient id="skinBio" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#556B2F"/><stop offset="100%" stopColor="#004d00"/></linearGradient>
-            <linearGradient id="skinRust" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stopColor="#8B4513"/><stop offset="50%" stopColor="#A0522D"/><stop offset="100%" stopColor="#5D4037"/></linearGradient>
-            <linearGradient id="skinCyber" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stopColor="#2C3E50"/><stop offset="50%" stopColor="#34495E"/><stop offset="100%" stopColor="#2C3E50"/></linearGradient>
+
+            {/* THEME SKINS (Base Chassis Colors) */}
+            <linearGradient id="skinVegas" x1="0" y1="0" x2="1" y2="0"><stop offset="0%" stopColor="#600"/><stop offset="50%" stopColor="#A00"/><stop offset="100%" stopColor="#400"/></linearGradient>
+            <linearGradient id="skinMagical" x1="0" y1="0" x2="1" y2="0"><stop offset="0%" stopColor="#FF69B4"/><stop offset="50%" stopColor="#FFC0CB"/><stop offset="100%" stopColor="#FF1493"/></linearGradient>
+            <linearGradient id="skinGothic" x1="0" y1="0" x2="1" y2="0"><stop offset="0%" stopColor="#2c3e50"/><stop offset="50%" stopColor="#4ca1af"/><stop offset="100%" stopColor="#2c3e50"/></linearGradient>
             <linearGradient id="skinGold" x1="0" y1="0" x2="1" y2="0"><stop offset="0%" stopColor="#B8860B"/><stop offset="50%" stopColor="#FFD700"/><stop offset="100%" stopColor="#B8860B"/></linearGradient>
-            <linearGradient id="skinVoid" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stopColor="#000"/><stop offset="50%" stopColor="#4B0082"/><stop offset="100%" stopColor="#000"/></linearGradient>
+            <linearGradient id="skinVoid" x1="0" y1="0" x2="1" y2="0"><stop offset="0%" stopColor="#000"/><stop offset="50%" stopColor="#333"/><stop offset="100%" stopColor="#000"/></linearGradient>
             
-            {/* MASKS */}
-            <clipPath id="screenCutout">
-                <rect x="40" y="85" width="160" height="115" rx="4" />
-            </clipPath>
-            <clipPath id="bellyClip">
-                <rect x="0" y="0" width="160" height="60" rx="4" />
-            </clipPath>
+            <clipPath id="screenCutout"><rect x="45" y="95" width="150" height="110" rx="4" /></clipPath>
+            <clipPath id="bellyClip"><path d="M20,290 L220,290 L220,380 L20,380 Z" /></clipPath>
         </defs>
     );
 
-    // --- LAYER 1: ENVIRONMENT (Shadows & Glow) ---
-    const renderLayerEnvironment = () => (
-        <g id="layer-env">
-            <ellipse cx="120" cy="390" rx="100" ry="15" fill="black" opacity="0.6" filter="blur(8px)" />
-            {isHot && <ellipse cx="120" cy="390" rx="130" ry="25" fill="url(#goldGradient)" opacity="0.4" filter="blur(15px)" className="animate-pulse" />}
-        </g>
-    );
-
-    // --- LAYER 2: CABINET FRAME (The Housing) ---
-    const renderLayerFrame = () => {
-        // Dynamic styling based on Island
-        let bodyFill = "url(#darkMetal)";
+    // --- 2. CHASSIS GEOMETRY (10 Variations) ---
+    const renderChassis = () => {
+        let path, fill, trim;
         
         switch(islandId) {
-            case 1: // VEGAS (Neon/Red)
+            case 1: // Vegas (Classic Red/Gold Box)
+                fill = "url(#skinVegas)"; trim = "url(#goldGradient)";
+                path = "M10,40 Q120,20 230,40 L230,400 L10,400 Z";
+                break;
+            case 6: // Sky (Magical Girl Style - Rounded Wings)
+                fill = "url(#skinMagical)"; trim = "#FFF";
                 return (
                     <g>
-                        <path d="M15,20 L225,20 L235,390 L5,390 Z" fill="url(#skinVegas)" stroke="#FFD700" strokeWidth="2" />
-                        <path d="M20,30 L10,380" stroke="#0FF" strokeWidth="3" className="animate-pulse" filter="url(#neonBlur)" opacity="0.9" />
-                        <path d="M220,30 L230,380" stroke="#FF00FF" strokeWidth="3" className="animate-pulse" filter="url(#neonBlur)" opacity="0.9" />
+                        {/* Winged Top */}
+                        <path d="M0,50 Q20,20 60,30 L180,30 Q220,20 240,50 L230,400 L10,400 Z" fill="url(#skinMagical)" stroke="#FF69B4" strokeWidth="2"/>
+                        <path d="M0,50 Q20,20 60,30" fill="none" stroke="white" strokeWidth="3" />
+                        <path d="M180,30 Q220,20 240,50" fill="none" stroke="white" strokeWidth="3" />
+                        {/* Gem on Top */}
+                        <circle cx="120" cy="25" r="15" fill="#FF00FF" stroke="white" strokeWidth="2" filter="url(#ledGlow)" className="animate-pulse"/>
                     </g>
                 );
-            case 2: // ALOHA (Bamboo)
+            case 9: // Gold (Industrial/Mecha)
+                fill = "url(#skinGold)"; trim = "#000";
                 return (
                     <g>
-                        <path d="M10,20 L230,20 L235,400 L5,400 Z" fill="url(#skinAloha)" stroke="#DAA520" strokeWidth="2" />
-                        <rect x="5" y="20" width="15" height="380" fill="#8D6E63" rx="5" stroke="#3E2723" />
-                        <rect x="220" y="20" width="15" height="380" fill="#8D6E63" rx="5" stroke="#3E2723" />
+                        <path d="M10,20 L50,20 L60,40 L180,40 L190,20 L230,20 L240,400 L0,400 Z" fill="url(#goldGradient)" stroke="#000" strokeWidth="2"/>
+                        <rect x="20" y="50" width="200" height="340" fill="#333" opacity="0.3"/>
+                        <path d="M10,20 L20,400" stroke="white" strokeWidth="1" opacity="0.5"/>
                     </g>
                 );
-            case 3: // MAGMA (Obsidian)
-                return (
-                    <g>
-                        <path d="M15,20 L225,20 L235,390 L5,390 Z" fill="url(#skinMagma)" stroke="none" />
-                        <path d="M20,60 L60,100 M200,300 L180,250" stroke="#FF4500" strokeWidth="3" filter="url(#neonBlur)" className="animate-pulse" />
-                    </g>
-                );
-            case 4: // NOCTYRA (Gothic)
-                 return (
-                    <g>
-                        <path d="M20,50 L120,10 L220,50 L220,390 L20,390 Z" fill="#2d3436" stroke="#6c5ce7" strokeWidth="2" />
-                        <path d="M30,60 L30,380 M210,60 L210,380" stroke="#000" strokeWidth="4" />
-                        <path d="M120,20 L120,60" stroke="#6c5ce7" strokeWidth="2" />
-                    </g>
-                 );
-            case 5: // GLACIA (Ice)
-                return (
-                    <g>
-                        <path d="M20,20 L220,20 L230,390 L10,390 Z" fill="url(#skinIce)" stroke="#fff" strokeWidth="1" opacity="0.9" />
-                        <path d="M20,20 L80,390 M220,20 L160,390" stroke="white" strokeWidth="1" opacity="0.7" />
-                        <circle cx="30" cy="40" r="2" fill="white" className="animate-ping" />
-                    </g>
-                );
-            case 6: // SKY (Marble)
-                 return (
-                    <g>
-                        <path d="M20,20 L220,20 L220,390 L20,390 Z" fill="url(#skinSky)" stroke="#FFD700" strokeWidth="2" />
-                        <rect x="10" y="20" width="10" height="370" fill="#FFF" />
-                        <rect x="220" y="20" width="10" height="370" fill="#FFF" />
-                    </g>
-                 );
-            case 7: // BIO (Moss)
-                 return (
-                    <g>
-                        <path d="M20,30 Q120,10 220,30 L230,390 L10,390 Z" fill="url(#skinBio)" stroke="#7CFC00" strokeWidth="3" />
-                        <path d="M30,50 Q80,100 30,200" fill="none" stroke="#32CD32" strokeWidth="4" />
-                        <path d="M210,300 Q160,200 210,100" fill="none" stroke="#32CD32" strokeWidth="4" />
-                    </g>
-                 );
-            case 8: // CYBER (Rust/Tech)
-                 return (
-                    <g>
-                        <path d="M15,20 L225,20 L225,390 L15,390 Z" fill="url(#skinCyber)" stroke="#000" strokeWidth="2" />
-                        <rect x="30" y="30" width="180" height="360" fill="none" stroke="#FFFF00" strokeWidth="2" strokeDasharray="10,5" className="animate-pulse" />
-                        <text x="120" y="380" textAnchor="middle" fill="yellow" fontSize="8" fontFamily="monospace">HIGH VOLTAGE</text>
-                    </g>
-                 );
-            case 9: // GOLD (Steampunk)
-                 return (
-                    <g>
-                        <path d="M20,20 L220,20 L220,390 L20,390 Z" fill="url(#skinGold)" stroke="#B8860B" strokeWidth="4" />
-                        <circle cx="20" cy="20" r="10" fill="#B8860B" />
-                        <circle cx="220" cy="20" r="10" fill="#B8860B" />
-                        <path d="M20,390 L220,390" stroke="#B8860B" strokeWidth="4" strokeDasharray="5,5" />
-                    </g>
-                 );
-            case 10: // VOID (Space)
-                 return (
-                    <g>
-                        <path d="M30,30 L210,30 L210,380 L30,380 Z" fill="url(#skinVoid)" stroke="#8A2BE2" strokeWidth="2" />
-                        <circle cx="120" cy="200" r="100" stroke="#8A2BE2" strokeWidth="2" fill="none" opacity="0.8" className="animate-pulse" />
-                    </g>
-                 );
-            default: // Generic
-                return <path d="M15,20 L225,20 L235,390 L5,390 Z" fill="url(#darkMetal)" stroke="#999" strokeWidth="2" />;
+            default: // Standard Pachislo Box
+                fill = "url(#skinGothic)"; trim = "url(#chromeGradient)";
+                path = "M20,30 L220,30 L220,390 L20,390 Z";
         }
+
+        return (
+            <g>
+                <path d={path} fill={fill} stroke={trim} strokeWidth="3" />
+                {/* Side LED Strips */}
+                <path d="M25,50 L25,380" stroke={isHot ? "gold" : "cyan"} strokeWidth="4" className="animate-pulse" filter="url(#ledGlow)"/>
+                <path d="M215,50 L215,380" stroke={isHot ? "gold" : "magenta"} strokeWidth="4" className="animate-pulse" filter="url(#ledGlow)"/>
+            </g>
+        );
     };
 
-    // --- 3. TOPPER (Data Counter & Manual) ---
+    // --- 3. TOPPER (Data Counter) ---
     const renderTopper = () => (
-        <g transform="translate(65, -5)">
-            {/* Main Unit */}
-            <rect x="0" y="0" width="110" height="35" fill="#080808" stroke="#333" rx="3" />
+        <g transform="translate(60, -10)">
+            <rect x="0" y="0" width="120" height="35" fill="#111" stroke="#333" rx="4" />
             
-            {/* LED Display Area (Spins) */}
+            {/* Big LED Digits */}
             <g transform="translate(10, 5)">
-                <rect x="0" y="0" width="80" height="25" fill="#220000" />
-                <text x="75" y="20" textAnchor="end" fill="red" fontSize="14" fontFamily="monospace" fontWeight="bold" filter="url(#ledGlow)">
+                <rect x="0" y="0" width="70" height="25" fill="#200" />
+                <text x="65" y="20" textAnchor="end" fill="red" fontSize="16" fontFamily="monospace" fontWeight="bold" filter="url(#ledGlow)">
                     {stats?.laps || 0}
                 </text>
-                <text x="5" y="8" fill="#500" fontSize="5" fontWeight="bold">SPINS</text>
+                <text x="5" y="8" fill="#500" fontSize="5">GAMES</text>
             </g>
             
-            {/* Status Lights (Candle) */}
-            <g transform="translate(95, 5)">
-                <circle cx="4" cy="4" r="3" fill={isBroken ? 'red' : '#300'} className={isBroken ? "animate-pulse" : ""} />
-                <circle cx="4" cy="12" r="3" fill={isHot ? 'yellow' : '#330'} className={isHot ? 'animate-pulse' : ''} />
-                <circle cx="4" cy="20" r="3" fill={isBusy ? 'blue' : '#003'} className={isBusy ? "animate-pulse" : ""} />
-            </g>
-
-            {/* Guide/Manual Holder (Left Side) */}
-            <g transform="translate(-20, 5)">
-                 <rect x="0" y="0" width="20" height="25" fill="#222" stroke="#444" rx="1"/>
-                 <text x="10" y="15" textAnchor="middle" fill="#666" fontSize="4" fontWeight="bold">INFO</text>
+            {/* Battle History Lamps */}
+            <g transform="translate(85, 5)">
+                <circle cx="5" cy="5" r="3" fill={isBroken ? 'red' : '#300'} />
+                <circle cx="15" cy="5" r="3" fill={isHot ? 'yellow' : '#330'} className={isHot?'animate-pulse':''} />
+                <circle cx="25" cy="5" r="3" fill={isBusy ? 'lime' : '#030'} className={isBusy?'animate-pulse':''} />
             </g>
         </g>
     );
 
     // --- 4. SCREEN BEZEL ---
-    const renderScreenArea = () => {
+    const renderScreen = () => {
         if (mode === 'game') {
-            // Game Mode: Hollow frame
             return (
                 <g>
-                    {/* Bezel Frame */}
-                    <path d="M40,85 H200 V205 H40 Z M10,40 H230 V380 H10 Z" fill="rgba(0,0,0,0.95)" fillRule="evenodd" />
-                    {/* Chrome Inner Trim */}
-                    <rect x="40" y="85" width="160" height="120" fill="none" stroke="url(#chromeGradient)" strokeWidth="4" rx="2" />
+                    {/* Hollow frame for HTML reels */}
+                    <path d="M45,95 H195 V205 H45 Z M10,30 H230 V390 H10 Z" fill="rgba(10,10,10,0.95)" fillRule="evenodd" />
+                    {/* Chrome Trim */}
+                    <rect x="43" y="93" width="154" height="114" fill="none" stroke="url(#chromeGradient)" strokeWidth="4" rx="2" />
                 </g>
             );
         }
-
-        // Lobby Mode: Static Screen
         return (
-            <g transform="translate(40, 85)">
-                <rect x="0" y="0" width="160" height="120" fill="#000" stroke="#333" strokeWidth="2" />
-                {/* Mock Reels */}
-                <rect x="10" y="10" width="40" height="100" fill="url(#chromeGradient)" opacity="0.1" />
-                <rect x="60" y="10" width="40" height="100" fill="url(#chromeGradient)" opacity="0.1" />
-                <rect x="110" y="10" width="40" height="100" fill="url(#chromeGradient)" opacity="0.1" />
-                
-                <text x="80" y="65" textAnchor="middle" fill={isBusy ? '#F00' : '#0F0'} fontWeight="bold" fontSize="18" className={!isBusy ? 'animate-pulse' : ''} style={{textShadow: '0 0 10px currentColor'}}>
-                    {isBroken ? 'ERROR' : (isBusy ? 'PLAYING' : 'OPEN')}
-                </text>
+            <g transform="translate(45, 95)">
+                <rect x="0" y="0" width="150" height="110" fill="#000" stroke="#333" strokeWidth="2" />
+                {/* Simulated Reels */}
+                <rect x="10" y="10" width="40" height="90" fill="url(#chromeGradient)" opacity="0.1"/>
+                <rect x="55" y="10" width="40" height="90" fill="url(#chromeGradient)" opacity="0.1"/>
+                <rect x="100" y="10" width="40" height="90" fill="url(#chromeGradient)" opacity="0.1"/>
+                <text x="75" y="60" textAnchor="middle" fill={isBusy ? 'red' : 'green'} fontSize="14" fontWeight="bold">{isBusy ? 'PLAY' : 'IDLE'}</text>
             </g>
         );
     };
 
-    // --- 5. BUTTON DECK & BELLY GLASS ---
-    const renderButtonDeck = () => (
-        <g transform="translate(10, 230)">
-             {/* Sloped Deck Body */}
-             <path d="M0,0 L220,0 L235,50 L-15,50 Z" fill="url(#chromeGradient)" stroke="#111" />
-             <path d="M-15,50 L235,50 L235,70 L-15,70 Z" fill="#111" /> {/* Front Lip */}
-             
-             {/* Coin Slot */}
-             <rect x="190" y="15" width="5" height="20" rx="2" fill="#000" stroke="#888" />
-             <rect x="192" y="18" width="1" height="14" fill="#0F0" className="animate-pulse" filter="url(#neonBlur)"/>
-             
-             {/* START LEVER (Knob) */}
-             <g transform="translate(15, 25)">
-                 <circle cx="0" cy="0" r="14" fill="#111" stroke="#333" />
-                 <circle cx="0" cy="0" r="10" fill="url(#chromeGradient)" />
-                 <circle cx="0" cy="-6" r="12" fill="red" className={isBusy ? "" : "animate-pulse"} />
-             </g>
+    // --- 5. CONTROL DECK (Pachislo Style) ---
+    const renderControls = () => (
+        <g transform="translate(10, 220)">
+            {/* Slanted Table */}
+            <path d="M0,0 L220,0 L235,60 L-15,60 Z" fill="url(#chromeGradient)" stroke="#111" />
+            <path d="M-15,60 L235,60 L235,75 L-15,75 Z" fill="#222" />
+            
+            {/* START LEVER (The Knob) */}
+            <g transform="translate(20, 30)">
+                <circle cx="0" cy="0" r="16" fill="#111" stroke="#333" strokeWidth="2" />
+                <circle cx="0" cy="0" r="12" fill="silver" />
+                <circle cx="0" cy="-8" r="12" fill="red" className={!isBusy ? "animate-pulse" : ""} /> {/* The Ball */}
+            </g>
 
-             {/* STOP BUTTONS */}
-             <g transform="translate(70, 15)">
-                 <circle cx="0" cy="10" r="12" fill="#c0392b" stroke="#500" strokeWidth="2" />
-                 <text x="0" y="13" textAnchor="middle" fill="white" fontSize="6" fontWeight="bold">1</text>
-                 <circle cx="40" cy="10" r="12" fill="#c0392b" stroke="#500" strokeWidth="2" />
-                 <text x="40" y="13" textAnchor="middle" fill="white" fontSize="6" fontWeight="bold">2</text>
-                 <circle cx="80" cy="10" r="12" fill="#c0392b" stroke="#500" strokeWidth="2" />
-                 <text x="80" y="13" textAnchor="middle" fill="white" fontSize="6" fontWeight="bold">3</text>
-             </g>
+            {/* STOP BUTTONS (3 Buttons) */}
+            <g transform="translate(75, 20)">
+                {/* Button 1 */}
+                <g>
+                    <circle cx="0" cy="10" r="14" fill="#c0392b" stroke="#333" strokeWidth="2" />
+                    <text x="0" y="14" textAnchor="middle" fill="white" fontSize="8" fontWeight="bold">STOP</text>
+                </g>
+                {/* Button 2 */}
+                <g transform="translate(35, 0)">
+                    <circle cx="0" cy="10" r="14" fill="#c0392b" stroke="#333" strokeWidth="2" />
+                    <text x="0" y="14" textAnchor="middle" fill="white" fontSize="8" fontWeight="bold">STOP</text>
+                </g>
+                {/* Button 3 */}
+                <g transform="translate(70, 0)">
+                    <circle cx="0" cy="10" r="14" fill="#c0392b" stroke="#333" strokeWidth="2" />
+                    <text x="0" y="14" textAnchor="middle" fill="white" fontSize="8" fontWeight="bold">STOP</text>
+                </g>
+            </g>
+
+            {/* Coin Slot */}
+            <rect x="195" y="15" width="5" height="25" rx="2" fill="#000" stroke="#888" />
+            <rect x="197" y="18" width="1" height="19" fill="#0F0" className="animate-pulse" filter="url(#ledGlow)"/>
         </g>
     );
 
-    const renderBellyGlass = () => (
-        <g transform="translate(30, 310)">
-             {/* Frame */}
-             <path d="M0,0 L180,0 L170,70 L10,70 Z" fill="#000" stroke="url(#chromeGradient)" strokeWidth="2" />
-             
-             {/* Art Area */}
-             <g clipPath="url(#screenCutout)">
-                 <rect x="5" y="5" width="170" height="60" fill={islandId===3 ? '#300' : '#101'} />
-                 
-                 {/* Character Sticker */}
-                 <g transform="translate(140, 35) scale(0.25)">
+    // --- 6. BELLY GLASS (Art Panel) ---
+    // Note: Replace CharacterSVG with <image> tag for PNGs
+    const renderBelly = () => (
+        <g transform="translate(20, 290)">
+            <rect x="0" y="0" width="200" height="90" rx="2" fill="#000" stroke="#333" />
+            
+            <g clipPath="url(#bellyClip)">
+                {/* Placeholder for PNG Art */}
+                {/* <image href="/assets/belly/madoka.png" x="0" y="0" width="200" height="90" /> */}
+                
+                {/* Fallback Vector Art */}
+                <rect x="0" y="0" width="200" height="90" fill={islandId===6 ? '#FFC0CB' : '#220000'} opacity="0.8" />
+                <g transform="translate(150, 45) scale(0.3)">
                     <CharacterSVG type={charId} stickerMode={true} />
-                 </g>
-                 
-                 {/* Text */}
-                 <text x="15" y="25" fill="#FFF" fontSize="14" fontWeight="black" style={{textShadow:'0 0 5px white'}}>BIG BONUS</text>
-                 <text x="15" y="45" fill="gold" fontSize="10" fontFamily="monospace">WIN: {stats.wins}</text>
-             </g>
-             
-             {/* Glare */}
-             <path d="M0,0 L180,0 L170,70 L10,70 Z" fill="url(#glassGlare)" opacity="0.3" pointerEvents="none" />
-             
-             {/* Serial Plate */}
-             <rect x="60" y="55" width="60" height="10" fill="#silver" stroke="black" rx="1" />
-             <text x="90" y="62" textAnchor="middle" fill="black" fontSize="5" fontFamily="monospace" fontWeight="bold">{displaySerial}</text>
+                </g>
+                
+                <text x="100" y="45" textAnchor="middle" fill="white" fontSize="18" fontWeight="900" style={{textShadow: '0 0 10px #FF00FF'}}>
+                    {isHot ? 'SUPER JACKPOT' : 'SUROPARA'}
+                </text>
+                <text x="100" y="65" textAnchor="middle" fill="gold" fontSize="12" fontFamily="monospace">
+                    WIN: {stats.wins}
+                </text>
+            </g>
+            
+            {/* Glass Reflection */}
+            <path d="M0,0 L200,0 L180,90 L20,90 Z" fill="url(#plasticGloss)" opacity="0.3" pointerEvents="none" />
+            
+            {/* Serial Plate */}
+            <rect x="70" y="80" width="60" height="8" fill="silver" stroke="black" />
+            <text x="100" y="86" textAnchor="middle" fill="black" fontSize="4" fontFamily="monospace">{displaySerial}</text>
         </g>
     );
 
     const renderCoinTray = () => (
-        <g transform="translate(0, 380)">
-             <path d="M10,0 Q120,15 230,0 L230,20 Q120,30 10,20 Z" fill="url(#chromeGradient)" stroke="#333" />
-             <rect x="20" y="5" width="200" height="12" rx="5" fill="#111" opacity="0.9" />
-             {isHot && <circle cx="40" cy="12" r="4" fill="gold" stroke="orange" />}
+        <g transform="translate(0, 375)">
+            <path d="M10,0 Q120,15 230,0 L230,25 Q120,35 10,25 Z" fill="url(#chromeGradient)" stroke="#222" />
+            <rect x="25" y="5" width="190" height="15" rx="5" fill="#111" opacity="0.9" />
+            {isHot && (
+                 <g>
+                    <circle cx="50" cy="12" r="5" fill="gold" stroke="orange" />
+                    <circle cx="60" cy="14" r="5" fill="gold" stroke="orange" />
+                    <circle cx="55" cy="10" r="5" fill="gold" stroke="orange" />
+                 </g>
+            )}
         </g>
     );
 
     // --- MAIN RENDER ---
     return (
-        <svg width="240" height="400" viewBox="0 0 240 400" className={`drop-shadow-2xl transition-transform group-hover:-translate-y-2 duration-300 ${isBroken ? 'animate-pulse' : ''}`}>
+        <svg width="240" height="400" viewBox="0 0 240 400" className={`drop-shadow-2xl transition-transform duration-300 ${mode==='hall' ? 'group-hover:-translate-y-2' : ''}`}>
             {renderDefs()}
             
             {/* Shadow */}
-            <ellipse cx="120" cy="390" rx="110" ry="12" fill="#000" opacity="0.7" filter="blur(6px)" />
+            <ellipse cx="120" cy="395" rx="100" ry="10" fill="#000" opacity="0.7" filter="blur(6px)" />
             
-            {renderCabinetFrame()}
+            {renderChassis()}
             {renderTopper()}
             {renderScreenArea()}
-            {renderButtonDeck()}
-            {renderBellyGlass()}
+            {renderControls()}
+            {renderBelly()}
             {renderCoinTray()}
-
-            {/* Occupant (Hall Mode) */}
+            
+            {/* Hall Mode Occupant */}
             {mode === 'hall' && isBusy && occupantPetId && (
                  <g transform="translate(80, 260) scale(0.35)">
                     <CharacterSVG type={occupantPetId} mood="idle" />
