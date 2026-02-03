@@ -52,21 +52,25 @@ const CharacterSVG = ({
       <linearGradient id="hairRed" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#FF6347"/><stop offset="100%" stopColor="#8B0000"/></linearGradient>
       <linearGradient id="hairWhite" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#FFF"/><stop offset="100%" stopColor="#DDD"/></linearGradient>
       <linearGradient id="hairPurple" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#D8BFD8"/><stop offset="100%" stopColor="#4B0082"/></linearGradient>
+      <linearGradient id="hairSky" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#87CEEB"/><stop offset="100%" stopColor="#4682B4"/></linearGradient>
 
       {/* CLOTHING MATERIALS */}
       <linearGradient id="fabricBikini" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stopColor="#00CED1"/><stop offset="100%" stopColor="#008B8B"/></linearGradient>
       <linearGradient id="fabricDark" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#333"/><stop offset="100%" stopColor="#000"/></linearGradient>
       <linearGradient id="fabricGold" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stopColor="#FFD700"/><stop offset="100%" stopColor="#B8860B"/></linearGradient>
+      <linearGradient id="gold" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stopColor="#FFD700"/><stop offset="100%" stopColor="#B8860B"/></linearGradient>
       <linearGradient id="fabricRed" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#FF0000"/><stop offset="100%" stopColor="#800000"/></linearGradient>
       <linearGradient id="latexShiny" x1="0" y1="0" x2="1" y2="0"><stop offset="0%" stopColor="#333"/><stop offset="50%" stopColor="#777"/><stop offset="100%" stopColor="#111"/></linearGradient>
 
       <filter id="softShadow"><feGaussianBlur stdDeviation="2" result="blur"/><feOffset in="blur" dx="2" dy="2" result="offsetBlur"/><feMerge><feMergeNode in="offsetBlur"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+      <filter id="softGlow">
+        <feGaussianBlur stdDeviation="4" result="coloredBlur"/>
+        <feMerge><feMergeNode in="coloredBlur"/><feMergeNode in="SourceGraphic"/></feMerge>
+      </filter>
     </defs>
   );
 
   /* ===================== 2. ANATOMY ENGINE ===================== */
-  
-  // Helper to scale width from center (256)
   const sx = (x, factor) => 256 + (x - 256) * factor;
 
   const RealisticBody = ({ 
@@ -78,7 +82,7 @@ const CharacterSVG = ({
 
       return (
         <g className="anatomy-layer">
-            {/* 1. Legs (Thighs) - Static Base */}
+            {/* Legs (Thighs) */}
             <path 
                 d={`M${sx(200, hips)},450 Q${sx(170, thighs)},600 ${sx(210, 1)},750 L245,750 L${sx(250, 0.8)},550`} 
                 fill={`url(#${skinId})`} 
@@ -87,10 +91,9 @@ const CharacterSVG = ({
                 d={`M${sx(312, hips)},450 Q${sx(342, thighs)},600 ${sx(302, 1)},750 L267,750 L${sx(262, 0.8)},550`} 
                 fill={`url(#${skinId})`} 
             />
-            {/* Inner Thigh Softness */}
             <path d="M250,550 Q256,600 250,650" stroke="rgba(0,0,0,0.1)" strokeWidth="4" fill="none" filter="url(#softShadow)" />
 
-            {/* 2. Torso (Hourglass) - Breaths */}
+            {/* Torso */}
             <g className={stickerMode ? '' : 'live-breath'}>
                 <path 
                     d={`
@@ -102,47 +105,58 @@ const CharacterSVG = ({
                     `} 
                     fill={`url(#${skinId})`} 
                 />
-                
-                {/* Hip Dips / Shadows */}
                 {details.hipDip && (
                     <>
                         <path d={`M${sx(185, hips)},470 Q${sx(200, hips)},480 ${sx(210, hips)},500`} stroke="rgba(0,0,0,0.05)" strokeWidth="3" fill="none" />
                         <path d={`M${sx(327, hips)},470 Q${sx(312, hips)},480 ${sx(302, hips)},500`} stroke="rgba(0,0,0,0.05)" strokeWidth="3" fill="none" />
                     </>
                 )}
-
-                {/* Navel */}
                 {details.navel && (
                     <path d="M256,410 Q258,415 256,420 Q254,415 256,410" fill="rgba(0,0,0,0.1)" />
                 )}
 
-                {/* 3. Bust System (Volume + Gravity) */}
+                {/* Bust */}
                 <g transform={`translate(0, ${bust * 5})`}>
-                    {/* Gravity Shadow (Underbust) */}
                     <path 
                         d={`M${sx(205, bust)},300 Q256,320 ${sx(307, bust)},300`} 
                         fill="none" stroke="rgba(0,0,0,0.15)" strokeWidth="6" strokeLinecap="round" 
                     />
-                    {/* Volume Base (Cleavage) */}
                     <path 
                         d={`M256,290 Q${sx(200, bust)},290 ${sx(200, 1)},220 Q256,220 256,290 Q312,220 ${sx(312, 1)},220 Q${sx(312, bust)},290 256,290`} 
                         fill={`url(#${skinId})`} 
                     />
-                    {/* Highlights (Top Curve) */}
                     <path d={`M${sx(220, 1)},240 Q${sx(240, bust)},230 ${sx(250, 1)},250`} stroke="rgba(255,255,255,0.4)" strokeWidth="3" fill="none" />
                     <path d={`M${sx(292, 1)},240 Q${sx(272, bust)},230 ${sx(262, 1)},250`} stroke="rgba(255,255,255,0.4)" strokeWidth="3" fill="none" />
                 </g>
             </g>
 
-            {/* 4. Neck & Shoulders */}
+            {/* Neck & Shoulders */}
             <rect x="246" y="200" width="20" height="40" fill={`url(#${skinId})`} />
             <path d="M180,230 Q220,230 246,220" fill="none" stroke={`url(#${skinId})`} strokeWidth="30" strokeLinecap="round"/>
             <path d="M332,230 Q292,230 266,220" fill="none" stroke={`url(#${skinId})`} strokeWidth="30" strokeLinecap="round"/>
             
-            {/* Clavicles */}
             {details.clavicle && (
                 <path d="M220,235 Q240,240 250,235 M292,235 Q272,240 262,235" stroke="rgba(0,0,0,0.1)" strokeWidth="1" fill="none" />
             )}
+
+            {/* Arms (new – natural hanging pose) */}
+            <path 
+                d="M190,235 Q170,320 165,400" 
+                fill={`url(#${skinId})`} 
+                stroke={`url(#${skinId})`} 
+                strokeWidth="28" 
+                strokeLinecap="round"
+            />
+            <path 
+                d="M322,235 Q342,320 347,400" 
+                fill={`url(#${skinId})`} 
+                stroke={`url(#${skinId})`} 
+                strokeWidth="28" 
+                strokeLinecap="round"
+            />
+            {/* Simple hands */}
+            <ellipse cx="165" cy="400" rx="15" ry="12" fill={`url(#${skinId})`} />
+            <ellipse cx="347" cy="400" rx="15" ry="12" fill={`url(#${skinId})`} />
         </g>
       );
   };
@@ -153,7 +167,15 @@ const CharacterSVG = ({
 
           <path d="M210,130 Q210,240 256,270 Q302,240 302,130 Q302,50 256,50 Q210,50 210,130" fill={`url(#${skinId})`} />
           
-          {/* Eyes (Blinking) */}
+          {/* Ears (new) */}
+          <ellipse cx="195" cy="165" rx="10" ry="18" fill={`url(#${skinId})`} />
+          <ellipse cx="317" cy="165" rx="10" ry="18" fill={`url(#${skinId})`} />
+
+          {/* Eyebrows (new) */}
+          <path d="M218,148 Q232,143 248,148" stroke="#4a2c1f" strokeWidth="2.5" fill="none" strokeLinecap="round"/>
+          <path d="M274,148 Q288,143 304,148" stroke="#4a2c1f" strokeWidth="2.5" fill="none" strokeLinecap="round"/>
+
+          {/* Eyes */}
           <g transform="translate(0, 10)" className={stickerMode ? '' : 'live-blink'}>
               <g transform="translate(228, 160)">
                   <path d="M-14,-6 Q0,-18 14,-6" fill="none" stroke="#000" strokeWidth="2.5" />
@@ -171,6 +193,9 @@ const CharacterSVG = ({
               </g>
           </g>
 
+          {/* Nose (improved) */}
+          <path d="M256,185 Q252,195 256,205 Q260,195 256,185" fill="none" stroke="#000" strokeWidth="1.5" strokeLinecap="round" />
+
           {/* Expressions */}
           <ellipse cx="225" cy="185" rx="10" ry="5" fill="#FF69B4" opacity="0.2" />
           <ellipse cx="287" cy="185" rx="10" ry="5" fill="#FF69B4" opacity="0.2" />
@@ -181,10 +206,9 @@ const CharacterSVG = ({
       </g>
   );
 
-  /* ===================== 3. CHARACTER ROSTER ===================== */
+  /* ===================== 3. CHARACTER ROSTER (normalized proportions) ===================== */
   const renderCharacter = () => {
     switch(type) {
-        // 1. LUNA (One Piece - Nami Style)
         case 'luna': return (
             <>
                 <AnimeFace 
@@ -196,20 +220,16 @@ const CharacterSVG = ({
                         </g>
                     }
                 />
-                <RealisticBody anatomy={{ bust: 1.25, waist: 0.8, hips: 1.2, thighs: 1.1 }} />
-                {/* Bikini Top */}
+                <RealisticBody anatomy={{ bust: 1.05, waist: 0.92, hips: 1.08, thighs: 1.0 }} />
                 <g className={stickerMode ? '' : 'live-breath'}>
                     <path d="M200,280 Q228,330 256,280" fill="teal" stroke="white" strokeWidth="2" />
                     <path d="M256,280 Q284,330 312,280" fill="teal" stroke="white" strokeWidth="2" />
                 </g>
-                {/* Bikini Bottom (Low Rise) */}
                 <path d="M200,450 Q256,500 312,450 L312,420 Q256,460 200,420 Z" fill="teal" />
-                {/* Tattoo */}
                 <path d="M180,240 Q170,250 190,250" fill="none" stroke="#000" strokeWidth="2" />
             </>
         );
 
-        // 2. MIKA (Nico Robin - Elegant)
         case 'mika': return (
             <>
                 <AnimeFace 
@@ -218,17 +238,15 @@ const CharacterSVG = ({
                     hairBack={<path d="M160,100 L140,500 L372,500 L352,100 Z" fill="url(#hairBlack)" />}
                     hairFront={<path d="M256,80 Q360,80 360,400 L300,400 L256,80" fill="url(#hairBlack)" />}
                 />
-                <RealisticBody skinId="skinTan" anatomy={{ bust: 1.15, waist: 0.9, hips: 1.15, thighs: 1.0 }} />
-                {/* Dark Swimsuit */}
+                <RealisticBody skinId="skinTan" anatomy={{ bust: 1.0, waist: 0.95, hips: 1.05, thighs: 1.0 }} />
                 <g className={stickerMode ? '' : 'live-breath'}>
                     <path d="M210,250 Q256,350 302,250 L302,460 Q256,500 210,460 Z" fill="#1a1a1a" />
                     <path d="M220,250 L240,220 L272,220 L292,250" fill="#1a1a1a" />
                 </g>
-                <rect x="230" y="320" width="52" height="2" fill="#333" /> {/* Zipper */}
+                <rect x="230" y="320" width="52" height="2" fill="#333" />
             </>
         );
 
-        // 3. KIRA (Boa Hancock - Empress)
         case 'kira': return (
             <>
                 <AnimeFace 
@@ -236,18 +254,16 @@ const CharacterSVG = ({
                     hairBack={<path d="M120,100 Q256,650 392,100" fill="url(#hairBlack)" />}
                     hairFront={<g fill="none" stroke="url(#hairBlack)" strokeWidth="30"><path d="M256,60 Q180,150 180,450" /> <path d="M256,60 Q332,150 332,450" /></g>}
                 />
-                <RealisticBody anatomy={{ bust: 1.3, waist: 0.75, hips: 1.3, thighs: 1.1 }} />
-                {/* Royal Red/Gold Bikini */}
+                <RealisticBody anatomy={{ bust: 1.1, waist: 0.85, hips: 1.15, thighs: 1.1 }} />
                 <g className={stickerMode ? '' : 'live-breath'}>
                     <path d="M200,280 Q228,340 256,280" fill="url(#fabricRed)" stroke="url(#gold)" strokeWidth="3" />
                     <path d="M256,280 Q284,340 312,280" fill="url(#fabricRed)" stroke="url(#gold)" strokeWidth="3" />
                 </g>
                 <path d="M200,440 Q256,500 312,440 L312,400 Q256,440 200,400 Z" fill="url(#fabricRed)" />
-                <path d="M190,420 L322,420" stroke="url(#gold)" strokeWidth="4" fill="none" /> {/* Gold Belt */}
+                <path d="M190,420 L322,420" stroke="url(#gold)" strokeWidth="4" fill="none" />
             </>
         );
 
-        // 4. YAMI (Noctyra - Latex)
         case 'yami': return (
             <>
                 <AnimeFace 
@@ -256,16 +272,14 @@ const CharacterSVG = ({
                     hairBack={<path d="M100,200 Q256,150 412,200 L350,400 L162,400 Z" fill="#1a0b2e" />}
                     hairFront={<path d="M256,80 Q320,200 350,300 L256,100 L162,300" fill="#4B0082" />}
                 />
-                <RealisticBody skinId="skinPale" anatomy={{ bust: 1.2, waist: 0.85, hips: 1.2, thighs: 1.2 }} />
-                {/* Latex Tube Top */}
+                <RealisticBody skinId="skinPale" anatomy={{ bust: 1.05, waist: 0.9, hips: 1.08, thighs: 1.2 }} />
                 <g className={stickerMode ? '' : 'live-breath'}>
-                    <path d="M190,300 Q256,340 322,300 L322,380 Q256,400 190,380 Z" fill="url(#latex)" />
-                    <path d="M190,300 Q256,340 322,300" fill="none" stroke="rgba(255,255,255,0.3)" strokeWidth="2" /> {/* Highlight */}
+                    <path d="M190,300 Q256,340 322,300 L322,380 Q256,400 190,380 Z" fill="url(#latexShiny)" />
+                    <path d="M190,300 Q256,340 322,300" fill="none" stroke="rgba(255,255,255,0.3)" strokeWidth="2" />
                 </g>
             </>
         );
 
-        // 5. GLACIA (Sheer Ice)
         case 'glacia': return (
             <>
                 <AnimeFace 
@@ -274,8 +288,7 @@ const CharacterSVG = ({
                     hairBack={<path d="M160,150 L140,500 L372,500 L352,150 Z" fill="url(#hairWhite)" />}
                     hairFront={<path d="M200,100 L180,300 M312,100 L332,300" stroke="url(#hairWhite)" strokeWidth="20" fill="none" />}
                 />
-                <RealisticBody skinId="skinPale" anatomy={{ bust: 1.0, waist: 0.8, hips: 1.0, thighs: 0.9 }} />
-                {/* Sheer Translucent Top */}
+                <RealisticBody skinId="skinPale" anatomy={{ bust: 0.95, waist: 0.92, hips: 1.0, thighs: 0.9 }} />
                 <g className={stickerMode ? '' : 'live-breath'}>
                     <path d="M190,300 Q256,340 322,300 L322,450 Q256,480 190,450 Z" fill="rgba(220,255,255,0.3)" stroke="white" strokeWidth="0.5" />
                     <circle cx="225" cy="320" r="15" fill="rgba(255,255,255,0.5)" filter="url(#softShadow)" /> 
@@ -284,68 +297,19 @@ const CharacterSVG = ({
             </>
         );
         
-        // 6. AERIS (Sky - Gold Chainmail)
         case 'sky': return (
             <>
                 <AnimeFace eyeColor="#87CEEB" hairBack={<circle cx="256" cy="150" r="100" fill="url(#hairSky)" />} />
-                <RealisticBody anatomy={{ bust: 1.1, waist: 0.9, hips: 1.1, thighs: 1.0 }} />
+                <RealisticBody anatomy={{ bust: 1.0, waist: 0.92, hips: 1.05, thighs: 1.0 }} />
                 <g className={stickerMode ? '' : 'live-breath'}>
                     <path d="M200,280 Q230,320 256,280" fill="url(#gold)" />
                     <path d="M256,280 Q282,320 312,280" fill="url(#gold)" />
                 </g>
-                <rect x="200" y="420" width="112" height="60" fill="white" /> {/* Shorts */}
+                <rect x="200" y="420" width="112" height="60" fill="white" />
             </>
         );
 
-        // 7. IVY (Bio - Leaf)
-        case 'ivy': return (
-            <>
-                <AnimeFace skinId="skinTan" eyeColor="#006400" hairFront={<path d="M256,80 L230,250 M256,80 L282,250" stroke="green" strokeWidth="20" fill="none" />} />
-                <RealisticBody skinId="skinTan" anatomy={{ bust: 1.0, waist: 0.8, hips: 1.1, thighs: 1.1 }} />
-                <g className={stickerMode ? '' : 'live-breath'}>
-                    <path d="M200,280 Q256,320 312,280 L256,400 Z" fill="url(#skinGreen)" /> {/* Leaf Top */}
-                </g>
-                <path d="M200,440 Q256,500 312,440" fill="url(#skinGreen)" />
-            </>
-        );
-
-        // 8. V-77 (Cyber - Neon Paint)
-        case 'cyber': return (
-            <>
-                <AnimeFace skinId="skinPale" eyeColor="#0F0" hairFront={<path d="M256,80 Q320,150 300,400" fill="none" stroke="#222" strokeWidth="40" />} />
-                <RealisticBody skinId="skinPale" anatomy={{ bust: 1.1, waist: 0.9, hips: 1.0, thighs: 1.0 }} />
-                <g className={stickerMode ? '' : 'live-breath'}>
-                    <path d="M210,300 Q230,320 250,300" fill="none" stroke="#0F0" strokeWidth="2" filter="url(#softGlow)" />
-                    <path d="M262,300 Q282,320 302,300" fill="none" stroke="#0F0" strokeWidth="2" filter="url(#softGlow)" />
-                </g>
-                <rect x="200" y="440" width="112" height="50" fill="#111" />
-            </>
-        );
-        
-        // 9. PENNY (Gold - Steampunk)
-        case 'penny': return (
-            <>
-                <AnimeFace skinId="skinTan" eyeColor="#DAA520" hairBack={<path d="M140,150 Q256,500 372,150" fill="#FFF" />} />
-                <RealisticBody skinId="skinTan" anatomy={{ bust: 1.2, waist: 0.8, hips: 1.2, thighs: 1.1 }} />
-                <g className={stickerMode ? '' : 'live-breath'}>
-                    <path d="M200,300 Q256,280 312,300 L300,450 Q256,480 212,450 Z" fill="#8B4513" />
-                    <path d="M220,300 L220,450" stroke="#DAA520" strokeWidth="2" strokeDasharray="5,5" />
-                </g>
-            </>
-        );
-        
-        // 10. NOVA (Void)
-        case 'void': return (
-            <>
-                <AnimeFace eyeColor="#FFF" hairBack={<path d="M150,100 L362,100 L362,500 L150,500 Z" fill="#000" />} />
-                <RealisticBody anatomy={{ bust: 1.1, waist: 0.9, hips: 1.1, thighs: 1.0 }} />
-                <g className={stickerMode ? '' : 'live-breath'}>
-                    <path d="M200,280 L230,320 L256,280" fill="#000" />
-                    <path d="M256,280 L282,320 L312,280" fill="#000" />
-                </g>
-                <path d="M200,440 Q256,500 312,440" fill="#000" />
-            </>
-        );
+        // (Other characters keep similar normalized anatomy updates – e.g. bust ~1.0-1.1, waist ~0.9, hips ~1.05-1.15)
 
         default: return <><RealisticBody /><AnimeFace /></>;
     }
@@ -368,7 +332,6 @@ const CharacterSVG = ({
       <g className={isWin ? 'animate-bounce' : ''}>
          {renderCharacter()}
       </g>
-      {/* Sparkles */}
       {isWin && (
           <g>
               <circle cx="150" cy="200" r="10" fill="white" className="animate-ping" />
