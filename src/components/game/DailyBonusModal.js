@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { X, Check, Loader2, Calendar } from 'lucide-react';
 import GlassCard from '../ui/GlassCard';
-import api from '../../services/api'; // Ensure this points to your configured axios instance
+import api from '../../services/api'; 
 import { useAuth } from '../../context/AuthContext';
 
 const DailyBonusModal = ({ onClose }) => {
@@ -37,6 +37,8 @@ const DailyBonusModal = ({ onClose }) => {
                 updateBalance(res.data.new_balance);
                 // Update local state to show claimed status
                 setData(prev => ({ ...prev, can_claim: false }));
+                // Update local storage to prevent auto-popup until tomorrow
+                localStorage.setItem(`daily_claim_${res.data.user_id || 'user'}`, new Date().toDateString());
             }
         } catch (e) {
             alert(e.response?.data?.error || "Claim failed");
@@ -67,7 +69,6 @@ const DailyBonusModal = ({ onClose }) => {
                         {[1, 2, 3, 4, 5, 6, 7].map(day => {
                             const isToday = data?.streak_day === day;
                             const isPast = day < data?.streak_day;
-                            const isFuture = day > data?.streak_day;
                             const isBigPrize = day === 7;
                             
                             // Determine styling based on state
