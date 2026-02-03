@@ -62,20 +62,20 @@ const CabinetSVG = ({
             </filter>
             
             {/* PATTERNS (NEW: Real World Textures) */}
-            <pattern id="patCarbon" width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
-                <rect width="6" height="6" fill="#1a1a1a" />
-                <rect width="3" height="3" fill="#2a2a2a" />
-                <rect x="3" y="3" width="3" height="3" fill="#2a2a2a" />
+            <pattern id="patCarbon" width="4" height="4" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
+                <rect width="4" height="4" fill="#151515" />
+                <rect width="2" height="2" fill="#252525" />
+                <rect x="2" y="2" width="2" height="2" fill="#252525" />
             </pattern>
             
-            <pattern id="patWood" width="10" height="100" patternUnits="userSpaceOnUse">
-                 <rect width="10" height="100" fill="#5D4037" />
-                 <path d="M5,0 Q8,25 5,50 Q2,75 5,100" stroke="#3E2723" strokeWidth="1" fill="none" />
+            <pattern id="patWood" width="10" height="40" patternUnits="userSpaceOnUse">
+                 <rect width="10" height="40" fill="#5D4037" />
+                 <path d="M5,0 Q8,10 5,20 Q2,30 5,40" stroke="#3E2723" strokeWidth="0.5" fill="none" opacity="0.5"/>
             </pattern>
 
-            <pattern id="patHex" width="10" height="10" patternUnits="userSpaceOnUse">
-                 <rect width="10" height="10" fill="#2c3e50" />
-                 <path d="M5,0 L10,2.5 L10,7.5 L5,10 L0,7.5 L0,2.5 Z" fill="none" stroke="#34495e" strokeWidth="0.5" />
+            <pattern id="patHex" width="8" height="8" patternUnits="userSpaceOnUse">
+                 <rect width="8" height="8" fill="#1a252f" />
+                 <path d="M4,0 L8,2 L8,6 L4,8 L0,6 L0,2 Z" fill="none" stroke="#2c3e50" strokeWidth="0.5" />
             </pattern>
 
             <pattern id="speakerMesh" width="4" height="4" patternUnits="userSpaceOnUse">
@@ -83,19 +83,43 @@ const CabinetSVG = ({
                 <circle cx="2" cy="2" r="1.5" fill="#333" />
             </pattern>
             
-            {/* ISLAND SKINS (10 Unique Themes) */}
-            <linearGradient id="skinVegas" x1="0" y1="0" x2="1" y2="0"><stop offset="0%" stopColor="#900"/><stop offset="50%" stopColor="#E00"/><stop offset="100%" stopColor="#900"/></linearGradient>
-            <linearGradient id="skinMagma" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stopColor="#300"/><stop offset="50%" stopColor="#F40"/><stop offset="100%" stopColor="#300"/></linearGradient>
+            {/* ISLAND SKINS (Animated & Static) */}
+            <linearGradient id="skinVegas" x1="0" y1="0" x2="1" y2="0"><stop offset="0%" stopColor="#600"/><stop offset="50%" stopColor="#D00"/><stop offset="100%" stopColor="#600"/></linearGradient>
+            
+            <linearGradient id="skinMagma" x1="0" y1="0" x2="1" y2="1">
+                <stop offset="0%" stopColor="#300">
+                    <animate attributeName="stop-color" values="#300;#500;#300" dur="4s" repeatCount="indefinite" />
+                </stop>
+                <stop offset="50%" stopColor="#F00">
+                    <animate attributeName="stop-color" values="#F00;#F40;#F00" dur="4s" repeatCount="indefinite" />
+                </stop>
+                <stop offset="100%" stopColor="#300"/>
+            </linearGradient>
+
             <linearGradient id="skinNoctyra" x1="0" y1="0" x2="1" y2="0"><stop offset="0%" stopColor="#1a0b2e"/><stop offset="50%" stopColor="#4834d4"/><stop offset="100%" stopColor="#1a0b2e"/></linearGradient>
             <linearGradient id="skinGlacia" x1="0" y1="0" x2="1" y2="0"><stop offset="0%" stopColor="#81ecec"/><stop offset="50%" stopColor="#dff9fb"/><stop offset="100%" stopColor="#81ecec"/></linearGradient>
             <linearGradient id="skinSky" x1="0" y1="0" x2="1" y2="0"><stop offset="0%" stopColor="#bdc3c7"/><stop offset="50%" stopColor="#ffffff"/><stop offset="100%" stopColor="#bdc3c7"/></linearGradient>
-            <linearGradient id="skinBio" x1="0" y1="0" x2="1" y2="0"><stop offset="0%" stopColor="#1e8449"/><stop offset="50%" stopColor="#2ecc71"/><stop offset="100%" stopColor="#1e8449"/></linearGradient>
+            
+            <linearGradient id="skinBio" x1="0" y1="0" x2="1" y2="0">
+                <stop offset="0%" stopColor="#1e8449"/>
+                <stop offset="50%" stopColor="#2ecc71">
+                     <animate attributeName="stop-color" values="#2ecc71;#55efc4;#2ecc71" dur="5s" repeatCount="indefinite" />
+                </stop>
+                <stop offset="100%" stopColor="#1e8449"/>
+            </linearGradient>
+
             <linearGradient id="skinGold" x1="0" y1="0" x2="1" y2="0"><stop offset="0%" stopColor="#b8860b"/><stop offset="50%" stopColor="#f1c40f"/><stop offset="100%" stopColor="#b8860b"/></linearGradient>
-            <linearGradient id="skinVoid" x1="0" y1="0" x2="1" y2="0"><stop offset="0%" stopColor="#000"/><stop offset="50%" stopColor="#222"/><stop offset="100%" stopColor="#000"/></linearGradient>
+            
+            <linearGradient id="skinVoid" x1="0" y1="0" x2="1" y2="0">
+                <stop offset="0%" stopColor="#000"/>
+                <stop offset="50%" stopColor="#222">
+                    <animate attributeName="stop-color" values="#222;#444;#222" dur="6s" repeatCount="indefinite" />
+                </stop>
+                <stop offset="100%" stopColor="#000"/>
+            </linearGradient>
+
             <linearGradient id="blackPlastic" x1="0" y1="0" x2="1" y2="0"><stop offset="0%" stopColor="#111"/><stop offset="50%" stopColor="#333"/><stop offset="100%" stopColor="#111"/></linearGradient>
 
-            <filter id="ledGlow"><feGaussianBlur stdDeviation="2" result="coloredBlur"/><feMerge><feMergeNode in="coloredBlur"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
-            
             <clipPath id="screenCutout"><rect x="40" y="85" width="160" height="115" rx="4" /></clipPath>
             <clipPath id="bellyClip"><path d="M40,300 L200,300 L195,370 L45,370 Z" /></clipPath>
         </defs>
@@ -203,14 +227,26 @@ const CabinetSVG = ({
         </g>
     );
 
-    // --- 4. SCREEN AREA ---
+    // --- 4. SCREEN BEZEL (Custom per Island) ---
     const renderScreenArea = () => {
+        let bezelStroke = "url(#chromeGradient)";
+        let bezelFill = "none";
+        
+        // Theme Specific Bezel Colors
+        if (islandId === 1) bezelStroke = "url(#goldGradient)"; // Vegas Gold
+        if (islandId === 5) bezelStroke = "#E0FFFF"; // Glacia Ice
+        if (islandId === 8) bezelStroke = "#00F3FF"; // Cyber Neon
+
         if (mode === 'game') {
             // Game Mode: Hollow frame for React reels
             return (
                 <g>
+                    {/* Bezel Frame Mask */}
                     <path d="M40,85 H200 V205 H40 Z M10,40 H230 V390 H10 Z" fill="rgba(0,0,0,0.95)" fillRule="evenodd" />
-                    <rect x="40" y="85" width="160" height="120" fill="none" stroke="url(#chromeGradient)" strokeWidth="4" rx="2" />
+                    {/* The Bezel Itself */}
+                    <rect x="40" y="85" width="160" height="120" fill="none" stroke={bezelStroke} strokeWidth="4" rx="2" />
+                    {/* Inner Shadow */}
+                    <rect x="42" y="87" width="156" height="116" fill="none" stroke="black" strokeWidth="1" opacity="0.5" rx="2" />
                 </g>
             );
         }
@@ -219,6 +255,7 @@ const CabinetSVG = ({
         return (
             <g transform="translate(40, 85)">
                 <rect x="0" y="0" width="160" height="120" fill="#000" stroke="#333" strokeWidth="2" />
+                {/* Mock Reels */}
                 <rect x="10" y="10" width="40" height="100" fill="url(#cylinderShine)" opacity="0.3" />
                 <rect x="60" y="10" width="40" height="100" fill="url(#cylinderShine)" opacity="0.3" />
                 <rect x="110" y="10" width="40" height="100" fill="url(#cylinderShine)" opacity="0.3" />
@@ -235,14 +272,20 @@ const CabinetSVG = ({
         <g transform="translate(10, 230)">
              {/* Sloped Deck Body */}
              <path d="M0,0 L220,0 L235,50 L-15,50 Z" fill="url(#blackPlastic)" stroke="#333" />
-             <path d="M-15,50 L235,50 L235,70 L-15,70 Z" fill="#111" />
+             <path d="M-15,50 L235,50 L235,70 L-15,70 Z" fill="#111" /> {/* Front Lip */}
+             
+             {/* Coin Slot */}
              <rect x="190" y="15" width="5" height="20" rx="2" fill="#000" stroke="#888" />
              <rect x="192" y="18" width="1" height="14" fill="#0F0" className="animate-pulse" filter="url(#ledGlow)"/>
+             
+             {/* START LEVER (Knob) */}
              <g transform="translate(15, 25)">
                  <circle cx="0" cy="0" r="14" fill="#111" stroke="#333" />
                  <circle cx="0" cy="0" r="10" fill="url(#chromeGradient)" />
                  <circle cx="0" cy="-6" r="12" fill={isBusy ? "#500" : "red"} className={!isBusy ? "animate-pulse" : ""} />
              </g>
+
+             {/* STOP BUTTONS (Visual Only - HTML Handles Interaction in Game Mode) */}
              {mode !== 'game' && (
                  <g transform="translate(70, 15)">
                      <circle cx="0" cy="10" r="12" fill="#c0392b" stroke="#333" strokeWidth="2" />
@@ -255,16 +298,27 @@ const CabinetSVG = ({
 
     const renderBellyGlass = () => (
         <g transform="translate(30, 310)">
+             {/* Frame */}
              <path d="M0,0 L180,0 L170,70 L10,70 Z" fill="#000" stroke="url(#chromeGradient)" strokeWidth="2" />
+             
+             {/* Art Area */}
              <g clipPath="url(#bellyClip)">
                  <rect x="5" y="5" width="170" height="60" fill={islandId===3 ? '#300' : '#101'} />
-                 <g transform="translate(130, 40) scale(0.25)">
+                 
+                 {/* Character Sticker */}
+                 <g transform="translate(140, 35) scale(0.25)">
                     <CharacterSVG type={charId} stickerMode={true} />
                  </g>
+                 
+                 {/* Info Text */}
                  <text x="15" y="25" fill="#FFF" fontSize="14" fontWeight="black" style={{textShadow:'0 0 5px white'}}>BIG BONUS</text>
                  <text x="15" y="45" fill="gold" fontSize="10" fontFamily="monospace">WIN: {stats.wins}</text>
              </g>
+             
+             {/* Glare */}
              <path d="M0,0 L180,0 L170,70 L10,70 Z" fill="url(#glassGlare)" opacity="0.3" pointerEvents="none" />
+             
+             {/* Serial Plate */}
              <rect x="60" y="55" width="60" height="10" fill="silver" stroke="black" rx="1" />
              <text x="90" y="62" textAnchor="middle" fill="black" fontSize="5" fontFamily="monospace" fontWeight="bold">{displaySerial}</text>
         </g>
@@ -288,14 +342,23 @@ const CabinetSVG = ({
     return (
         <svg width="240" height="400" viewBox="0 0 240 400" className={`drop-shadow-2xl transition-transform group-hover:-translate-y-2 duration-300 ${isBroken ? 'animate-pulse' : ''}`}>
             {renderDefs()}
+            
+            {/* Floor Shadow */}
             <ellipse cx="120" cy="395" rx="100" ry="10" fill="#000" opacity="0.6" filter="blur(6px)" />
+            
             {renderCabinetFrame()}
             {renderTopper()}
             {renderScreenArea()} 
             {renderButtonDeck()}
             {renderBellyGlass()}
             {renderCoinTray()}
-            {mode === 'hall' && isBusy && occupantPetId && <g transform="translate(80, 260) scale(0.35)"><CharacterSVG type={occupantPetId} mood="idle" /></g>}
+
+            {/* Occupant (Hall Mode Only) */}
+            {mode === 'hall' && isBusy && occupantPetId && (
+                 <g transform="translate(80, 260) scale(0.35)">
+                    <CharacterSVG type={occupantPetId} mood="idle" />
+                 </g>
+            )}
         </svg>
     );
 };
