@@ -237,26 +237,27 @@ const PlayView = ({ machine, island, user, onLeave, updateBalance }) => {
             {/* MAIN STAGE CONTAINER */}
             <div className="flex-1 flex items-center justify-center relative z-10 w-full h-full overflow-hidden">
                 
-                {/* 1. 3D PET (Positioned relative to screen) */}
-                <div className="absolute top-[20%] right-[-5%] w-[40%] h-[40%] z-0 pointer-events-none transition-transform duration-500 md:right-0 md:w-[30%] md:h-[50%]" 
-                     style={{ transform: (winStage !== 'idle' && !gambleLost) ? 'scale(1.2) translateY(-20px)' : 'scale(1)' }}>
+                {/* 1. 3D PET (Repositioned to sit/stand near machine) */}
+                {/* Mobile: Anchored bottom-right, larger. Desktop: Offset right. */}
+                <div className="absolute bottom-[5%] right-[-15%] w-[60%] h-[60%] z-0 pointer-events-none transition-transform duration-500 md:right-[-5%] md:w-[35%] md:h-[65%] flex items-end justify-center" 
+                     style={{ transform: (winStage !== 'idle' && !gambleLost) ? 'scale(1.1) translateY(-10px)' : 'scale(1)' }}>
                     <CharacterSVG type={user.active_pet_id} mood={getMood()} />
                     {mysteryItem && (
-                        <div className="absolute -top-10 left-0 bg-gradient-to-r from-purple-600 to-pink-600 text-white p-3 rounded-xl animate-bounce shadow-2xl z-50 border border-white">
+                        <div className="absolute top-[20%] left-0 bg-gradient-to-r from-purple-600 to-pink-600 text-white p-3 rounded-xl animate-bounce shadow-2xl z-50 border border-white">
                             <div className="flex items-center gap-2"><Gift size={16} className="text-yellow-300"/> <span className="font-bold text-xs">{mysteryItem.message}</span></div>
                         </div>
                     )}
                     {/* "BOO!" Reaction Bubble */}
                     {gambleLost && (
-                        <div className="absolute top-0 left-[-20px] bg-white text-black font-black px-6 py-3 rounded-full rounded-bl-none animate-bounce z-50 shadow-[0_0_15px_red] border-2 border-red-600 text-xl transform -rotate-12">
+                        <div className="absolute top-[30%] left-[-20px] bg-white text-black font-black px-6 py-3 rounded-full rounded-bl-none animate-bounce z-50 shadow-[0_0_15px_red] border-2 border-red-600 text-xl transform -rotate-12">
                             BOO! 👻
                         </div>
                     )}
                 </div>
 
                 {/* 2. CABINET CONTAINER (Fixed Aspect Ratio 0.6) */}
-                {/* This wrapper forces the cabinet and its overlays to scale together perfectly */}
-                <div className="relative h-[85vh] max-h-[850px] aspect-[0.6] flex-shrink-0">
+                {/* Centered with slight vertical offset for better mobile fit */}
+                <div className="relative h-[75vh] max-h-[850px] aspect-[0.6] flex-shrink-0 mt-8 md:mt-0">
                     
                     {/* A. The SVG Artwork */}
                     <div className="absolute inset-0 w-full h-full z-10">
@@ -271,7 +272,7 @@ const PlayView = ({ machine, island, user, onLeave, updateBalance }) => {
                         />
                     </div>
 
-                    {/* B. SCREEN CONTENT LAYER (21.25% Top, 66.67% Width, 30% Height of container) */}
+                    {/* B. SCREEN CONTENT LAYER */}
                     <div className="absolute top-[21.25%] left-[16.67%] w-[66.67%] h-[30%] flex flex-col pointer-events-none z-20">
                         
                         {/* Win Marquee */}
@@ -299,7 +300,7 @@ const PlayView = ({ machine, island, user, onLeave, updateBalance }) => {
                         </div>
                     </div>
 
-                    {/* C. 3D BUTTON DECK OVERLAY (57.5% Top, 90% Width, 15% Height) */}
+                    {/* C. 3D BUTTON DECK OVERLAY */}
                     <div className="absolute top-[57.5%] left-[5%] w-[90%] h-[15%] z-50 pointer-events-none" style={{ perspective: '600px' }}>
                         <div className="w-full h-full relative pointer-events-auto" style={{ transform: 'rotateX(20deg)', transformOrigin: 'top center' }}>
                             
@@ -366,7 +367,9 @@ const PlayView = ({ machine, island, user, onLeave, updateBalance }) => {
                 </div>
             ))}
 
-            {/* MODALS (Gamble, Paytable, Settings) */}
+            {/* MODALS */}
+            
+            {/* 1. Gamble Modal */}
             {winStage === 'gambling' && (
                 <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/90 backdrop-blur-sm p-4 animate-in zoom-in-95">
                     <GlassCard className="w-full max-w-sm p-6 text-center border-yellow-500/50">
