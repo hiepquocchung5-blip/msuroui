@@ -81,22 +81,155 @@ const CharacterSVG = ({
   const renderCharacter = () => {
     switch(type) {
         // 1. LUNA (Moon Hostess)
-        case 'luna': return (
-            <>
-                {/* Back Hair */}
-                <path d="M150,150 Q256,300 362,150 L380,600 L130,600 Z" fill="url(#hairLuna)" className="hair-back" />
-                {/* Body (Bunny Suit) */}
-                <path d="M190,300 Q256,280 322,300 L340,550 Q256,600 172,550 Z" fill="#111" />
-                <path d="M190,300 L322,300 L322,350 Q256,380 190,350 Z" fill="#FFF" opacity="0.9" /> {/* Collar */}
-                <BaseHead /> <AnimeEyes color="#8A2BE2" />
-                {/* Front Hair */}
-                <path d="M256,100 Q150,150 180,400" fill="none" stroke="url(#hairLuna)" strokeWidth="40" strokeLinecap="round" />
-                <path d="M256,100 Q362,150 332,400" fill="none" stroke="url(#hairLuna)" strokeWidth="40" strokeLinecap="round" />
-                {/* Ears */}
-                <path d="M200,120 L150,20 L180,120" fill="#111" stroke="white" strokeWidth="2" />
-                <path d="M312,120 L362,20 L332,120" fill="#111" stroke="white" strokeWidth="2" />
-            </>
-        );
+        case 'luna':
+  return (
+    <>
+      {/* ================== DEFINITIONS ================== */}
+      <defs>
+        {/* Hair Gradients */}
+        <linearGradient id="lunaHairBack" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor="#2A0F4F" />
+          <stop offset="100%" stopColor="#090014" />
+        </linearGradient>
+
+        <linearGradient id="lunaHairMid" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor="#6B3FA0" />
+          <stop offset="100%" stopColor="#1A062E" />
+        </linearGradient>
+
+        <linearGradient id="lunaHairFront" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0%" stopColor="#B58BFF" />
+          <stop offset="100%" stopColor="#4A1775" />
+        </linearGradient>
+
+        {/* Skin */}
+        <linearGradient id="lunaSkin" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor="#F1C7A8" />
+          <stop offset="100%" stopColor="#D8A98B" />
+        </linearGradient>
+      </defs>
+
+      {/* ================== BACK HAIR ================== */}
+      <path
+        d="
+          M140,160
+          C110,340 150,560 256,620
+          C362,560 402,340 372,160
+          Q256,120 140,160 Z
+        "
+        fill="url(#lunaHairBack)"
+      />
+
+      {/* ================== BODY (BUNNY SUIT) ================== */}
+      <path
+        d="
+          M180,300
+          C165,360 180,460 200,540
+          Q256,590 312,540
+          C332,460 347,360 332,300
+          Q256,265 180,300 Z
+        "
+        fill="#0D0D0F"
+      />
+
+      {/* Suit Highlight */}
+      <path
+        d="M200,330 Q256,350 312,330"
+        stroke="rgba(255,255,255,0.12)"
+        strokeWidth="3"
+        fill="none"
+      />
+
+      {/* Collar */}
+      <path
+        d="M190,300 L322,300 L322,345 Q256,375 190,345 Z"
+        fill="#FFFFFF"
+        opacity="0.92"
+      />
+
+      {/* ================== NECK ================== */}
+      <path
+        d="
+          M232,260
+          Q256,272 280,260
+          L285,315
+          Q256,332 227,315 Z
+        "
+        fill="url(#lunaSkin)"
+      />
+
+      {/* Jaw Shadow */}
+      <path
+        d="
+          M220,225
+          Q256,252 292,225
+          Q256,268 220,225 Z
+        "
+        fill="#C79674"
+        opacity="0.35"
+      />
+
+      {/* ================== HEAD & EYES ================== */}
+      <BaseHead />
+      <AnimeEyes color="#8A2BE2" />
+
+      {/* Eye Wet Highlights */}
+      <circle cx="245" cy="210" r="3" fill="white" opacity="0.8" />
+      <circle cx="267" cy="210" r="3" fill="white" opacity="0.8" />
+
+      {/* ================== MID HAIR ================== */}
+      <path
+        d="
+          M165,145
+          C140,280 185,440 256,470
+          C327,440 372,280 347,145
+          Q256,115 165,145 Z
+        "
+        fill="url(#lunaHairMid)"
+      />
+
+      {/* ================== FRONT HAIR STRANDS ================== */}
+      <path
+        d="M230,110 C200,230 210,370"
+        stroke="url(#lunaHairFront)"
+        strokeWidth="18"
+        strokeLinecap="round"
+        fill="none"
+      />
+
+      <path
+        d="M282,110 C312,230 302,370"
+        stroke="url(#lunaHairFront)"
+        strokeWidth="18"
+        strokeLinecap="round"
+        fill="none"
+      />
+
+      {/* ================== BUNNY EARS ================== */}
+      {/* Left Ear */}
+      <path
+        d="M200,120 C180,40 145,20 165,140"
+        fill="#0D0D0F"
+      />
+      <path
+        d="M190,120 C175,60 165,55 175,130"
+        fill="#E8A8C8"
+        opacity="0.75"
+      />
+
+      {/* Right Ear */}
+      <path
+        d="M312,120 C332,40 367,20 347,140"
+        fill="#0D0D0F"
+      />
+      <path
+        d="M322,120 C337,60 347,55 337,130"
+        fill="#E8A8C8"
+        opacity="0.75"
+      />
+    </>
+  );
+
 
         // 2. MIKA (Beach)
         case 'mika': return (
