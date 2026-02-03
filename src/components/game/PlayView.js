@@ -188,7 +188,9 @@ const PlayView = ({ machine, island, user, onLeave, updateBalance }) => {
     
     const toggleTurbo = () => {
         playSound('click');
-        if (setTurboMode) setTurboMode(!turboMode);
+        if (setTurboMode) {
+            setTurboMode(!turboMode);
+        }
     };
   
     const toggleAuto = () => {
@@ -269,12 +271,12 @@ const PlayView = ({ machine, island, user, onLeave, updateBalance }) => {
                         />
                     </div>
 
-                    {/* B. SCREEN CONTENT LAYER (21.25% Top, 30% Height of container) */}
-                    <div className="absolute top-[21.25%] left-[16.6%] w-[66.6%] h-[28.75%] flex flex-col pointer-events-none z-20">
+                    {/* B. SCREEN CONTENT LAYER (21.25% Top, 66.67% Width, 30% Height of container) */}
+                    <div className="absolute top-[21.25%] left-[16.67%] w-[66.67%] h-[30%] flex flex-col pointer-events-none z-20">
                         
                         {/* Win Marquee */}
                         <div className={`bg-black/90 h-[15%] flex items-center justify-center overflow-hidden mb-[1%] shadow-inner ${isTeaser ? 'border-t-2 border-red-500' : ''}`}>
-                            <p className="font-mono text-[min(3vw,12px)] text-cyan-400 font-bold tracking-widest animate-marquee whitespace-nowrap px-2">
+                            <p className="font-mono text-[min(3vw,12px)] text-cyan-400 font-bold tracking-widest animate-marquee whitespace-nowrap">
                                 {lastWin > 0 ? `*** BIG WIN ${lastWin.toLocaleString()} ***` : (isTeaser ? 'NEAR MISS...' : 'INSERT COIN')}
                             </p>
                         </div>
@@ -297,7 +299,7 @@ const PlayView = ({ machine, island, user, onLeave, updateBalance }) => {
                         </div>
                     </div>
 
-                    {/* C. 3D BUTTON DECK OVERLAY (57.5% Top, 15% Height) */}
+                    {/* C. 3D BUTTON DECK OVERLAY (57.5% Top, 90% Width, 15% Height) */}
                     <div className="absolute top-[57.5%] left-[5%] w-[90%] h-[15%] z-50 pointer-events-none" style={{ perspective: '600px' }}>
                         <div className="w-full h-full relative pointer-events-auto" style={{ transform: 'rotateX(20deg)', transformOrigin: 'top center' }}>
                             
@@ -357,19 +359,17 @@ const PlayView = ({ machine, island, user, onLeave, updateBalance }) => {
                 </div>
             </div>
 
-            {/* VFX: Coin Shower */}
+            {/* COIN VFX */}
             {coins.map(c => (
                 <div key={c.id} className="absolute top-[-20px] animate-fall z-50 pointer-events-none" style={{ left: `${c.left}%`, animationDuration: '2.5s', animationDelay: `${c.delay}s`, transform: `scale(${c.scale}) rotate(${c.rotation}deg)` }}>
-                    <div className="w-6 h-6 bg-yellow-400 rounded-full border-2 border-yellow-200 shadow-[0_0_15px_gold] flex items-center justify-center font-black text-yellow-700 text-xs"><Coins size={12} strokeWidth={3}/></div>
+                    <div className="w-6 h-6 bg-yellow-400 rounded-full border-2 border-yellow-200 shadow-lg flex items-center justify-center font-black text-yellow-700 text-[8px]"><Coins size={10} strokeWidth={3}/></div>
                 </div>
             ))}
 
-            {/* MODALS */}
-            
-            {/* 1. Gamble Modal */}
+            {/* MODALS (Gamble, Paytable, Settings) */}
             {winStage === 'gambling' && (
                 <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/90 backdrop-blur-sm p-4 animate-in zoom-in-95">
-                    <GlassCard className="w-full max-w-sm p-6 text-center border-yellow-500/50 shadow-[0_0_50px_rgba(234,179,8,0.2)]">
+                    <GlassCard className="w-full max-w-sm p-6 text-center border-yellow-500/50">
                         <h2 className="text-3xl font-black text-yellow-400 mb-2 italic">DOUBLE UP?</h2>
                         <div className="flex justify-between text-xs font-mono text-gray-400 mb-6">
                             <span>RISK: <b className="text-white">{lastWin.toLocaleString()}</b></span>
@@ -384,33 +384,8 @@ const PlayView = ({ machine, island, user, onLeave, updateBalance }) => {
                 </div>
             )}
             
-            {/* 2. Celebration Modal */}
-            {winStage === 'celebrating' && (
-                <div className="absolute inset-0 z-50 flex flex-col items-center justify-center bg-black/80 backdrop-blur-sm animate-in zoom-in duration-300 cursor-pointer" onClick={() => setWinStage('gambling')}>
-                    <Trophy size={64} className="text-yellow-400 mb-4 animate-bounce" />
-                    <h1 className="text-6xl font-black text-yellow-300 drop-shadow-[0_0_25px_gold] italic">BIG WIN</h1>
-                    <div className="text-4xl font-mono text-white mt-4">{lastWin.toLocaleString()}</div>
-                    <div className="mt-8 text-sm text-gray-400 animate-pulse">TAP TO CONTINUE</div>
-                </div>
-            )}
-            
-            {/* 3. Paytable Modal */}
-            {showPaytable && (
-                <div className="absolute inset-0 z-50 bg-black/95 flex flex-col items-center justify-center p-6 backdrop-blur-xl animate-in fade-in" onClick={() => setShowPaytable(false)}>
-                     <div className="text-white font-bold text-xl mb-4">PAYTABLE</div>
-                     <div className="grid grid-cols-2 gap-4">
-                         <div className="bg-white/10 p-2 rounded flex items-center gap-2"><SymbolSVG id={1} /> <span className="text-yellow-400 font-bold">100x</span></div>
-                         <div className="bg-white/10 p-2 rounded flex items-center gap-2"><SymbolSVG id={2} /> <span className="text-red-400 font-bold">50x</span></div>
-                         <div className="bg-white/10 p-2 rounded flex items-center gap-2"><SymbolSVG id={3} /> <span className="text-cyan-400 font-bold">20x</span></div>
-                         <div className="bg-white/10 p-2 rounded flex items-center gap-2"><SymbolSVG id={4} /> <span className="text-white font-bold">10x</span></div>
-                     </div>
-                     <div className="mt-8 text-gray-500 text-xs">Tap to close</div>
-                </div>
-            )}
-
-            {/* 4. Settings Modal */}
             {showSettings && (
-                <div className="absolute inset-0 z-50 bg-black/95 flex flex-col items-center justify-center p-6 backdrop-blur-xl animate-in fade-in" onClick={() => setShowSettings(false)}>
+                <div className="absolute inset-0 z-50 bg-black/95 flex flex-col items-center justify-center p-6" onClick={() => setShowSettings(false)}>
                     <GlassCard className="w-full max-w-sm p-6" onClick={e => e.stopPropagation()}>
                         <h3 className="text-white font-bold mb-4 border-b border-white/10 pb-2">SETTINGS</h3>
                         <button onClick={toggleMute} className="w-full bg-white/10 p-3 rounded-xl flex justify-between mb-2">
@@ -422,10 +397,23 @@ const PlayView = ({ machine, island, user, onLeave, updateBalance }) => {
                     </GlassCard>
                 </div>
             )}
+            
+            {showPaytable && (
+                <div className="absolute inset-0 z-50 bg-black/95 flex flex-col items-center justify-center p-6" onClick={() => setShowPaytable(false)}>
+                     <div className="text-white font-bold text-xl mb-4">PAYTABLE</div>
+                     <div className="grid grid-cols-2 gap-4">
+                         <div className="bg-white/10 p-2 rounded flex items-center gap-2"><SymbolSVG id={1} /> <span className="text-yellow-400 font-bold">100x</span></div>
+                         <div className="bg-white/10 p-2 rounded flex items-center gap-2"><SymbolSVG id={2} /> <span className="text-red-400 font-bold">50x</span></div>
+                         <div className="bg-white/10 p-2 rounded flex items-center gap-2"><SymbolSVG id={3} /> <span className="text-cyan-400 font-bold">20x</span></div>
+                         <div className="bg-white/10 p-2 rounded flex items-center gap-2"><SymbolSVG id={4} /> <span className="text-white font-bold">10x</span></div>
+                     </div>
+                     <div className="mt-8 text-gray-500 text-xs">Tap to close</div>
+                </div>
+            )}
 
-            {/* 5. Low Balance Alert */}
+            {/* Low Balance */}
             {showLowBalance && (
-                <div className="absolute inset-0 z-50 bg-black/90 flex flex-col items-center justify-center p-6 backdrop-blur-sm animate-in zoom-in-95">
+                <div className="absolute inset-0 z-50 bg-black/90 flex flex-col items-center justify-center p-6">
                     <GlassCard className="text-center p-6 border-red-500/50">
                         <Coins className="w-12 h-12 text-red-500 mx-auto mb-2"/>
                         <h2 className="text-xl font-bold text-white">LOW BALANCE</h2>

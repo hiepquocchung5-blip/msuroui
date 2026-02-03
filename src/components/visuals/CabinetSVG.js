@@ -19,7 +19,7 @@ const CabinetSVG = ({
     
     const displaySerial = serialNumber || `SN-${islandId}-${machineNumber.toString().padStart(3,'0')}`;
 
-    // --- ASSET PATHS ---
+    // --- ASSET PATHS (Dynamic PNG Loading) ---
     const getHeaderImg = (id) => `/assets/machines/header_${id}.png`;
     const getBellyImg = (id) => `/assets/machines/belly_${id}.png`;
 
@@ -51,8 +51,8 @@ const CabinetSVG = ({
 
             {/* PATTERNS & FX */}
             <pattern id="speakerMesh" width="4" height="4" patternUnits="userSpaceOnUse">
-                <rect width="4" height="4" fill="#080808"/>
-                <circle cx="2" cy="2" r="1" fill="#333" />
+                <rect width="4" height="4" fill="#111"/>
+                <circle cx="2" cy="2" r="1.5" fill="#333" />
             </pattern>
             
             <filter id="ledGlow"><feGaussianBlur stdDeviation="2" result="coloredBlur"/><feMerge><feMergeNode in="coloredBlur"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
@@ -125,8 +125,17 @@ const CabinetSVG = ({
         return (
             <g>
                 <path d={path} fill={fill} stroke={stroke} strokeWidth="2" />
+                {/* Side LED Strips */}
                 <path d="M20,60 L20,350" stroke={accent} strokeWidth="4" className="animate-pulse" filter="url(#ledGlow)" opacity="0.8" />
                 <path d="M220,60 L220,350" stroke={accent} strokeWidth="4" className="animate-pulse" filter="url(#ledGlow)" opacity="0.8" />
+
+                {/* Speaker Housings (Top Ears) */}
+                <path d="M5,40 L50,40 L45,70 L10,70 Z" fill="url(#speakerMesh)" stroke="#222" />
+                <path d="M235,40 L190,40 L195,70 L230,70 Z" fill="url(#speakerMesh)" stroke="#222" />
+                
+                {/* Trim */}
+                <path d="M15,45 L15,360" stroke="url(#chromeGradient)" strokeWidth="1" opacity="0.8" fill="none" />
+                <path d="M225,45 L225,360" stroke="url(#chromeGradient)" strokeWidth="1" opacity="0.8" fill="none" />
             </g>
         );
     };
@@ -146,7 +155,11 @@ const CabinetSVG = ({
             </g>
 
             {/* Status Lights */}
-            <circle cx="115" cy="5" r="3" fill={isHot ? 'yellow' : '#330'} className={isHot ? 'animate-pulse' : ''} />
+            <g transform="translate(95, 5)">
+                <circle cx="4" cy="4" r="3" fill={isBroken ? 'red' : '#300'} className={isBroken ? "animate-pulse" : ""} />
+                <circle cx="4" cy="12" r="3" fill={isHot ? 'yellow' : '#330'} className={isHot ? 'animate-pulse' : ''} />
+                <circle cx="4" cy="20" r="3" fill={isBusy ? 'blue' : '#003'} className={isBusy ? "animate-pulse" : ""} />
+            </g>
         </g>
     );
 
@@ -155,7 +168,7 @@ const CabinetSVG = ({
         if (mode === 'game') {
             return (
                 <g>
-                    <path d="M40,85 H200 V205 H40 Z M10,40 H230 V390 H10 Z" fill="rgba(10,10,10,0.95)" fillRule="evenodd" />
+                    <path d="M40,85 H200 V205 H40 Z M10,40 H230 V390 H10 Z" fill="rgba(0,0,0,0.95)" fillRule="evenodd" />
                     <rect x="40" y="85" width="160" height="120" fill="none" stroke="url(#chromeGradient)" strokeWidth="4" rx="2" />
                 </g>
             );
@@ -163,41 +176,46 @@ const CabinetSVG = ({
         return (
             <g transform="translate(40, 85)">
                 <rect x="0" y="0" width="160" height="120" fill="#000" stroke="#333" strokeWidth="2" />
-                {/* Reels */}
+                {/* Mock Reels */}
                 <rect x="10" y="10" width="40" height="100" fill="url(#cylinderShine)" opacity="0.3" />
                 <rect x="60" y="10" width="40" height="100" fill="url(#cylinderShine)" opacity="0.3" />
                 <rect x="110" y="10" width="40" height="100" fill="url(#cylinderShine)" opacity="0.3" />
-                <text x="80" y="65" textAnchor="middle" fill={isBusy ? '#F00' : '#0F0'} fontWeight="bold" fontSize="18" className={!isBusy ? 'animate-pulse' : ''}>
+                <text x="80" y="65" textAnchor="middle" fill={isBusy ? '#F00' : '#0F0'} fontWeight="bold" fontSize="18" className={!isBusy ? 'animate-pulse' : ''} style={{textShadow: '0 0 10px currentColor'}}>
                     {isBroken ? 'ERROR' : (isBusy ? 'PLAYING' : 'OPEN')}
                 </text>
             </g>
         );
     };
 
-    // --- 5. BUTTON DECK (Hardware) ---
+    // --- 5. CONTROL DECK & BELLY ---
     const renderButtonDeck = () => (
         <g transform="translate(10, 230)">
+             {/* Sloped Deck Body */}
              <path d="M0,0 L220,0 L235,50 L-15,50 Z" fill="url(#blackPlastic)" stroke="#333" />
-             <path d="M-15,50 L235,50 L235,70 L-15,70 Z" fill="#111" />
+             <path d="M-15,50 L235,50 L235,70 L-15,70 Z" fill="#111" /> {/* Front Lip */}
+             
+             {/* Coin Slot */}
              <rect x="190" y="15" width="5" height="20" rx="2" fill="#000" stroke="#888" />
              <rect x="192" y="18" width="1" height="14" fill="#0F0" className="animate-pulse" filter="url(#ledGlow)"/>
+             
+             {/* START LEVER (Knob) */}
              <g transform="translate(15, 25)">
                  <circle cx="0" cy="0" r="14" fill="#111" stroke="#333" />
                  <circle cx="0" cy="0" r="10" fill="url(#chromeGradient)" />
                  <circle cx="0" cy="-6" r="12" fill={isBusy ? "#500" : "red"} className={!isBusy ? "animate-pulse" : ""} />
              </g>
+
+             {/* STOP BUTTONS (Visual) */}
              {mode !== 'game' && (
                  <g transform="translate(70, 15)">
-                     <circle cx="0" cy="10" r="12" fill="#c0392b" stroke="#333" strokeWidth="2" /><text x="0" y="14" textAnchor="middle" fill="white" fontSize="8" fontWeight="bold">1</text>
-                     <circle cx="40" cy="10" r="12" fill="#c0392b" stroke="#333" strokeWidth="2" /><text x="40" y="14" textAnchor="middle" fill="white" fontSize="8" fontWeight="bold">2</text>
-                     <circle cx="80" cy="10" r="12" fill="#c0392b" stroke="#333" strokeWidth="2" /><text x="80" y="14" textAnchor="middle" fill="white" fontSize="8" fontWeight="bold">3</text>
+                     <circle cx="0" cy="10" r="12" fill="#c0392b" stroke="#333" strokeWidth="2" />
+                     <circle cx="40" cy="10" r="12" fill="#c0392b" stroke="#333" strokeWidth="2" />
+                     <circle cx="80" cy="10" r="12" fill="#c0392b" stroke="#333" strokeWidth="2" />
                  </g>
              )}
         </g>
     );
 
-    // --- 6. BELLY GLASS (Art + 1:1 PNG) ---
-    // Moved group coordinate space to make masking easier
     const renderBellyGlass = () => (
         <g transform="translate(30, 310)">
              {/* Frame */}
@@ -252,7 +270,7 @@ const CabinetSVG = ({
 
     // --- MAIN RENDER ---
     return (
-        <svg width="240" height="400" viewBox="0 0 240 400" className={`drop-shadow-2xl transition-transform duration-300 ${mode==='hall' ? 'group-hover:-translate-y-2' : ''}`}>
+        <svg width="240" height="400" viewBox="0 0 240 400" className={`drop-shadow-2xl transition-transform group-hover:-translate-y-2 duration-300 ${isBroken ? 'animate-pulse' : ''}`}>
             {renderDefs()}
             <ellipse cx="120" cy="395" rx="100" ry="10" fill="#000" opacity="0.6" filter="blur(6px)" />
             {renderChassis()}
