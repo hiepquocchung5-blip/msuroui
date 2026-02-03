@@ -36,7 +36,7 @@ const withPWA = require('next-pwa')({
 const nextConfig = {
   reactStrictMode: true,
   images: {
-    domains: ['localhost', 'm.api.suropara.com'], // Allow external images
+    domains: ['m.api.suropara.com'], // Allow external images
     unoptimized: true // Vital for static export/PWA handling of local assets
   },
 };
