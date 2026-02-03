@@ -237,29 +237,11 @@ const PlayView = ({ machine, island, user, onLeave, updateBalance }) => {
             {/* MAIN STAGE CONTAINER */}
             <div className="flex-1 flex items-center justify-center relative z-10 w-full h-full overflow-hidden">
                 
-                {/* 1. 3D PET (Repositioned to sit/stand near machine) */}
-                {/* Mobile: Anchored bottom-right, larger. Desktop: Offset right. */}
-                <div className="absolute bottom-[5%] right-[-15%] w-[60%] h-[60%] z-0 pointer-events-none transition-transform duration-500 md:right-[-5%] md:w-[35%] md:h-[65%] flex items-end justify-center" 
-                     style={{ transform: (winStage !== 'idle' && !gambleLost) ? 'scale(1.1) translateY(-10px)' : 'scale(1)' }}>
-                    <CharacterSVG type={user.active_pet_id} mood={getMood()} />
-                    {mysteryItem && (
-                        <div className="absolute top-[20%] left-0 bg-gradient-to-r from-purple-600 to-pink-600 text-white p-3 rounded-xl animate-bounce shadow-2xl z-50 border border-white">
-                            <div className="flex items-center gap-2"><Gift size={16} className="text-yellow-300"/> <span className="font-bold text-xs">{mysteryItem.message}</span></div>
-                        </div>
-                    )}
-                    {/* "BOO!" Reaction Bubble */}
-                    {gambleLost && (
-                        <div className="absolute top-[30%] left-[-20px] bg-white text-black font-black px-6 py-3 rounded-full rounded-bl-none animate-bounce z-50 shadow-[0_0_15px_red] border-2 border-red-600 text-xl transform -rotate-12">
-                            BOO! 👻
-                        </div>
-                    )}
-                </div>
-
-                {/* 2. CABINET CONTAINER (Fixed Aspect Ratio 0.6) */}
-                {/* Centered with slight vertical offset for better mobile fit */}
-                <div className="relative h-[75vh] max-h-[850px] aspect-[0.6] flex-shrink-0 mt-8 md:mt-0">
+                {/* 1. MACHINE + PET WRAPPER (Centered & Fixed Ratio) */}
+                {/* This ensures the HTML buttons always align with the SVG coordinates */}
+                <div className="relative flex items-end justify-center h-[75vh] max-h-[850px] aspect-[0.6]">
                     
-                    {/* A. The SVG Artwork */}
+                    {/* A. The 3D Cabinet SVG */}
                     <div className="absolute inset-0 w-full h-full z-10">
                         <CabinetSVG 
                             islandId={parseInt(island.id)} 
@@ -272,7 +254,7 @@ const PlayView = ({ machine, island, user, onLeave, updateBalance }) => {
                         />
                     </div>
 
-                    {/* B. SCREEN CONTENT LAYER */}
+                    {/* B. SCREEN CONTENT LAYER (21.25% Top, 16.67% Left, 66.67% Width, 30% Height) */}
                     <div className="absolute top-[21.25%] left-[16.67%] w-[66.67%] h-[30%] flex flex-col pointer-events-none z-20">
                         
                         {/* Win Marquee */}
@@ -300,39 +282,24 @@ const PlayView = ({ machine, island, user, onLeave, updateBalance }) => {
                         </div>
                     </div>
 
-                    {/* C. 3D BUTTON DECK OVERLAY */}
-                    <div className="absolute top-[57.5%] left-[5%] w-[90%] h-[15%] z-50 pointer-events-none" style={{ perspective: '600px' }}>
-                        <div className="w-full h-full relative pointer-events-auto" style={{ transform: 'rotateX(20deg)', transformOrigin: 'top center' }}>
+                    {/* C. 3D BUTTON DECK OVERLAY (57.5% Top, 5% Left, 90% Width, 15% Height) */}
+                    <div className="absolute top-[57.5%] left-[5%] w-[90%] h-[15%] z-50 pointer-events-auto touch-manipulation" style={{ perspective: '600px' }}>
+                        <div className="w-full h-full relative" style={{ transform: 'rotateX(20deg)', transformOrigin: 'top center' }}>
                             
                             {/* Left: Bet Config */}
                             <div className="absolute left-[5%] top-[10%] flex gap-1">
-                                <button 
-                                    onClick={() => changeBet(-1)} 
-                                    className="w-8 h-8 sm:w-10 sm:h-10 bg-gray-800 rounded-lg border-b-4 border-black text-white flex items-center justify-center active:border-b-0 active:translate-y-1 shadow-lg touch-manipulation active:bg-gray-700"
-                                >
-                                    <Minus size={14}/>
-                                </button>
+                                <button onClick={() => changeBet(-1)} className="w-8 h-8 sm:w-10 sm:h-10 bg-gray-800 rounded-lg border-b-4 border-black text-white flex items-center justify-center active:border-b-0 active:translate-y-1 shadow-lg touch-manipulation active:bg-gray-700 pointer-events-auto"><Minus size={14}/></button>
                                 <div className="bg-black border border-gray-600 w-12 h-8 sm:w-16 sm:h-10 flex items-center justify-center text-[9px] sm:text-xs text-yellow-400 font-mono tracking-tighter shadow-inner select-none">{currentBet.toLocaleString()}</div>
-                                <button 
-                                    onClick={() => changeBet(1)} 
-                                    className="w-8 h-8 sm:w-10 sm:h-10 bg-gray-800 rounded-lg border-b-4 border-black text-white flex items-center justify-center active:border-b-0 active:translate-y-1 shadow-lg touch-manipulation active:bg-gray-700"
-                                >
-                                    <Plus size={14}/>
-                                </button>
+                                <button onClick={() => changeBet(1)} className="w-8 h-8 sm:w-10 sm:h-10 bg-gray-800 rounded-lg border-b-4 border-black text-white flex items-center justify-center active:border-b-0 active:translate-y-1 shadow-lg touch-manipulation active:bg-gray-700 pointer-events-auto"><Plus size={14}/></button>
                             </div>
                             
-                            <button 
-                                onClick={handleMaxBet} 
-                                className="absolute left-[5%] top-[60%] w-10 h-6 sm:w-12 sm:h-8 bg-orange-700 rounded border-b-4 border-black text-[8px] font-black text-white flex items-center justify-center active:border-b-0 active:translate-y-1 shadow-lg touch-manipulation active:bg-orange-600"
-                            >
-                                MAX
-                            </button>
+                            <button onClick={handleMaxBet} className="absolute left-[5%] top-[60%] w-10 h-6 sm:w-12 sm:h-8 bg-orange-700 rounded border-b-4 border-black text-[8px] font-black text-white flex items-center justify-center active:border-b-0 active:translate-y-1 shadow-lg touch-manipulation active:bg-orange-600 pointer-events-auto">MAX</button>
 
                             {/* Right: SPIN Button */}
                             <button 
                                 onClick={handleSpin} 
                                 disabled={isSpinning.some(s=>s) || (winStage !== 'idle' && winStage !== 'celebrating')} 
-                                className={`absolute right-[5%] top-[5%] w-16 h-16 sm:w-20 sm:h-20 rounded-full border-b-[6px] shadow-xl flex flex-col items-center justify-center active:border-b-0 active:translate-y-1 transition-all touch-manipulation
+                                className={`absolute right-[5%] top-[5%] w-16 h-16 sm:w-20 sm:h-20 rounded-full border-b-[6px] shadow-xl flex flex-col items-center justify-center active:border-b-0 active:translate-y-1 transition-all touch-manipulation pointer-events-auto
                                 ${isSpinning.some(s=>s) ? 'bg-gray-800 border-gray-950 opacity-50' : 'bg-gradient-to-b from-red-600 to-red-800 border-red-950 text-white hover:brightness-110 hover:shadow-red-500/80 active:bg-red-700'}`}
                             >
                                 <Gamepad2 size={24} strokeWidth={3} />
@@ -341,26 +308,30 @@ const PlayView = ({ machine, island, user, onLeave, updateBalance }) => {
 
                             {/* Center: Toggles */}
                             <div className="absolute right-[35%] top-[15%] flex flex-col gap-2">
-                                <button 
-                                    onClick={toggleTurbo} 
-                                    className={`w-8 h-8 sm:w-9 sm:h-9 rounded-lg border-b-4 border-black flex items-center justify-center active:border-b-0 active:translate-y-1 shadow-md touch-manipulation ${turboMode ? 'bg-yellow-500 text-black shadow-[0_0_10px_gold]' : 'bg-gray-700 text-gray-400'}`}
-                                >
-                                    <Zap size={14} fill={turboMode ? "currentColor" : "none"}/>
-                                </button>
-                                <button 
-                                    onClick={toggleAuto} 
-                                    className={`w-8 h-8 sm:w-9 sm:h-9 rounded-lg border-b-4 border-black flex items-center justify-center active:border-b-0 active:translate-y-1 shadow-md touch-manipulation ${autoPlay ? 'bg-green-600 text-white shadow-[0_0_10px_green]' : 'bg-gray-700 text-gray-400'}`}
-                                >
-                                    {autoPlay ? <StopCircle size={14}/> : <Repeat size={14}/>}
-                                </button>
+                                <button onClick={toggleTurbo} className={`w-8 h-8 sm:w-9 sm:h-9 rounded-lg border-b-4 border-black flex items-center justify-center active:border-b-0 active:translate-y-1 shadow-md touch-manipulation pointer-events-auto ${turboMode ? 'bg-yellow-500 text-black shadow-[0_0_10px_gold]' : 'bg-gray-700 text-gray-400'}`}><Zap size={14} fill={turboMode ? "currentColor" : "none"}/></button>
+                                <button onClick={toggleAuto} className={`w-8 h-8 sm:w-9 sm:h-9 rounded-lg border-b-4 border-black flex items-center justify-center active:border-b-0 active:translate-y-1 shadow-md touch-manipulation pointer-events-auto ${autoPlay ? 'bg-green-600 text-white shadow-[0_0_10px_green]' : 'bg-gray-700 text-gray-400'}`}>{autoPlay ? <StopCircle size={14}/> : <Repeat size={14}/>}</button>
                             </div>
                         </div>
                     </div>
 
-                </div>
+                    {/* D. 3D PET (Relative to Machine Wrapper) */}
+                    <div className="absolute bottom-[5%] right-[-35%] w-[40%] h-[60%] pointer-events-none transition-transform duration-500 z-30" 
+                         style={{ transform: (winStage !== 'idle' && !gambleLost) ? 'scale(1.1) translateY(-10px)' : 'scale(1)' }}>
+                        <CharacterSVG type={user.active_pet_id} mood={getMood()} />
+                        {mysteryItem && (
+                            <div className="absolute top-[20%] left-0 bg-gradient-to-r from-purple-600 to-pink-600 text-white p-3 rounded-xl animate-bounce shadow-2xl z-50 border border-white">
+                                <div className="flex items-center gap-2"><Gift size={16} className="text-yellow-300"/> <span className="font-bold text-xs">{mysteryItem.message}</span></div>
+                            </div>
+                        )}
+                        {gambleLost && (
+                            <div className="absolute top-[30%] left-[-20px] bg-white text-black font-black px-6 py-3 rounded-full rounded-bl-none animate-bounce z-50 shadow-[0_0_15px_red] border-2 border-red-600 text-xl transform -rotate-12">BOO! 👻</div>
+                        )}
+                    </div>
+                
+                </div> {/* End Wrapper */}
             </div>
 
-            {/* COIN VFX */}
+            {/* VFX: Coin Shower */}
             {coins.map(c => (
                 <div key={c.id} className="absolute top-[-20px] animate-fall z-50 pointer-events-none" style={{ left: `${c.left}%`, animationDuration: '2.5s', animationDelay: `${c.delay}s`, transform: `scale(${c.scale}) rotate(${c.rotation}deg)` }}>
                     <div className="w-6 h-6 bg-yellow-400 rounded-full border-2 border-yellow-200 shadow-lg flex items-center justify-center font-black text-yellow-700 text-[8px]"><Coins size={10} strokeWidth={3}/></div>
