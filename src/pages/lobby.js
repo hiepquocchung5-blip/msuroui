@@ -3,13 +3,15 @@ import { useRouter } from 'next/router';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext'; 
 import api, { game, finance, user as userApi } from '../services/api';
-import { ChevronLeft, ChevronRight, Lock, Coins, MapPin, Loader2, Bell, Trophy, Calendar, Volume2, VolumeX, X, MessageCircle } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Lock, Coins, MapPin, Loader2, Bell, Trophy, Calendar, Volume2, VolumeX, X, MessageCircle, ClipboardList, CheckCircle } from 'lucide-react';
 import CharacterSVG from '../components/visuals/CharacterSVG';
 import CabinetSVG from '../components/visuals/CabinetSVG';
 import IslandLandscapeSVG from '../components/visuals/IslandLandscapeSVG';
 import BottomDock from '../components/layout/BottomDock';
 import GlassCard from '../components/ui/GlassCard';
 import DailyBonusModal from '../components/game/DailyBonusModal';
+import GlobalTicker from '../components/ui/GlobalTicker'; // New: Ticker in Lobby
+import ActiveEvents from '../components/ui/ActiveEvents'; // New: Events in Lobby
 import { useGameSound } from '../hooks/useGameSound';
 
 export default function Lobby() {
@@ -27,11 +29,19 @@ export default function Lobby() {
     // UI/Audio State
     const [isMuted, setIsMuted] = useState(false);
     const [showDailyBonus, setShowDailyBonus] = useState(false);
+    const [showMissions, setShowMissions] = useState(false); // New: Missions Modal
     
     // Tutorial / Greeting State
-    const [tutorialStep, setTutorialStep] = useState(0); // 0 = Hidden, 1+ = Active Steps
+    const [tutorialStep, setTutorialStep] = useState(0);
 
     const { playSound } = useGameSound(!isMuted);
+
+    // Mock Missions Data (In real app, fetch from API)
+    const [missions, setMissions] = useState([
+        { id: 1, task: "Spin 50 Times", progress: 34, total: 50, reward: 500, claimed: false },
+        { id: 2, task: "Hit a Big Win (>10x)", progress: 1, total: 1, reward: 1000, claimed: true },
+        { id: 3, task: "Play 'Inferna' Island", progress: 0, total: 1, reward: 200, claimed: false },
+    ]);
 
     // 1. Fetch Lobby Data
     useEffect(() => {
@@ -45,15 +55,14 @@ export default function Lobby() {
                 if (resIslands.data.status === 'success') setIslands(resIslands.data.data);
                 if (resNotifs.data.status === 'success') setUnreadCount(resNotifs.data.count || 0);
 
-                // Auto-trigger Tutorial if first time this session
+                // Auto-trigger Tutorial
                 const hasSeenIntro = sessionStorage.getItem('suro_intro_seen');
                 if (!hasSeenIntro) {
                     setTimeout(() => {
                         setTutorialStep(1);
-                        playSound('win'); // Attention sound
+                        playSound('win'); 
                     }, 500);
                 } else {
-                    // Only check daily bonus if not showing tutorial immediately
                     checkDailyBonus();
                 }
 
@@ -80,10 +89,9 @@ export default function Lobby() {
     const handleTutorialNext = () => {
         playSound('click');
         if (tutorialStep >= 4) {
-            // End Tutorial
             setTutorialStep(0);
             sessionStorage.setItem('suro_intro_seen', 'true');
-            checkDailyBonus(); // Check bonus after tutorial ends
+            checkDailyBonus();
         } else {
             setTutorialStep(prev => prev + 1);
         }
@@ -91,22 +99,10 @@ export default function Lobby() {
 
     const getTutorialContent = () => {
         switch(tutorialStep) {
-            case 1: return { 
-                text: `Welcome back, ${user.username}! I've been waiting for you! Let's win big today!`, 
-                mood: 'win' 
-            };
-            case 2: return { 
-                text: "Don't forget to check your DAILY BONUS by tapping the Calendar icon above!", 
-                mood: 'idle' 
-            };
-            case 3: return { 
-                text: "Need more chips? Visit the CASHIER to Deposit or Withdraw your winnings instantly.", 
-                mood: 'idle' 
-            };
-            case 4: return { 
-                text: "Swipe left or right to choose an Island. Each one has unique machines. Good luck!", 
-                mood: 'win' 
-            };
+            case 1: return { text: `Welcome back, ${user.username}! I've been waiting for you! Let's win big today!`, mood: 'win' };
+            case 2: return { text: "Don't forget to check your DAILY BONUS by tapping the Calendar icon above!", mood: 'idle' };
+            case 3: return { text: "Check the MISSIONS tab (Clipboard icon) to earn extra rewards while playing!", mood: 'idle' };
+            case 4: return { text: "Swipe left or right to choose an Island. Each one has unique machines. Good luck!", mood: 'win' };
             default: return { text: "", mood: 'idle' };
         }
     };
@@ -162,6 +158,14 @@ export default function Lobby() {
         router.push(`/game/${island.id}`);
     };
 
+    // Claim Mission
+    const claimMission = (id, reward) => {
+        playSound('win');
+        updateBalance(parseFloat(user.balance) + reward);
+        addToast(`Claimed ${reward} MMK!`, 'success');
+        setMissions(prev => prev.map(m => m.id === id ? { ...m, claimed: true } : m));
+    };
+
     if (loading || !selectedIsland) return <div className="bg-black min-h-screen text-white flex items-center justify-center"><Loader2 className="animate-spin text-cyan-500 mr-2"/> Loading World...</div>;
 
     const tut = getTutorialContent();
@@ -169,8 +173,16 @@ export default function Lobby() {
     return (
         <div className="min-h-screen bg-[#050505] pb-24 relative overflow-hidden flex flex-col">
             
+            {/* Global Ticker */}
+            <div className="relative z-50">
+                <GlobalTicker />
+            </div>
+
+            {/* Active Events Overlay */}
+            <ActiveEvents />
+
             {/* --- HEADER --- */}
-            <div className="pt-4 px-6 pb-2 flex justify-between items-center z-20 bg-gradient-to-b from-black/90 to-transparent backdrop-blur-sm sticky top-0">
+            <div className="pt-2 px-6 pb-2 flex justify-between items-center z-20 bg-gradient-to-b from-black/90 to-transparent backdrop-blur-sm sticky top-8">
                 <div className="flex flex-col gap-1">
                     <div className="flex items-center gap-2">
                          <span className="text-white font-black text-lg italic tracking-tighter">LVL {user.level}</span>
@@ -181,19 +193,28 @@ export default function Lobby() {
                 </div>
 
                 <div className="flex items-center gap-2">
+                    {/* Missions */}
+                    <button onClick={() => { playSound('click'); setShowMissions(true); }} className="w-9 h-9 rounded-full bg-blue-900/30 border border-blue-500/30 flex items-center justify-center text-blue-400 hover:bg-blue-500/20 active:scale-95 transition-all">
+                        <ClipboardList size={16} />
+                    </button>
+
+                    {/* Daily Bonus */}
                     <button onClick={() => { playSound('click'); setShowDailyBonus(true); }} className="w-9 h-9 rounded-full bg-green-900/30 border border-green-500/30 flex items-center justify-center text-green-400 hover:bg-green-500/20 active:scale-95 transition-all">
                         <Calendar size={16} />
                     </button>
+
+                    {/* Tournament */}
                     <button onClick={() => { playSound('click'); router.push('/tournaments'); }} className="w-9 h-9 rounded-full bg-yellow-900/30 border border-yellow-500/30 flex items-center justify-center text-yellow-400 hover:bg-yellow-500/20 active:scale-95 transition-all">
                         <Trophy size={16} />
                     </button>
+
+                    {/* Notifications */}
                     <button onClick={() => { playSound('click'); router.push('/notifications'); }} className="w-9 h-9 rounded-full bg-white/10 border border-white/10 flex items-center justify-center text-white hover:bg-white/20 active:scale-95 transition-all relative">
                         <Bell size={16} />
                         {unreadCount > 0 && <span className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full border border-black flex items-center justify-center text-[8px] font-bold">{unreadCount > 9 ? '!' : unreadCount}</span>}
                     </button>
-                    <button onClick={() => setIsMuted(!isMuted)} className="w-9 h-9 rounded-full bg-white/10 border border-white/10 flex items-center justify-center text-white hover:bg-white/20 active:scale-95 transition-all">
-                        {isMuted ? <VolumeX size={16}/> : <Volume2 size={16}/>}
-                    </button>
+                    
+                    {/* Wallet */}
                     <div className="bg-black/50 px-3 py-1.5 rounded-full border border-yellow-500/30 flex items-center gap-2 backdrop-blur-md cursor-pointer hover:bg-black/70 active:scale-95 transition-all shadow-[0_0_15px_rgba(234,179,8,0.1)]" onClick={() => router.push('/wallet')}>
                         <Coins className="w-4 h-4 text-yellow-400" />
                         <span className="text-yellow-400 font-mono font-bold text-sm">{parseFloat(user.balance).toLocaleString()}</span>
@@ -256,29 +277,24 @@ export default function Lobby() {
                 ))}
             </div>
 
-            {/* --- TUTORIAL OVERLAY --- */}
+            {/* --- MODALS & OVERLAYS --- */}
+
+            {/* Tutorial */}
             {tutorialStep > 0 && (
                 <div className="fixed inset-0 z-50 bg-black/80 flex flex-col items-center justify-center animate-in fade-in" onClick={handleTutorialNext}>
-                    {/* Spotlight effect on character */}
                     <div className="absolute bottom-0 right-0 w-[80%] h-[70%] z-10 pointer-events-none animate-in slide-in-from-bottom-20 duration-500">
                         <CharacterSVG type={user.active_pet_id} mood={tut.mood} scale={1.2} />
                     </div>
-
-                    {/* Speech Bubble */}
                     <div className="absolute top-[30%] left-[10%] right-[10%] md:w-96 md:left-[20%] z-20">
                         <GlassCard className="p-6 border-cyan-500/50 bg-black/90 shadow-[0_0_50px_rgba(6,182,212,0.3)] relative">
-                             {/* Speech arrow */}
                              <div className="absolute -bottom-3 right-20 w-6 h-6 bg-black border-r border-b border-cyan-500/50 transform rotate-45"></div>
-                             
                              <div className="flex items-start gap-4">
                                  <div className="bg-cyan-900/50 p-2 rounded-full border border-cyan-500/30">
                                      <MessageCircle size={24} className="text-cyan-400" />
                                  </div>
                                  <div className="flex-1">
                                      <h3 className="text-cyan-400 font-bold text-xs mb-1 uppercase tracking-wider">GUIDE: {user.active_pet_id.toUpperCase()}</h3>
-                                     <p className="text-white text-sm font-medium leading-relaxed">
-                                         {tut.text}
-                                     </p>
+                                     <p className="text-white text-sm font-medium leading-relaxed">{tut.text}</p>
                                      <div className="mt-4 flex justify-end">
                                          <span className="text-[10px] text-gray-500 animate-pulse font-bold tracking-widest">TAP TO CONTINUE &rarr;</span>
                                      </div>
@@ -286,6 +302,45 @@ export default function Lobby() {
                              </div>
                         </GlassCard>
                     </div>
+                </div>
+            )}
+
+            {/* Missions Modal */}
+            {showMissions && (
+                <div className="fixed inset-0 z-50 bg-black/90 flex items-center justify-center p-6 backdrop-blur-sm animate-in zoom-in-95" onClick={() => setShowMissions(false)}>
+                    <GlassCard className="w-full max-w-sm p-0 overflow-hidden border-blue-500/50" onClick={e => e.stopPropagation()}>
+                        <div className="bg-gradient-to-r from-blue-900 to-indigo-900 p-4 flex justify-between items-center">
+                            <h2 className="text-xl font-black text-white italic">DAILY MISSIONS</h2>
+                            <button onClick={() => setShowMissions(false)}><X size={20} className="text-white/50 hover:text-white"/></button>
+                        </div>
+                        <div className="p-4 space-y-3">
+                            {missions.map(m => (
+                                <div key={m.id} className="bg-white/5 border border-white/10 p-3 rounded-xl">
+                                    <div className="flex justify-between items-center mb-2">
+                                        <div className="text-sm font-bold text-white">{m.task}</div>
+                                        <div className="text-xs text-yellow-400 font-mono">+{m.reward}</div>
+                                    </div>
+                                    <div className="w-full h-2 bg-black rounded-full overflow-hidden mb-2">
+                                        <div className="h-full bg-blue-500" style={{width: `${(m.progress/m.total)*100}%`}}></div>
+                                    </div>
+                                    <div className="flex justify-between items-center">
+                                        <span className="text-[10px] text-gray-500">{m.progress} / {m.total}</span>
+                                        {m.claimed ? (
+                                            <span className="text-[10px] text-green-500 font-bold flex items-center gap-1"><CheckCircle size={10}/> CLAIMED</span>
+                                        ) : (
+                                            <button 
+                                                onClick={() => claimMission(m.id, m.reward)} 
+                                                disabled={m.progress < m.total}
+                                                className={`text-[10px] px-3 py-1 rounded-full font-bold ${m.progress >= m.total ? 'bg-yellow-500 text-black animate-pulse' : 'bg-gray-700 text-gray-500'}`}
+                                            >
+                                                CLAIM
+                                            </button>
+                                        )}
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    </GlassCard>
                 </div>
             )}
 
