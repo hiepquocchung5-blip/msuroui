@@ -16,19 +16,31 @@ const CharacterSVG = ({
       <radialGradient id="skinLight" cx="0.4" cy="0.4" r="0.8"><stop offset="0%" stopColor="#FFF0E5" /><stop offset="100%" stopColor="#EBC6A6" /></radialGradient>
       <radialGradient id="skinTan" cx="0.4" cy="0.4" r="0.8"><stop offset="0%" stopColor="#F5D0A9" /><stop offset="100%" stopColor="#A67B5B" /></radialGradient>
       <radialGradient id="skinPale" cx="0.4" cy="0.4" r="0.8"><stop offset="0%" stopColor="#FFF" /><stop offset="100%" stopColor="#E0E0FF" /></radialGradient>
+      <radialGradient id="skinGreen" cx="0.4" cy="0.4" r="0.8"><stop offset="0%" stopColor="#d4f7d4" /><stop offset="100%" stopColor="#8fbc8f" /></radialGradient>
+      <radialGradient id="skinDark" cx="0.4" cy="0.4" r="0.8"><stop offset="0%" stopColor="#8d6e63" /><stop offset="100%" stopColor="#3e2723" /></radialGradient>
       <linearGradient id="skinShadow" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="rgba(0,0,0,0)"/><stop offset="100%" stopColor="rgba(100,50,0,0.2)"/></linearGradient>
 
       {/* HAIR GRADIENTS */}
       <linearGradient id="hairLuna" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#2e1a47"/><stop offset="100%" stopColor="#5e3987"/></linearGradient>
       <linearGradient id="hairMika" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#FFFACD"/><stop offset="100%" stopColor="#FFD700"/></linearGradient>
       <linearGradient id="hairKira" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stopColor="#800"/><stop offset="100%" stopColor="#F00"/></linearGradient>
+      <linearGradient id="hairGlacia" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#E0FFFF"/><stop offset="100%" stopColor="#00BFFF"/></linearGradient>
+      <linearGradient id="hairSky" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#FFFFFF"/><stop offset="100%" stopColor="#87CEEB"/></linearGradient>
+      <linearGradient id="hairBio" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#32CD32"/><stop offset="100%" stopColor="#006400"/></linearGradient>
+      <linearGradient id="hairGold" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#D2691E"/><stop offset="100%" stopColor="#8B4513"/></linearGradient>
 
       {/* MATERIALS */}
       <linearGradient id="latex" x1="0" y1="0" x2="1" y2="0"><stop offset="0%" stopColor="#222"/><stop offset="50%" stopColor="#666"/><stop offset="100%" stopColor="#111"/></linearGradient>
       <linearGradient id="gold" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stopColor="#C5A059"/><stop offset="40%" stopColor="#FFD700"/><stop offset="100%" stopColor="#DAA520"/></linearGradient>
+      <linearGradient id="silver" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stopColor="#EEE"/><stop offset="50%" stopColor="#CCC"/><stop offset="100%" stopColor="#999"/></linearGradient>
       <radialGradient id="void"><stop offset="0%" stopColor="#000"/><stop offset="100%" stopColor="#4B0082"/></radialGradient>
+      <radialGradient id="leaf" cx="0.5" cy="0.5" r="0.5"><stop offset="0%" stopColor="#32CD32"/><stop offset="100%" stopColor="#006400"/></radialGradient>
 
       <filter id="softGlow"><feGaussianBlur stdDeviation="2" result="coloredBlur"/><feMerge><feMergeNode in="coloredBlur"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+      <pattern id="circuit" x="0" y="0" width="20" height="20" patternUnits="userSpaceOnUse">
+          <path d="M0,10 L20,10 M10,0 L10,20" stroke="#0F0" strokeWidth="1" opacity="0.5"/>
+          <circle cx="10" cy="10" r="2" fill="#0F0" opacity="0.5"/>
+      </pattern>
     </defs>
   );
 
@@ -172,7 +184,96 @@ const CharacterSVG = ({
                 <circle cx="287" cy="330" r="25" fill="rgba(255,255,255,0.6)" />
                 
                 <Head skinId="skinPale" /> <AnimeEyes color="#00FFFF" />
-                <path d="M180,150 L256,100 L332,150 L332,600 L180,600 Z" fill="#E0FFFF" opacity="0.5" className="hair-back" />
+                <path d="M180,150 L256,100 L332,150 L332,600 L180,600 Z" fill="url(#hairGlacia)" opacity="0.5" className="hair-back" />
+            </>
+        );
+
+        // 6. AERIS (Sky - Gold Chainmail)
+        case 'sky': return (
+            <>
+                <FemaleBody />
+                {/* Gold Chainmail Bikini */}
+                <path d="M200,320 Q230,360 256,320 L256,290 L200,290 Z" fill="url(#gold)" />
+                <path d="M256,320 Q282,360 312,320 L312,290 L256,290 Z" fill="url(#gold)" />
+                <path d="M200,290 L256,230 L312,290" fill="none" stroke="url(#gold)" strokeWidth="2" /> {/* Neck chain */}
+                
+                <Head /> <AnimeEyes color="#87CEEB" />
+                {/* White Angel Wings */}
+                <path d="M150,250 Q100,100 250,250" fill="#FFF" opacity="0.8" />
+                <path d="M362,250 Q412,100 262,250" fill="#FFF" opacity="0.8" />
+                <path d="M256,100 Q180,200 180,500" fill="none" stroke="url(#hairSky)" strokeWidth="30" />
+                <path d="M256,100 Q332,200 332,500" fill="none" stroke="url(#hairSky)" strokeWidth="30" />
+            </>
+        );
+
+        // 7. IVY (Bio - Leaf Bikini)
+        case 'ivy': return (
+            <>
+                <FemaleBody skinId="skinGreen" />
+                {/* Leaf Top */}
+                <path d="M200,320 Q230,360 256,320" fill="url(#leaf)" />
+                <path d="M256,320 Q282,360 312,320" fill="url(#leaf)" />
+                <path d="M256,320 L256,300" stroke="#006400" strokeWidth="2" />
+                
+                <Head skinId="skinGreen" /> <AnimeEyes color="#006400" />
+                {/* Vines in Hair */}
+                <path d="M256,80 Q150,150 150,500" fill="none" stroke="url(#hairBio)" strokeWidth="40" />
+                <path d="M256,80 Q362,150 362,500" fill="none" stroke="url(#hairBio)" strokeWidth="40" />
+                <circle cx="200" cy="150" r="5" fill="red" /> <circle cx="312" cy="180" r="5" fill="red" />
+            </>
+        );
+
+        // 8. V-77 (Cyber - Neon Body Paint)
+        case 'cyber': return (
+            <>
+                {/* Circuit Patterns on Body */}
+                <FemaleBody skinId="skinPale" />
+                <rect x="200" y="300" width="112" height="150" fill="url(#circuit)" opacity="0.5" />
+                {/* Neon Strips (No clothes) */}
+                <path d="M210,320 Q230,350 250,320" fill="none" stroke="#0F0" strokeWidth="2" filter="url(#softGlow)" />
+                <path d="M262,320 Q282,350 302,320" fill="none" stroke="#0F0" strokeWidth="2" filter="url(#softGlow)" />
+                
+                <Head skinId="skinPale" /> <AnimeEyes color="#0F0" />
+                {/* Visor */}
+                <rect x="210" y="190" width="92" height="15" fill="#000" opacity="0.8" />
+                <rect x="220" y="195" width="72" height="5" fill="#0F0" className="animate-pulse" />
+                {/* Cyber Hair */}
+                <path d="M256,100 L200,400" stroke="#222" strokeWidth="40" />
+                <path d="M256,100 L312,400" stroke="#222" strokeWidth="40" />
+            </>
+        );
+
+        // 9. PENNY (Gold - Steampunk Corset)
+        case 'penny': return (
+            <>
+                <FemaleBody skinId="skinTan" />
+                {/* Leather Corset */}
+                <path d="M200,300 Q256,280 312,300 L300,450 Q256,480 212,450 Z" fill="#8B4513" />
+                <path d="M220,300 L220,450" stroke="#B8860B" strokeWidth="2" strokeDasharray="5,5" />
+                <path d="M292,300 L292,450" stroke="#B8860B" strokeWidth="2" strokeDasharray="5,5" />
+                
+                <Head skinId="skinTan" /> <AnimeEyes color="#DAA520" />
+                {/* Goggles */}
+                <g transform="translate(256, 120)">
+                    <circle r="30" fill="none" stroke="#B8860B" strokeWidth="5" />
+                    <rect x="-35" y="-10" width="70" height="20" fill="rgba(255,255,255,0.3)" stroke="#555" />
+                </g>
+                <path d="M256,100 Q150,200 180,450" fill="none" stroke="url(#hairGold)" strokeWidth="30" />
+                <path d="M256,100 Q360,200 330,450" fill="none" stroke="url(#hairGold)" strokeWidth="30" />
+            </>
+        );
+
+        // 10. NOVA (Void - Cosmic Energy)
+        case 'void': return (
+            <>
+                {/* Void Body */}
+                <path d="M180,250 Q256,200 332,250 Q360,350 330,450 Q400,550 380,700 L132,700 Q112,550 182,450 Q152,350 180,250" fill="url(#void)" />
+                <Head skinId="skinPale" /> <AnimeEyes color="#FFF" />
+                {/* Floating Energy Bits */}
+                <circle cx="200" cy="320" r="5" fill="white" className="animate-ping" />
+                <circle cx="312" cy="320" r="5" fill="white" className="animate-ping" style={{animationDelay: '1s'}} />
+                {/* Halo */}
+                <ellipse cx="256" cy="80" rx="60" ry="10" fill="none" stroke="white" strokeWidth="2" filter="url(#softGlow)" />
             </>
         );
 
