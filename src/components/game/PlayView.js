@@ -11,23 +11,20 @@ import { useGameSound } from '../../hooks/useGameSound';
 import { game as gameApi } from '../../services/api';
 
 const PlayView = ({ machine, island, user, onLeave, updateBalance }) => {
-    // 1. Logic Hooks - Pass Island ID for special mechanics
+    // 1. Logic Hooks
     const slotLogic = useSlotMachine(machine.id, island.id);
     const { 
         reels, isSpinning, isTeaser, lastWin, mysteryItem, 
         autoPlay, spin, stopReel, setAutoPlay, setLastWin, 
         turboMode, setTurboMode,
-        // Mechanics Flags from Hook
-        expandedReels = [false, false, false], 
-        lockedReels = [false, false, false], 
-        avalancheTriggered = false
+        expandedReels, lockedReels, avalancheTriggered 
     } = slotLogic;
     
     // 2. Local UI State
     const [betIndex, setBetIndex] = useState(0);
-    const [winStage, setWinStage] = useState('idle'); // 'idle' | 'celebrating' | 'gambling'
+    const [winStage, setWinStage] = useState('idle'); 
     const [gamblePending, setGamblePending] = useState(false);
-    const [gambleLost, setGambleLost] = useState(false); // Triggers "Boo!" mood
+    const [gambleLost, setGambleLost] = useState(false); 
     
     // Modals
     const [showPaytable, setShowPaytable] = useState(false);
@@ -43,18 +40,6 @@ const PlayView = ({ machine, island, user, onLeave, updateBalance }) => {
     const BET_AMOUNTS = [200, 500, 1000, 2000, 5000, 10000, 50000];
     const currentBet = BET_AMOUNTS[betIndex];
 
-    // --- INITIALIZATION ---
-    useEffect(() => {
-        const savedMute = localStorage.getItem('suro_game_muted');
-        if (savedMute !== null) setIsMuted(savedMute === 'true');
-    }, []);
-
-    const toggleMute = () => {
-        const newVal = !isMuted;
-        setIsMuted(newVal);
-        localStorage.setItem('suro_game_muted', newVal);
-    };
-
     // Determine Machine Visual State
     const getCabinetState = () => {
         if (winStage === 'celebrating') return 'JACKPOT_HOT'; 
@@ -63,17 +48,15 @@ const PlayView = ({ machine, island, user, onLeave, updateBalance }) => {
         return 'FREE';
     };
     
-    // Character Mood Logic
     const getMood = () => {
         if (gambleLost) return 'sad'; 
         if (winStage === 'celebrating' || (winStage === 'gambling' && !gamblePending)) return 'win';
         return 'idle';
     };
 
-    // --- 3. GAMEPLAY EFFECTS ---
+    // --- 3. EFFECTS ---
     useEffect(() => {
         if (lastWin > 0) {
-            // Only handle fresh wins (not during gamble loop updates if we are already gambling)
             if (winStage === 'idle') {
                 const isBigWin = lastWin > currentBet * 10;
                 
@@ -84,12 +67,10 @@ const PlayView = ({ machine, island, user, onLeave, updateBalance }) => {
                 if (!autoPlay) {
                     setWinStage('celebrating');
                     setGambleLost(false);
-                    // Delay before showing Gamble option
                     setTimeout(() => setWinStage('gambling'), isBigWin ? 2500 : 1000);
                 }
             }
         } else {
-             // If win cleared (e.g. lost gamble), reset to idle
              if (winStage !== 'gambling' && winStage !== 'celebrating') setWinStage('idle');
         }
     }, [lastWin, autoPlay, currentBet, playSound]);
@@ -116,13 +97,13 @@ const PlayView = ({ machine, island, user, onLeave, updateBalance }) => {
             return;
         }
 
-        setGambleLost(false); // Reset sad state
+        setGambleLost(false);
         playSound('spin');
         if (navigator.vibrate) navigator.vibrate(50);
         spin(currentBet);
     }, [user.balance, currentBet, winStage, playSound, spin]);
 
-    // Keyboard Shortcuts
+    // Keyboard
     useEffect(() => {
         const handleKeyDown = (e) => {
             if (e.code === 'Space') {
@@ -147,28 +128,18 @@ const PlayView = ({ machine, island, user, onLeave, updateBalance }) => {
             const res = await gameApi.gamble(choice);
             if (res.data.status === 'success') {
                 if (res.data.won) {
-                    // WON: Celebrate then Close (One Shot)
                     setLastWin(res.data.new_win_amount); 
                     updateBalance(res.data.new_balance);
-                    
                     playSound('win');
                     triggerCoinShower();
-                    setWinStage('celebrating'); 
-                    
-                    // Auto close after celebration
-                    setTimeout(() => {
-                        setWinStage('idle');
-                    }, 3000);
+                    setWinStage('celebrating');
+                    setTimeout(() => { setWinStage('idle'); }, 3000);
                 } else {
-                    // LOST: Show Boo then Close
                     setLastWin(0); 
                     updateBalance(res.data.new_balance);
-                    
-                    playSound('stop'); // Sad sound
-                    setGambleLost(true); // Character cries
-                    setWinStage('idle'); // Close modal immediately to show character
-                    
-                    // Reset Boo after 2s
+                    playSound('stop'); 
+                    setGambleLost(true); 
+                    setWinStage('idle');
                     setTimeout(() => setGambleLost(false), 2000);
                 }
             } else {
@@ -208,6 +179,12 @@ const PlayView = ({ machine, island, user, onLeave, updateBalance }) => {
         setAutoPlay(!autoPlay);
     };
 
+    const toggleMute = () => {
+        const newVal = !isMuted;
+        setIsMuted(newVal);
+        localStorage.setItem('suro_game_muted', newVal);
+    };
+
     return (
         <div className="min-h-screen bg-black relative flex flex-col overflow-hidden" style={{ imageRendering: 'crisp-edges' }}>
             
@@ -216,7 +193,7 @@ const PlayView = ({ machine, island, user, onLeave, updateBalance }) => {
                 <div className="absolute inset-0 scale-110 opacity-70 transition-opacity duration-1000">
                     {island && <IslandLandscapeSVG islandId={island.id} />}
                 </div>
-                <div className="absolute inset-0 bg-gradient-to-b from-black/70 via-black/20 to-black pointer-events-none"></div>
+                <div className="absolute inset-0 bg-gradient-to-b from-black/80 via-black/20 to-black pointer-events-none"></div>
                 <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,transparent_0%,#000_100%)] pointer-events-none"></div>
             </div>
 
@@ -237,216 +214,164 @@ const PlayView = ({ machine, island, user, onLeave, updateBalance }) => {
                 </div>
             </div>
 
-            {/* MAIN STAGE */}
-            <div className="flex-1 flex flex-col items-center justify-center pt-8 relative z-10 w-full h-full">
+            {/* MAIN STAGE CONTAINER */}
+            <div className="flex-1 flex items-center justify-center relative z-10 w-full h-full overflow-hidden">
                 
-                {/* 1. 3D PET */}
-                <div className="absolute top-[18%] right-[-5%] w-[42%] h-[42%] z-0 pointer-events-none transition-transform duration-500 md:right-0 md:w-[35%] md:h-[35%]" 
-                     style={{ transform: (winStage !== 'idle' && !gambleLost) ? 'scale(1.25) translateY(-20px)' : 'scale(1)' }}>
+                {/* 1. 3D PET (Scaled & Positioned relative to screen, not cabinet container) */}
+                <div className="absolute top-[20%] right-[-5%] w-[40%] h-[40%] z-0 pointer-events-none transition-transform duration-500 md:right-0 md:w-[30%] md:h-[50%]" 
+                     style={{ transform: (winStage !== 'idle' && !gambleLost) ? 'scale(1.2) translateY(-20px)' : 'scale(1)' }}>
                     <CharacterSVG type={user.active_pet_id} mood={getMood()} />
                     {mysteryItem && (
-                        <div className="absolute -top-20 -left-20 bg-gradient-to-r from-purple-600 to-pink-600 text-white p-4 rounded-2xl animate-bounce shadow-2xl z-50 border-2 border-white scale-75 md:scale-100">
-                            <div className="flex items-center gap-2 mb-1"><Gift className="w-6 h-6 text-yellow-300"/> <span className="font-black text-sm">BONUS!</span></div>
-                            <div className="text-xs font-bold">{mysteryItem.message}</div>
+                        <div className="absolute -top-10 left-0 bg-gradient-to-r from-purple-600 to-pink-600 text-white p-3 rounded-xl animate-bounce shadow-2xl z-50 border border-white">
+                            <div className="flex items-center gap-2"><Gift size={16} className="text-yellow-300"/> <span className="font-bold text-xs">{mysteryItem.message}</span></div>
                         </div>
                     )}
-                    {/* "BOO!" Reaction Bubble */}
                     {gambleLost && (
-                        <div className="absolute top-10 left-0 bg-white text-black font-black px-6 py-3 rounded-3xl rounded-bl-none animate-bounce z-50 shadow-[0_0_20px_red] border-4 border-red-600 text-xl transform -rotate-12">
-                            BOO! 👻
+                        <div className="absolute top-0 left-[-20px] bg-white text-black font-black px-4 py-2 rounded-full rounded-bl-none animate-bounce z-50 shadow-[0_0_15px_red] border-2 border-red-600 transform -rotate-12">
+                            BOO!
                         </div>
                     )}
                 </div>
 
-                {/* 2. 3D CABINET */}
-                <div className="relative z-10 w-full max-w-md h-[82vh] max-h-[850px] flex items-center justify-center transform md:scale-100 scale-95 origin-center">
-                    <CabinetSVG 
-                        islandId={parseInt(island.id)} 
-                        mode="game" 
-                        charId={island.hostess_char_id} 
-                        stats={{laps: machine.total_laps, wins: machine.total_payout}} 
-                        machineNumber={machine.machine_number}
-                        serialNumber={machine.serial_number}
-                        visualState={getCabinetState()}
-                    />
+                {/* 2. CABINET CONTAINER (Maintains Aspect Ratio 240/400 = 0.6) */}
+                {/* This ensures SVG and HTML overlays always line up perfectly on any device */}
+                <div className="relative h-[80vh] max-h-[850px] aspect-[0.6] flex-shrink-0">
                     
-                    {/* --- INTERACTIVE SCREEN --- */}
-                    <div className="absolute top-[21%] w-[68%] h-[30%] flex flex-col pointer-events-none">
-                        
+                    {/* The SVG Artwork */}
+                    <div className="absolute inset-0 w-full h-full z-10">
+                        <CabinetSVG 
+                            islandId={parseInt(island.id)} 
+                            mode="game" 
+                            charId={island.hostess_char_id} 
+                            stats={{laps: machine.total_laps, wins: machine.total_payout}} 
+                            machineNumber={machine.machine_number}
+                            serialNumber={machine.serial_number}
+                            visualState={getCabinetState()}
+                        />
+                    </div>
+
+                    {/* --- INTERACTIVE SCREEN OVERLAY (21% Top, 30% Height of container) --- */}
+                    <div className="absolute top-[21.25%] left-[16.6%] w-[66.6%] h-[28.75%] flex flex-col pointer-events-none z-20">
                         {/* Win Marquee */}
-                        <div className={`bg-black/95 rounded border border-gray-800 h-8 flex items-center justify-center overflow-hidden relative mb-1 shadow-inner ${isTeaser ? 'border-red-500 animate-pulse' : ''}`}>
-                            <p className="font-mono text-[10px] text-cyan-400 font-bold tracking-widest animate-marquee whitespace-nowrap px-2">
-                                {lastWin > 0 ? `*** BIG WIN ${lastWin.toLocaleString()} MMK ***` : (isTeaser ? 'NEAR MISS...' : 'INSERT COIN • PLAY NOW')}
+                        <div className={`bg-black/90 h-[15%] flex items-center justify-center overflow-hidden mb-[1%] shadow-inner ${isTeaser ? 'border-t-2 border-red-500' : ''}`}>
+                            <p className="font-mono text-[min(3vw,12px)] text-cyan-400 font-bold tracking-widest animate-marquee whitespace-nowrap">
+                                {lastWin > 0 ? `*** BIG WIN ${lastWin.toLocaleString()} ***` : (isTeaser ? 'NEAR MISS...' : 'INSERT COIN')}
                             </p>
                         </div>
-
-                        {/* Reels with Mechanics Visuals */}
-                        <div className="flex-1 grid grid-cols-3 gap-1 bg-black p-1 rounded overflow-hidden relative border-4 border-gray-900 shadow-[inset_0_0_20px_black]">
+                        {/* Reels */}
+                        <div className="flex-1 grid grid-cols-3 gap-[2%] bg-black p-[2%] overflow-hidden relative shadow-[inset_0_0_20px_black]">
                             {reels.map((s, i) => (
-                                <div key={i} className={`relative h-full overflow-hidden bg-gradient-to-b from-[#0a0a0a] via-[#2a2a2a] to-[#0a0a0a] border-x border-black/50 ${lockedReels && lockedReels[i] ? 'border-2 border-yellow-400 shadow-[inset_0_0_15px_gold]' : ''}`}>
+                                <div key={i} className={`relative h-full overflow-hidden bg-gradient-to-b from-[#111] via-[#333] to-[#111] border-x border-black/50 ${lockedReels && lockedReels[i] ? 'border-2 border-yellow-400' : ''}`}>
+                                    {lockedReels && lockedReels[i] && <div className="absolute inset-0 bg-yellow-400/20 z-30 animate-pulse flex items-center justify-center"><Lock size={12} className="text-yellow-400"/></div>}
+                                    {expandedReels && expandedReels[i] && <div className="absolute inset-0 bg-red-600/80 z-40 flex items-center justify-center animate-in fade-in"><Flame size={24} className="text-white animate-bounce"/></div>}
                                     
-                                    {/* Locked State Overlay (Noctyra) */}
-                                    {lockedReels && lockedReels[i] && (
-                                        <div className="absolute inset-0 bg-yellow-400/20 z-30 pointer-events-none animate-pulse flex flex-col items-center justify-center">
-                                            <Lock size={16} className="text-yellow-400 drop-shadow-md mb-8"/>
-                                            <div className="text-[8px] font-bold text-yellow-400 bg-black/50 px-1 rounded">HELD</div>
-                                        </div>
-                                    )}
-
-                                    {/* Expanding Wild Overlay (Inferna) */}
-                                    {expandedReels && expandedReels[i] && (
-                                        <div className="absolute inset-0 bg-gradient-to-t from-red-600 via-orange-500 to-yellow-400 z-40 flex flex-col items-center justify-center animate-in fade-in zoom-in duration-300">
-                                            <Flame size={32} className="text-white animate-bounce" fill="white"/>
-                                            <span className="text-white font-black text-xl rotate-90 tracking-widest drop-shadow-md mt-2">WILD</span>
-                                        </div>
-                                    )}
-
-                                    <div className={`absolute inset-0 flex flex-col items-center justify-center transition-all duration-100 
-                                        ${isSpinning[i] ? 'blur-[2px] scale-y-110 opacity-80' : 'blur-0 scale-y-100 opacity-100'}
-                                        ${i===2 && isTeaser ? 'animate-bounce' : ''}
-                                        ${turboMode && isSpinning[i] ? 'blur-[4px]' : ''}
-                                        ${avalancheTriggered && !isSpinning[i] ? 'animate-ping' : ''}
-                                    `}>
-                                        <div className="absolute top-[-45%] w-full p-2 transform scale-y-[0.6] opacity-30 brightness-50"><SymbolSVG id={(s === 1 ? 7 : s - 1)} /></div>
-                                        <div className="w-full p-1 transform scale-110 z-10 drop-shadow-[0_0_15px_rgba(255,255,255,0.4)]"><SymbolSVG id={s} /></div>
-                                        <div className="absolute bottom-[-45%] w-full p-2 transform scale-y-[0.6] opacity-30 brightness-50"><SymbolSVG id={(s % 7) + 1} /></div>
+                                    <div className={`absolute inset-0 flex flex-col items-center justify-center ${isSpinning[i] ? 'blur-[2px]' : ''} ${turboMode && isSpinning[i] ? 'blur-[4px]' : ''} ${avalancheTriggered && !isSpinning[i] ? 'animate-ping' : ''}`}>
+                                        <div className="w-[80%] aspect-square"><SymbolSVG id={s} /></div>
                                     </div>
-                                    <div className="absolute inset-0 bg-gradient-to-b from-white/10 via-transparent to-black/50 z-20"></div>
+                                    <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-transparent to-black/60 z-20"></div>
                                 </div>
                             ))}
                         </div>
                     </div>
 
-                    {/* --- BUTTON DECK (Interactive) --- */}
-                    <div className="absolute bottom-[23%] w-[82%] h-[15%] flex flex-col gap-2 p-1 z-50 pointer-events-auto touch-manipulation" style={{ perspective: '600px', transformStyle: 'preserve-3d' }}>
-                         <div className="w-full h-full flex flex-col justify-between" style={{ transform: 'rotateX(25deg)' }}>
-                             
-                             {/* Left: Bet Config */}
-                             <div className="absolute left-2 top-2 flex gap-1 z-50">
-                                 <button onClick={() => changeBet(-1)} className="w-10 h-9 bg-gray-800 rounded-lg border-b-4 border-gray-950 text-white flex items-center justify-center active:border-b-0 active:translate-y-1 transition-all shadow-lg hover:bg-gray-700 pointer-events-auto cursor-pointer"><Minus size={14}/></button>
-                                 <div className="bg-black border border-gray-600 w-16 h-9 flex items-center justify-center text-[10px] text-yellow-400 font-mono tracking-tighter shadow-inner">{currentBet.toLocaleString()}</div>
-                                 <button onClick={() => changeBet(1)} className="w-10 h-9 bg-gray-800 rounded-lg border-b-4 border-gray-950 text-white flex items-center justify-center active:border-b-0 active:translate-y-1 transition-all shadow-lg hover:bg-gray-700 pointer-events-auto cursor-pointer"><Plus size={14}/></button>
-                             </div>
-                             
-                             <button onClick={handleMaxBet} className="absolute left-2 top-14 w-12 h-9 bg-orange-700 rounded-lg border-b-4 border-black text-[7px] font-black text-white flex flex-col items-center justify-center active:border-b-0 active:translate-y-1 shadow-lg hover:bg-orange-600 pointer-events-auto cursor-pointer z-50">MAX</button>
+                    {/* --- 3D BUTTON DECK OVERLAY (57.5% Top, 15% Height) --- */}
+                    <div className="absolute top-[57.5%] left-[5%] w-[90%] h-[15%] z-50 pointer-events-none" style={{ perspective: '600px' }}>
+                        <div className="w-full h-full relative pointer-events-auto" style={{ transform: 'rotateX(20deg)', transformOrigin: 'top center' }}>
+                            
+                            {/* Left: Bet */}
+                            <div className="absolute left-[5%] top-[10%] flex gap-1">
+                                <button onClick={() => changeBet(-1)} className="w-8 h-8 sm:w-10 sm:h-10 bg-gray-800 rounded-lg border-b-4 border-black text-white flex items-center justify-center active:border-b-0 active:translate-y-1 shadow-lg touch-manipulation"><Minus size={14}/></button>
+                                <div className="bg-black border border-gray-600 w-12 h-8 sm:w-16 sm:h-10 flex items-center justify-center text-[9px] sm:text-xs text-yellow-400 font-mono tracking-tighter shadow-inner">{currentBet.toLocaleString()}</div>
+                                <button onClick={() => changeBet(1)} className="w-8 h-8 sm:w-10 sm:h-10 bg-gray-800 rounded-lg border-b-4 border-black text-white flex items-center justify-center active:border-b-0 active:translate-y-1 shadow-lg touch-manipulation"><Plus size={14}/></button>
+                            </div>
+                            <button onClick={handleMaxBet} className="absolute left-[5%] top-[60%] w-10 h-6 sm:w-12 sm:h-8 bg-orange-700 rounded border-b-4 border-black text-[8px] font-black text-white flex items-center justify-center active:border-b-0 active:translate-y-1 shadow-lg touch-manipulation">MAX</button>
 
-                             {/* Right: SPIN Button */}
-                             <button 
+                            {/* Right: SPIN */}
+                            <button 
                                 onClick={handleSpin} 
                                 disabled={isSpinning.some(s=>s) || (winStage !== 'idle' && winStage !== 'celebrating')} 
-                                className={`absolute right-2 top-1 w-20 h-20 rounded-full border-b-[8px] shadow-2xl flex flex-col items-center justify-center active:border-b-0 active:translate-y-2 transition-all pointer-events-auto cursor-pointer z-50
-                                ${isSpinning.some(s=>s) ? 'bg-gray-800 border-gray-950 opacity-50' : 'bg-gradient-to-b from-red-600 to-red-800 border-red-950 text-white shadow-red-600/40 hover:brightness-110 hover:shadow-red-500/80'}`}
-                             >
-                                 <Gamepad2 size={28} strokeWidth={3} />
-                                 <span className="text-[10px] font-black tracking-widest mt-0.5">SPIN</span>
-                             </button>
+                                className={`absolute right-[5%] top-[5%] w-16 h-16 sm:w-20 sm:h-20 rounded-full border-b-[6px] shadow-xl flex flex-col items-center justify-center active:border-b-0 active:translate-y-1 transition-all touch-manipulation
+                                ${isSpinning.some(s=>s) ? 'bg-gray-800 border-gray-950 opacity-50' : 'bg-gradient-to-b from-red-600 to-red-800 border-red-950 text-white hover:brightness-110'}`}
+                            >
+                                <Gamepad2 size={24} strokeWidth={3} />
+                                <span className="text-[8px] font-black tracking-widest">SPIN</span>
+                            </button>
 
-                             {/* Center-Right: Toggles */}
-                             <div className="absolute right-24 top-4 flex flex-col gap-2 z-50">
-                                 <button onClick={toggleTurbo} className={`w-9 h-9 rounded-lg border-b-4 border-black flex items-center justify-center active:border-b-0 active:translate-y-1 shadow-md transition-colors pointer-events-auto cursor-pointer ${turboMode ? 'bg-yellow-500 text-black' : 'bg-gray-700 text-gray-400'}`}>
+                            {/* Center: Toggles */}
+                            <div className="absolute right-[35%] top-[15%] flex flex-col gap-2">
+                                <button onClick={toggleTurbo} className={`w-8 h-8 sm:w-9 sm:h-9 rounded-lg border-b-4 border-black flex items-center justify-center active:border-b-0 active:translate-y-1 shadow-md touch-manipulation ${turboMode ? 'bg-yellow-500 text-black' : 'bg-gray-700 text-gray-400'}`}>
                                     <Zap size={14} fill={turboMode ? "currentColor" : "none"}/>
-                                 </button>
-                                 <button onClick={toggleAuto} className={`w-9 h-9 rounded-lg border-b-4 border-black flex items-center justify-center active:border-b-0 active:translate-y-1 shadow-md transition-colors pointer-events-auto cursor-pointer ${autoPlay ? 'bg-green-600 text-white' : 'bg-gray-700 text-gray-400'}`}>
+                                </button>
+                                <button onClick={toggleAuto} className={`w-8 h-8 sm:w-9 sm:h-9 rounded-lg border-b-4 border-black flex items-center justify-center active:border-b-0 active:translate-y-1 shadow-md touch-manipulation ${autoPlay ? 'bg-green-600 text-white' : 'bg-gray-700 text-gray-400'}`}>
                                     {autoPlay ? <StopCircle size={14}/> : <Repeat size={14}/>}
-                                 </button>
-                             </div>
-                         </div>
+                                </button>
+                            </div>
+                        </div>
                     </div>
+
                 </div>
             </div>
 
-            {/* VFX: Coin Shower */}
+            {/* COIN VFX */}
             {coins.map(c => (
                 <div key={c.id} className="absolute top-[-20px] animate-fall z-50 pointer-events-none" style={{ left: `${c.left}%`, animationDuration: '2.5s', animationDelay: `${c.delay}s`, transform: `scale(${c.scale}) rotate(${c.rotation}deg)` }}>
-                    <div className="w-6 h-6 bg-yellow-400 rounded-full border-2 border-yellow-200 shadow-[0_0_15px_gold] flex items-center justify-center font-black text-yellow-700 text-xs"><Coins size={12} strokeWidth={3}/></div>
+                    <div className="w-5 h-5 bg-yellow-400 rounded-full border-2 border-yellow-200 shadow-lg flex items-center justify-center font-black text-yellow-700 text-[8px]"><Coins size={10} strokeWidth={3}/></div>
                 </div>
             ))}
 
-            {/* MODALS */}
-            
-            {/* 1. Gamble Modal */}
+            {/* MODALS (Gamble, Paytable, Settings) */}
             {winStage === 'gambling' && (
-                <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/90 backdrop-blur-sm animate-in zoom-in-95 duration-200 p-4">
-                    <GlassCard className="w-[90%] max-w-sm p-6 text-center border-yellow-500/50 shadow-[0_0_50px_rgba(234,179,8,0.2)]">
-                        <h2 className="text-3xl font-black text-yellow-400 mb-2 italic tracking-tighter drop-shadow-md">DOUBLE UP?</h2>
-                        
-                        <div className="flex justify-between items-center text-xs font-mono text-gray-400 mb-4 px-2">
+                <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/90 backdrop-blur-sm p-4 animate-in zoom-in-95">
+                    <GlassCard className="w-full max-w-sm p-6 text-center border-yellow-500/50">
+                        <h2 className="text-3xl font-black text-yellow-400 mb-2 italic">DOUBLE UP?</h2>
+                        <div className="flex justify-between text-xs font-mono text-gray-400 mb-6">
                             <span>RISK: <b className="text-white">{lastWin.toLocaleString()}</b></span>
-                            <span className="text-green-400">TO WIN: <b className="text-xl">{(lastWin*2).toLocaleString()}</b></span>
+                            <span className="text-green-400">WIN: <b className="text-lg">{(lastWin*2).toLocaleString()}</b></span>
                         </div>
-                        
                         <div className="grid grid-cols-2 gap-4 mb-6">
-                            <button onClick={() => handleGamble('red')} disabled={gamblePending} className="h-32 bg-gradient-to-br from-red-600 to-red-900 rounded-2xl border-b-8 border-red-950 flex flex-col items-center justify-center shadow-lg active:border-b-0 active:translate-y-2 transition-all hover:brightness-110 group">
-                                <div className="w-16 h-16 bg-red-500 rotate-45 transform shadow-inner border-4 border-red-300 group-hover:scale-110 transition-transform rounded-sm mb-2"></div>
-                                <span className="text-white font-black text-sm">RED</span>
-                            </button>
-                            <button onClick={() => handleGamble('black')} disabled={gamblePending} className="h-32 bg-gradient-to-br from-gray-800 to-black rounded-2xl border-b-8 border-black flex flex-col items-center justify-center shadow-lg active:border-b-0 active:translate-y-2 transition-all hover:brightness-110 group">
-                                <div className="w-16 h-16 bg-black border-4 border-gray-600 rotate-45 transform shadow-inner group-hover:scale-110 transition-transform rounded-sm mb-2"></div>
-                                <span className="text-white font-black text-sm">BLACK</span>
-                            </button>
+                            <button onClick={() => handleGamble('red')} disabled={gamblePending} className="h-24 bg-gradient-to-br from-red-600 to-red-900 rounded-2xl border-4 border-red-400 flex items-center justify-center shadow-lg active:scale-95"><span className="text-white font-black">RED</span></button>
+                            <button onClick={() => handleGamble('black')} disabled={gamblePending} className="h-24 bg-gradient-to-br from-gray-800 to-black rounded-2xl border-4 border-gray-600 flex items-center justify-center shadow-lg active:scale-95"><span className="text-white font-black">BLACK</span></button>
                         </div>
-                        
-                        <button onClick={collectWin} className="text-gray-400 text-xs font-bold tracking-widest hover:text-white transition-colors uppercase border-b border-transparent hover:border-white">
-                            No Thanks, Collect Win
-                        </button>
+                        <button onClick={collectWin} className="text-gray-400 text-xs font-bold underline">COLLECT WIN</button>
                     </GlassCard>
                 </div>
             )}
             
-            {/* 2. Celebration Modal */}
-            {winStage === 'celebrating' && (
-                <div className="absolute inset-0 z-50 flex flex-col items-center justify-center bg-black/80 backdrop-blur-sm animate-in zoom-in duration-300 cursor-pointer" onClick={() => setWinStage('gambling')}>
-                    <Trophy size={64} className="text-yellow-400 mb-4 animate-bounce" />
-                    <h1 className="text-6xl font-black text-yellow-300 drop-shadow-[0_0_25px_gold] italic">BIG WIN</h1>
-                    <div className="text-4xl font-mono text-white mt-4">{lastWin.toLocaleString()}</div>
-                    <div className="mt-8 text-sm text-gray-400 animate-pulse">TAP TO CONTINUE</div>
-                </div>
-            )}
-            
-            {/* 3. Paytable Modal */}
-            {showPaytable && (
-                <div className="absolute inset-0 z-50 bg-black/95 flex flex-col items-center justify-center p-6 backdrop-blur-xl animate-in fade-in" onClick={() => setShowPaytable(false)}>
-                    <h3 className="text-white font-black mb-6 tracking-widest text-2xl border-b-4 border-cyan-500 pb-2">PAYTABLE</h3>
-                    <div className="grid grid-cols-2 gap-4 w-full max-w-xs">
-                        <div className="flex items-center gap-3 bg-white/5 p-3 rounded-xl border border-white/10"><div className="w-10 h-10"><SymbolSVG id={1}/></div><span className="text-yellow-400 font-black text-xl">100x</span></div>
-                        <div className="flex items-center gap-3 bg-white/5 p-3 rounded-xl border border-white/10"><div className="w-10 h-10"><SymbolSVG id={2}/></div><span className="text-red-500 font-black text-xl">50x</span></div>
-                        <div className="flex items-center gap-3 bg-white/5 p-3 rounded-xl border border-white/10"><div className="w-10 h-10"><SymbolSVG id={3}/></div><span className="text-cyan-400 font-bold text-lg">20x</span></div>
-                        <div className="flex items-center gap-3 bg-white/5 p-3 rounded-xl border border-white/10"><div className="w-10 h-10"><SymbolSVG id={4}/></div><span className="text-white font-bold text-lg">10x</span></div>
-                    </div>
-                    <div className="col-span-2 text-center text-gray-500 text-xs mt-4">Tap anywhere to close</div>
-                </div>
-            )}
-
-            {/* 4. Settings Modal */}
             {showSettings && (
-                <div className="absolute inset-0 z-50 bg-black/95 flex flex-col items-center justify-center p-6 backdrop-blur-xl animate-in fade-in" onClick={() => setShowSettings(false)}>
-                    <GlassCard className="w-full max-w-sm p-6" onClick={(e) => e.stopPropagation()}>
-                        <h3 className="text-white font-bold mb-4 tracking-widest border-b border-white/10 pb-2">GAME MENU</h3>
-                        <div className="space-y-3">
-                             <button onClick={toggleMute} className="w-full bg-white/5 p-3 rounded-xl flex justify-between items-center hover:bg-white/10">
-                                 <span className="text-sm font-bold text-gray-300">Sound Effects</span>
-                                 {isMuted ? <VolumeX size={18} className="text-gray-500"/> : <Volume2 size={18} className="text-green-400"/>}
-                             </button>
-                             <button onClick={onLeave} className="w-full bg-red-900/20 border border-red-500/30 p-3 rounded-xl flex justify-between items-center hover:bg-red-900/40 text-red-400">
-                                 <span className="text-sm font-bold">Leave Machine</span>
-                                 <LogOut size={18} />
-                             </button>
-                        </div>
+                <div className="absolute inset-0 z-50 bg-black/95 flex flex-col items-center justify-center p-6" onClick={() => setShowSettings(false)}>
+                    <GlassCard className="w-full max-w-sm p-6" onClick={e => e.stopPropagation()}>
+                        <h3 className="text-white font-bold mb-4 border-b border-white/10 pb-2">SETTINGS</h3>
+                        <button onClick={toggleMute} className="w-full bg-white/10 p-3 rounded-xl flex justify-between mb-2">
+                             <span>Sound</span> {isMuted ? <VolumeX/> : <Volume2 className="text-green-400"/>}
+                        </button>
+                        <button onClick={onLeave} className="w-full bg-red-900/30 text-red-400 p-3 rounded-xl flex justify-between">
+                             <span>Leave Game</span> <LogOut/>
+                        </button>
                     </GlassCard>
                 </div>
             )}
+            
+            {showPaytable && (
+                <div className="absolute inset-0 z-50 bg-black/95 flex flex-col items-center justify-center p-6" onClick={() => setShowPaytable(false)}>
+                     <div className="text-white font-bold text-xl mb-4">PAYTABLE</div>
+                     <div className="grid grid-cols-2 gap-4">
+                         <div className="bg-white/10 p-2 rounded flex items-center gap-2"><SymbolSVG id={1} /> <span className="text-yellow-400 font-bold">100x</span></div>
+                         <div className="bg-white/10 p-2 rounded flex items-center gap-2"><SymbolSVG id={2} /> <span className="text-red-400 font-bold">50x</span></div>
+                         <div className="bg-white/10 p-2 rounded flex items-center gap-2"><SymbolSVG id={3} /> <span className="text-cyan-400 font-bold">20x</span></div>
+                         <div className="bg-white/10 p-2 rounded flex items-center gap-2"><SymbolSVG id={4} /> <span className="text-white font-bold">10x</span></div>
+                     </div>
+                     <div className="mt-8 text-gray-500 text-xs">Tap to close</div>
+                </div>
+            )}
 
-            {/* 5. Low Balance Alert */}
+            {/* Low Balance */}
             {showLowBalance && (
-                <div className="absolute inset-0 z-50 bg-black/90 flex flex-col items-center justify-center p-6 backdrop-blur-sm animate-in zoom-in-95">
-                    <GlassCard className="w-full max-w-sm p-6 text-center border-red-500/50">
-                        <Coins className="w-12 h-12 text-red-500 mx-auto mb-2" />
-                        <h2 className="text-xl font-black text-white mb-2">LOW BALANCE</h2>
-                        <p className="text-gray-400 text-xs mb-4">You need more credits to place this bet.</p>
-                        <button onClick={() => window.location.href='/wallet'} className="w-full bg-green-600 hover:bg-green-500 text-white font-bold py-3 rounded-xl shadow-lg flex items-center justify-center gap-2">
-                            <Wallet size={16}/> DEPOSIT NOW
-                        </button>
-                        <button onClick={() => setShowLowBalance(false)} className="mt-3 text-gray-500 text-xs">Cancel</button>
+                <div className="absolute inset-0 z-50 bg-black/90 flex flex-col items-center justify-center p-6">
+                    <GlassCard className="text-center p-6 border-red-500/50">
+                        <Coins className="w-12 h-12 text-red-500 mx-auto mb-2"/>
+                        <h2 className="text-xl font-bold text-white">LOW BALANCE</h2>
+                        <button onClick={() => window.location.href='/wallet'} className="mt-4 w-full bg-green-600 py-3 rounded-xl font-bold text-white">DEPOSIT NOW</button>
+                        <button onClick={() => setShowLowBalance(false)} className="mt-2 text-gray-500 text-xs">Cancel</button>
                     </GlassCard>
                 </div>
             )}
