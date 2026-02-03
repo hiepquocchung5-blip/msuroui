@@ -6,6 +6,7 @@ import SymbolSVG from '../visuals/SymbolSVG';
 import IslandLandscapeSVG from '../visuals/IslandLandscapeSVG';
 import GlassCard from '../ui/GlassCard';
 import GlobalTicker from '../ui/GlobalTicker';
+import ActiveEvents from '../ui/ActiveEvents';
 import { useSlotMachine } from '../../hooks/useSlotMachine';
 import { useGameSound } from '../../hooks/useGameSound';
 import { game as gameApi } from '../../services/api';
@@ -16,15 +17,15 @@ const PlayView = ({ machine, island, user, onLeave, updateBalance }) => {
     const { 
         reels, isSpinning, isTeaser, lastWin, mysteryItem, 
         autoPlay, spin, stopReel, setAutoPlay, setLastWin, 
-        turboMode, setTurboMode,
+        turboMode, setTurboMode, 
         expandedReels, lockedReels, avalancheTriggered 
     } = slotLogic;
     
     // 2. Local UI State
     const [betIndex, setBetIndex] = useState(0);
-    const [winStage, setWinStage] = useState('idle'); 
+    const [winStage, setWinStage] = useState('idle'); // 'idle' | 'celebrating' | 'gambling'
     const [gamblePending, setGamblePending] = useState(false);
-    const [gambleLost, setGambleLost] = useState(false); 
+    const [gambleLost, setGambleLost] = useState(false); // Triggers "Boo!" mood
     
     // Modals
     const [showPaytable, setShowPaytable] = useState(false);
@@ -40,7 +41,9 @@ const PlayView = ({ machine, island, user, onLeave, updateBalance }) => {
     const BET_AMOUNTS = [200, 500, 1000, 2000, 5000, 10000, 50000];
     const currentBet = BET_AMOUNTS[betIndex];
 
-    // Determine Machine Visual State
+    // --- HELPER FUNCTIONS ---
+
+    // Determine Machine Visual State (Lights/LEDs)
     const getCabinetState = () => {
         if (winStage === 'celebrating') return 'JACKPOT_HOT'; 
         if (isSpinning.some(s => s)) return 'BUSY';
@@ -48,6 +51,7 @@ const PlayView = ({ machine, island, user, onLeave, updateBalance }) => {
         return 'FREE';
     };
     
+    // Determine Character Animation State
     const getMood = () => {
         if (gambleLost) return 'sad'; 
         if (winStage === 'celebrating' || (winStage === 'gambling' && !gamblePending)) return 'win';
@@ -57,6 +61,7 @@ const PlayView = ({ machine, island, user, onLeave, updateBalance }) => {
     // --- 3. EFFECTS ---
     useEffect(() => {
         if (lastWin > 0) {
+            // Only handle fresh wins (not during gamble loop updates)
             if (winStage === 'idle') {
                 const isBigWin = lastWin > currentBet * 10;
                 
@@ -67,10 +72,12 @@ const PlayView = ({ machine, island, user, onLeave, updateBalance }) => {
                 if (!autoPlay) {
                     setWinStage('celebrating');
                     setGambleLost(false);
+                    // Delay before showing Gamble option
                     setTimeout(() => setWinStage('gambling'), isBigWin ? 2500 : 1000);
                 }
             }
         } else {
+             // If win cleared, reset to idle
              if (winStage !== 'gambling' && winStage !== 'celebrating') setWinStage('idle');
         }
     }, [lastWin, autoPlay, currentBet, playSound]);
@@ -103,7 +110,7 @@ const PlayView = ({ machine, island, user, onLeave, updateBalance }) => {
         spin(currentBet);
     }, [user.balance, currentBet, winStage, playSound, spin]);
 
-    // Keyboard
+    // Keyboard Shortcuts
     useEffect(() => {
         const handleKeyDown = (e) => {
             if (e.code === 'Space') {
@@ -128,18 +135,28 @@ const PlayView = ({ machine, island, user, onLeave, updateBalance }) => {
             const res = await gameApi.gamble(choice);
             if (res.data.status === 'success') {
                 if (res.data.won) {
+                    // WON: Celebrate then Close (One Shot Logic)
                     setLastWin(res.data.new_win_amount); 
                     updateBalance(res.data.new_balance);
+                    
                     playSound('win');
                     triggerCoinShower();
-                    setWinStage('celebrating');
-                    setTimeout(() => { setWinStage('idle'); }, 3000);
+                    setWinStage('celebrating'); 
+                    
+                    // Auto close after celebration
+                    setTimeout(() => {
+                        setWinStage('idle');
+                    }, 3000);
                 } else {
+                    // LOST: Show Boo then Close
                     setLastWin(0); 
                     updateBalance(res.data.new_balance);
-                    playSound('stop'); 
-                    setGambleLost(true); 
-                    setWinStage('idle');
+                    
+                    playSound('stop'); // Sad sound
+                    setGambleLost(true); // Character cries
+                    setWinStage('idle'); // Close modal immediately to show character
+                    
+                    // Reset Boo after 2s
                     setTimeout(() => setGambleLost(false), 2000);
                 }
             } else {
@@ -193,11 +210,12 @@ const PlayView = ({ machine, island, user, onLeave, updateBalance }) => {
                 <div className="absolute inset-0 scale-110 opacity-70 transition-opacity duration-1000">
                     {island && <IslandLandscapeSVG islandId={island.id} />}
                 </div>
-                <div className="absolute inset-0 bg-gradient-to-b from-black/80 via-black/20 to-black pointer-events-none"></div>
+                <div className="absolute inset-0 bg-gradient-to-b from-black/70 via-black/20 to-black pointer-events-none"></div>
                 <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,transparent_0%,#000_100%)] pointer-events-none"></div>
             </div>
 
             <GlobalTicker />
+            <ActiveEvents />
 
             {/* HUD */}
             <div className="absolute top-8 w-full p-4 flex justify-between items-center z-40 pointer-events-none safe-area-top">
@@ -217,7 +235,7 @@ const PlayView = ({ machine, island, user, onLeave, updateBalance }) => {
             {/* MAIN STAGE CONTAINER */}
             <div className="flex-1 flex items-center justify-center relative z-10 w-full h-full overflow-hidden">
                 
-                {/* 1. 3D PET (Scaled & Positioned relative to screen, not cabinet container) */}
+                {/* 1. 3D PET (Positioned relative to screen) */}
                 <div className="absolute top-[20%] right-[-5%] w-[40%] h-[40%] z-0 pointer-events-none transition-transform duration-500 md:right-0 md:w-[30%] md:h-[50%]" 
                      style={{ transform: (winStage !== 'idle' && !gambleLost) ? 'scale(1.2) translateY(-20px)' : 'scale(1)' }}>
                     <CharacterSVG type={user.active_pet_id} mood={getMood()} />
@@ -226,17 +244,19 @@ const PlayView = ({ machine, island, user, onLeave, updateBalance }) => {
                             <div className="flex items-center gap-2"><Gift size={16} className="text-yellow-300"/> <span className="font-bold text-xs">{mysteryItem.message}</span></div>
                         </div>
                     )}
+                    {/* "BOO!" Reaction Bubble */}
                     {gambleLost && (
-                        <div className="absolute top-0 left-[-20px] bg-white text-black font-black px-4 py-2 rounded-full rounded-bl-none animate-bounce z-50 shadow-[0_0_15px_red] border-2 border-red-600 transform -rotate-12">
-                            BOO!
+                        <div className="absolute top-0 left-[-20px] bg-white text-black font-black px-6 py-3 rounded-full rounded-bl-none animate-bounce z-50 shadow-[0_0_15px_red] border-2 border-red-600 text-xl transform -rotate-12">
+                            BOO! 👻
                         </div>
                     )}
                 </div>
 
-                {/* 2. CABINET CONTAINER (Maintains Aspect Ratio 240/400 = 0.6) */}
-                <div className="relative h-[80vh] max-h-[850px] aspect-[0.6] flex-shrink-0">
+                {/* 2. CABINET CONTAINER (Fixed Aspect Ratio 0.6) */}
+                {/* This wrapper forces the cabinet and its overlays to scale together perfectly */}
+                <div className="relative h-[85vh] max-h-[850px] aspect-[0.6] flex-shrink-0">
                     
-                    {/* The SVG Artwork */}
+                    {/* A. The SVG Artwork */}
                     <div className="absolute inset-0 w-full h-full z-10">
                         <CabinetSVG 
                             islandId={parseInt(island.id)} 
@@ -249,18 +269,22 @@ const PlayView = ({ machine, island, user, onLeave, updateBalance }) => {
                         />
                     </div>
 
-                    {/* --- INTERACTIVE SCREEN OVERLAY (21.25% Top, 30% Height of container) --- */}
+                    {/* B. SCREEN CONTENT LAYER (21.25% Top, 30% Height of container) */}
                     <div className="absolute top-[21.25%] left-[16.6%] w-[66.6%] h-[28.75%] flex flex-col pointer-events-none z-20">
+                        
                         {/* Win Marquee */}
                         <div className={`bg-black/90 h-[15%] flex items-center justify-center overflow-hidden mb-[1%] shadow-inner ${isTeaser ? 'border-t-2 border-red-500' : ''}`}>
-                            <p className="font-mono text-[min(3vw,12px)] text-cyan-400 font-bold tracking-widest animate-marquee whitespace-nowrap">
+                            <p className="font-mono text-[min(3vw,12px)] text-cyan-400 font-bold tracking-widest animate-marquee whitespace-nowrap px-2">
                                 {lastWin > 0 ? `*** BIG WIN ${lastWin.toLocaleString()} ***` : (isTeaser ? 'NEAR MISS...' : 'INSERT COIN')}
                             </p>
                         </div>
-                        {/* Reels */}
+
+                        {/* Reels Container */}
                         <div className="flex-1 grid grid-cols-3 gap-[2%] bg-black p-[2%] overflow-hidden relative shadow-[inset_0_0_20px_black]">
                             {reels.map((s, i) => (
                                 <div key={i} className={`relative h-full overflow-hidden bg-gradient-to-b from-[#111] via-[#333] to-[#111] border-x border-black/50 ${lockedReels && lockedReels[i] ? 'border-2 border-yellow-400 shadow-[inset_0_0_15px_gold]' : ''}`}>
+                                    
+                                    {/* Visual Effects Overlays */}
                                     {lockedReels && lockedReels[i] && <div className="absolute inset-0 bg-yellow-400/20 z-30 animate-pulse flex items-center justify-center"><Lock size={12} className="text-yellow-400"/></div>}
                                     {expandedReels && expandedReels[i] && <div className="absolute inset-0 bg-red-600/80 z-40 flex items-center justify-center animate-in fade-in"><Flame size={24} className="text-white animate-bounce"/></div>}
                                     
@@ -273,7 +297,7 @@ const PlayView = ({ machine, island, user, onLeave, updateBalance }) => {
                         </div>
                     </div>
 
-                    {/* --- 3D BUTTON DECK OVERLAY (57.5% Top, 15% Height) --- */}
+                    {/* C. 3D BUTTON DECK OVERLAY (57.5% Top, 15% Height) */}
                     <div className="absolute top-[57.5%] left-[5%] w-[90%] h-[15%] z-50 pointer-events-none" style={{ perspective: '600px' }}>
                         <div className="w-full h-full relative pointer-events-auto" style={{ transform: 'rotateX(20deg)', transformOrigin: 'top center' }}>
                             
@@ -285,7 +309,7 @@ const PlayView = ({ machine, island, user, onLeave, updateBalance }) => {
                                 >
                                     <Minus size={14}/>
                                 </button>
-                                <div className="bg-black border border-gray-600 w-12 h-8 sm:w-16 sm:h-10 flex items-center justify-center text-[9px] sm:text-xs text-yellow-400 font-mono tracking-tighter shadow-inner">{currentBet.toLocaleString()}</div>
+                                <div className="bg-black border border-gray-600 w-12 h-8 sm:w-16 sm:h-10 flex items-center justify-center text-[9px] sm:text-xs text-yellow-400 font-mono tracking-tighter shadow-inner select-none">{currentBet.toLocaleString()}</div>
                                 <button 
                                     onClick={() => changeBet(1)} 
                                     className="w-8 h-8 sm:w-10 sm:h-10 bg-gray-800 rounded-lg border-b-4 border-black text-white flex items-center justify-center active:border-b-0 active:translate-y-1 shadow-lg touch-manipulation active:bg-gray-700"
@@ -309,7 +333,7 @@ const PlayView = ({ machine, island, user, onLeave, updateBalance }) => {
                                 ${isSpinning.some(s=>s) ? 'bg-gray-800 border-gray-950 opacity-50' : 'bg-gradient-to-b from-red-600 to-red-800 border-red-950 text-white hover:brightness-110 hover:shadow-red-500/80 active:bg-red-700'}`}
                             >
                                 <Gamepad2 size={24} strokeWidth={3} />
-                                <span className="text-[8px] font-black tracking-widest">SPIN</span>
+                                <span className="text-[8px] font-black tracking-widest mt-0.5 select-none">SPIN</span>
                             </button>
 
                             {/* Center: Toggles */}
@@ -333,17 +357,19 @@ const PlayView = ({ machine, island, user, onLeave, updateBalance }) => {
                 </div>
             </div>
 
-            {/* COIN VFX */}
+            {/* VFX: Coin Shower */}
             {coins.map(c => (
                 <div key={c.id} className="absolute top-[-20px] animate-fall z-50 pointer-events-none" style={{ left: `${c.left}%`, animationDuration: '2.5s', animationDelay: `${c.delay}s`, transform: `scale(${c.scale}) rotate(${c.rotation}deg)` }}>
-                    <div className="w-6 h-6 bg-yellow-400 rounded-full border-2 border-yellow-200 shadow-lg flex items-center justify-center font-black text-yellow-700 text-[8px]"><Coins size={10} strokeWidth={3}/></div>
+                    <div className="w-6 h-6 bg-yellow-400 rounded-full border-2 border-yellow-200 shadow-[0_0_15px_gold] flex items-center justify-center font-black text-yellow-700 text-xs"><Coins size={12} strokeWidth={3}/></div>
                 </div>
             ))}
 
-            {/* MODALS (Gamble, Paytable, Settings) */}
+            {/* MODALS */}
+            
+            {/* 1. Gamble Modal */}
             {winStage === 'gambling' && (
                 <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/90 backdrop-blur-sm p-4 animate-in zoom-in-95">
-                    <GlassCard className="w-full max-w-sm p-6 text-center border-yellow-500/50">
+                    <GlassCard className="w-full max-w-sm p-6 text-center border-yellow-500/50 shadow-[0_0_50px_rgba(234,179,8,0.2)]">
                         <h2 className="text-3xl font-black text-yellow-400 mb-2 italic">DOUBLE UP?</h2>
                         <div className="flex justify-between text-xs font-mono text-gray-400 mb-6">
                             <span>RISK: <b className="text-white">{lastWin.toLocaleString()}</b></span>
@@ -358,22 +384,19 @@ const PlayView = ({ machine, island, user, onLeave, updateBalance }) => {
                 </div>
             )}
             
-            {showSettings && (
-                <div className="absolute inset-0 z-50 bg-black/95 flex flex-col items-center justify-center p-6" onClick={() => setShowSettings(false)}>
-                    <GlassCard className="w-full max-w-sm p-6" onClick={e => e.stopPropagation()}>
-                        <h3 className="text-white font-bold mb-4 border-b border-white/10 pb-2">SETTINGS</h3>
-                        <button onClick={toggleMute} className="w-full bg-white/10 p-3 rounded-xl flex justify-between mb-2">
-                             <span>Sound</span> {isMuted ? <VolumeX/> : <Volume2 className="text-green-400"/>}
-                        </button>
-                        <button onClick={onLeave} className="w-full bg-red-900/30 text-red-400 p-3 rounded-xl flex justify-between">
-                             <span>Leave Game</span> <LogOut/>
-                        </button>
-                    </GlassCard>
+            {/* 2. Celebration Modal */}
+            {winStage === 'celebrating' && (
+                <div className="absolute inset-0 z-50 flex flex-col items-center justify-center bg-black/80 backdrop-blur-sm animate-in zoom-in duration-300 cursor-pointer" onClick={() => setWinStage('gambling')}>
+                    <Trophy size={64} className="text-yellow-400 mb-4 animate-bounce" />
+                    <h1 className="text-6xl font-black text-yellow-300 drop-shadow-[0_0_25px_gold] italic">BIG WIN</h1>
+                    <div className="text-4xl font-mono text-white mt-4">{lastWin.toLocaleString()}</div>
+                    <div className="mt-8 text-sm text-gray-400 animate-pulse">TAP TO CONTINUE</div>
                 </div>
             )}
             
+            {/* 3. Paytable Modal */}
             {showPaytable && (
-                <div className="absolute inset-0 z-50 bg-black/95 flex flex-col items-center justify-center p-6" onClick={() => setShowPaytable(false)}>
+                <div className="absolute inset-0 z-50 bg-black/95 flex flex-col items-center justify-center p-6 backdrop-blur-xl animate-in fade-in" onClick={() => setShowPaytable(false)}>
                      <div className="text-white font-bold text-xl mb-4">PAYTABLE</div>
                      <div className="grid grid-cols-2 gap-4">
                          <div className="bg-white/10 p-2 rounded flex items-center gap-2"><SymbolSVG id={1} /> <span className="text-yellow-400 font-bold">100x</span></div>
@@ -385,9 +408,24 @@ const PlayView = ({ machine, island, user, onLeave, updateBalance }) => {
                 </div>
             )}
 
-            {/* Low Balance */}
+            {/* 4. Settings Modal */}
+            {showSettings && (
+                <div className="absolute inset-0 z-50 bg-black/95 flex flex-col items-center justify-center p-6 backdrop-blur-xl animate-in fade-in" onClick={() => setShowSettings(false)}>
+                    <GlassCard className="w-full max-w-sm p-6" onClick={e => e.stopPropagation()}>
+                        <h3 className="text-white font-bold mb-4 border-b border-white/10 pb-2">SETTINGS</h3>
+                        <button onClick={toggleMute} className="w-full bg-white/10 p-3 rounded-xl flex justify-between mb-2">
+                             <span>Sound</span> {isMuted ? <VolumeX/> : <Volume2 className="text-green-400"/>}
+                        </button>
+                        <button onClick={onLeave} className="w-full bg-red-900/30 text-red-400 p-3 rounded-xl flex justify-between">
+                             <span>Leave Game</span> <LogOut/>
+                        </button>
+                    </GlassCard>
+                </div>
+            )}
+
+            {/* 5. Low Balance Alert */}
             {showLowBalance && (
-                <div className="absolute inset-0 z-50 bg-black/90 flex flex-col items-center justify-center p-6">
+                <div className="absolute inset-0 z-50 bg-black/90 flex flex-col items-center justify-center p-6 backdrop-blur-sm animate-in zoom-in-95">
                     <GlassCard className="text-center p-6 border-red-500/50">
                         <Coins className="w-12 h-12 text-red-500 mx-auto mb-2"/>
                         <h2 className="text-xl font-bold text-white">LOW BALANCE</h2>
