@@ -19,20 +19,16 @@ const CabinetSVG = ({
     
     const displaySerial = serialNumber || `SN-${islandId}-${machineNumber.toString().padStart(3,'0')}`;
 
-    // --- 1. DEFINITIONS (Advanced Materials) ---
+    // --- 1. DEFINITIONS (Materials & Gradients) ---
     const renderDefs = () => (
         <defs>
-            {/* PLASTICS & METALS */}
-            <linearGradient id="plasticGloss" x1="0" y1="0" x2="1" y2="1">
-                <stop offset="0%" stopColor="rgba(255,255,255,0.8)" />
-                <stop offset="50%" stopColor="rgba(255,255,255,0)" />
-                <stop offset="100%" stopColor="rgba(255,255,255,0.4)" />
-            </linearGradient>
+            {/* COMMON METALS */}
             <linearGradient id="chromeGradient" x1="0" y1="0" x2="1" y2="0">
                 <stop offset="0%" stopColor="#333" />
-                <stop offset="20%" stopColor="#FFF" />
-                <stop offset="50%" stopColor="#999" />
-                <stop offset="80%" stopColor="#FFF" />
+                <stop offset="15%" stopColor="#888" />
+                <stop offset="25%" stopColor="#aaa" />
+                <stop offset="50%" stopColor="#fff" />
+                <stop offset="75%" stopColor="#888" />
                 <stop offset="100%" stopColor="#333" />
             </linearGradient>
             <linearGradient id="goldGradient" x1="0" y1="0" x2="1" y2="1">
@@ -40,229 +36,200 @@ const CabinetSVG = ({
                 <stop offset="50%" stopColor="#FCF6BA" />
                 <stop offset="100%" stopColor="#AA771C" />
             </linearGradient>
+            <linearGradient id="blackPlastic" x1="0" y1="0" x2="1" y2="0">
+                 <stop offset="0%" stopColor="#1a1a1a"/>
+                 <stop offset="20%" stopColor="#333"/>
+                 <stop offset="50%" stopColor="#222"/>
+                 <stop offset="80%" stopColor="#333"/>
+                 <stop offset="100%" stopColor="#1a1a1a"/>
+            </linearGradient>
+            <linearGradient id="cylinderShine" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor="#000" stopOpacity="0.8"/>
+                <stop offset="20%" stopColor="#000" stopOpacity="0.2"/>
+                <stop offset="50%" stopColor="#fff" stopOpacity="0.1"/>
+                <stop offset="80%" stopColor="#000" stopOpacity="0.2"/>
+                <stop offset="100%" stopColor="#000" stopOpacity="0.8"/>
+            </linearGradient>
 
-            {/* LIGHTING FX */}
-            <filter id="ledGlow" x="-50%" y="-50%" width="200%" height="200%">
-                <feGaussianBlur stdDeviation="3" result="coloredBlur" />
+            {/* GLASS & LIGHTS */}
+            <linearGradient id="glassGlare" x1="0" y1="0" x2="1" y2="1">
+                <stop offset="0%" stopColor="rgba(255,255,255,0.05)" />
+                <stop offset="45%" stopColor="rgba(255,255,255,0.2)" />
+                <stop offset="50%" stopColor="rgba(255,255,255,0)" />
+                <stop offset="100%" stopColor="rgba(255,255,255,0.05)" />
+            </linearGradient>
+            <filter id="neonBlur">
+                <feGaussianBlur stdDeviation="2.5" result="coloredBlur" />
                 <feMerge><feMergeNode in="coloredBlur" /><feMergeNode in="SourceGraphic" /></feMerge>
             </filter>
             
-            <pattern id="speakerMesh" width="3" height="3" patternUnits="userSpaceOnUse">
-                <rect width="3" height="3" fill="#111"/>
-                <circle cx="1.5" cy="1.5" r="1" fill="#333" />
-            </pattern>
-
-            {/* THEME SKINS (Base Chassis Colors) */}
-            <linearGradient id="skinVegas" x1="0" y1="0" x2="1" y2="0"><stop offset="0%" stopColor="#600"/><stop offset="50%" stopColor="#A00"/><stop offset="100%" stopColor="#400"/></linearGradient>
-            <linearGradient id="skinMagical" x1="0" y1="0" x2="1" y2="0"><stop offset="0%" stopColor="#FF69B4"/><stop offset="50%" stopColor="#FFC0CB"/><stop offset="100%" stopColor="#FF1493"/></linearGradient>
-            <linearGradient id="skinGothic" x1="0" y1="0" x2="1" y2="0"><stop offset="0%" stopColor="#2c3e50"/><stop offset="50%" stopColor="#4ca1af"/><stop offset="100%" stopColor="#2c3e50"/></linearGradient>
+            {/* ISLAND SKINS */}
+            <linearGradient id="skinVegas" x1="0" y1="0" x2="1" y2="0"><stop offset="0%" stopColor="#500"/><stop offset="50%" stopColor="#900"/><stop offset="100%" stopColor="#500"/></linearGradient>
+            <linearGradient id="skinMagma" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#FF4500"/><stop offset="100%" stopColor="#220000"/></linearGradient>
+            <linearGradient id="skinAloha" x1="0" y1="0" x2="1" y2="0"><stop offset="0%" stopColor="#5D4037"/><stop offset="50%" stopColor="#8D6E63"/><stop offset="100%" stopColor="#5D4037"/></linearGradient>
+            <linearGradient id="skinIce" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#E0FFFF"/><stop offset="100%" stopColor="#00BFFF"/></linearGradient>
+            <linearGradient id="skinSky" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stopColor="#FFF"/><stop offset="50%" stopColor="#F0F8FF"/><stop offset="100%" stopColor="#B0C4DE"/></linearGradient>
+            <linearGradient id="skinBio" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#556B2F"/><stop offset="100%" stopColor="#004d00"/></linearGradient>
+            <linearGradient id="skinRust" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stopColor="#5a3a2a"/><stop offset="50%" stopColor="#8b4513"/><stop offset="100%" stopColor="#3e2723"/></linearGradient>
+            <linearGradient id="skinVoid" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stopColor="#000"/><stop offset="50%" stopColor="#4B0082"/><stop offset="100%" stopColor="#000"/></linearGradient>
             <linearGradient id="skinGold" x1="0" y1="0" x2="1" y2="0"><stop offset="0%" stopColor="#B8860B"/><stop offset="50%" stopColor="#FFD700"/><stop offset="100%" stopColor="#B8860B"/></linearGradient>
-            <linearGradient id="skinVoid" x1="0" y1="0" x2="1" y2="0"><stop offset="0%" stopColor="#000"/><stop offset="50%" stopColor="#333"/><stop offset="100%" stopColor="#000"/></linearGradient>
             
-            <clipPath id="screenCutout"><rect x="45" y="95" width="150" height="110" rx="4" /></clipPath>
-            <clipPath id="bellyClip"><path d="M20,290 L220,290 L220,380 L20,380 Z" /></clipPath>
+            {/* MASKS */}
+            <clipPath id="screenCutout">
+                <rect x="40" y="85" width="160" height="115" rx="4" />
+            </clipPath>
+            <clipPath id="bellyClip">
+                <path d="M30,310 L210,310 L200,380 L40,380 Z" />
+            </clipPath>
         </defs>
     );
 
-    // --- 2. CHASSIS GEOMETRY (10 Variations) ---
-    const renderChassis = () => {
-        let path, fill, trim;
+    // --- 2. CABINET FRAME (The Housing) ---
+    const renderCabinetFrame = () => {
+        // Dynamic styling based on Island
+        let bodyFill = "url(#blackPlastic)";
+        let trimStroke = "url(#chromeGradient)";
+        const accentColor = isHot ? '#FFD700' : (islandId === 3 ? '#FF4500' : '#00F3FF');
         
         switch(islandId) {
-            case 1: // Vegas (Classic Red/Gold Box)
-                fill = "url(#skinVegas)"; trim = "url(#goldGradient)";
-                path = "M10,40 Q120,20 230,40 L230,400 L10,400 Z";
-                break;
-            case 6: // Sky (Magical Girl Style - Rounded Wings)
-                fill = "url(#skinMagical)"; trim = "#FFF";
-                return (
-                    <g>
-                        {/* Winged Top */}
-                        <path d="M0,50 Q20,20 60,30 L180,30 Q220,20 240,50 L230,400 L10,400 Z" fill="url(#skinMagical)" stroke="#FF69B4" strokeWidth="2"/>
-                        <path d="M0,50 Q20,20 60,30" fill="none" stroke="white" strokeWidth="3" />
-                        <path d="M180,30 Q220,20 240,50" fill="none" stroke="white" strokeWidth="3" />
-                        {/* Gem on Top */}
-                        <circle cx="120" cy="25" r="15" fill="#FF00FF" stroke="white" strokeWidth="2" filter="url(#ledGlow)" className="animate-pulse"/>
-                    </g>
-                );
-            case 9: // Gold (Industrial/Mecha)
-                fill = "url(#skinGold)"; trim = "#000";
-                return (
-                    <g>
-                        <path d="M10,20 L50,20 L60,40 L180,40 L190,20 L230,20 L240,400 L0,400 Z" fill="url(#goldGradient)" stroke="#000" strokeWidth="2"/>
-                        <rect x="20" y="50" width="200" height="340" fill="#333" opacity="0.3"/>
-                        <path d="M10,20 L20,400" stroke="white" strokeWidth="1" opacity="0.5"/>
-                    </g>
-                );
-            default: // Standard Pachislo Box
-                fill = "url(#skinGothic)"; trim = "url(#chromeGradient)";
-                path = "M20,30 L220,30 L220,390 L20,390 Z";
+            case 1: bodyFill = "url(#skinVegas)"; break;
+            case 2: bodyFill = "url(#skinAloha)"; break;
+            case 3: bodyFill = "url(#skinMagma)"; break;
+            case 4: bodyFill = "url(#skinNoctyra)"; break;
+            case 5: bodyFill = "url(#skinIce)"; break;
+            case 6: bodyFill = "url(#skinSky)"; break;
+            case 7: bodyFill = "url(#skinBio)"; break;
+            case 8: bodyFill = "url(#skinRust)"; break; // Cyber
+            case 9: bodyFill = "url(#skinGold)"; break;
+            case 10: bodyFill = "url(#skinVoid)"; break;
+            default: bodyFill = "url(#blackPlastic)";
         }
 
         return (
             <g>
-                <path d={path} fill={fill} stroke={trim} strokeWidth="3" />
+                <path d="M15,20 L225,20 L235,390 L5,390 Z" fill={bodyFill} stroke="#111" strokeWidth="1" />
+                
                 {/* Side LED Strips */}
-                <path d="M25,50 L25,380" stroke={isHot ? "gold" : "cyan"} strokeWidth="4" className="animate-pulse" filter="url(#ledGlow)"/>
-                <path d="M215,50 L215,380" stroke={isHot ? "gold" : "magenta"} strokeWidth="4" className="animate-pulse" filter="url(#ledGlow)"/>
+                <path d="M20,30 L10,380" stroke={accentColor} strokeWidth="3" className="animate-pulse" filter="url(#neonBlur)" opacity="0.8" />
+                <path d="M220,30 L230,380" stroke={accentColor} strokeWidth="3" className="animate-pulse" filter="url(#neonBlur)" opacity="0.8" />
+                
+                {/* Chrome Trim */}
+                <path d="M15,20 L225,20 L235,390 L5,390 Z" fill="none" stroke="url(#chromeGradient)" strokeWidth="2" opacity="0.6" />
             </g>
         );
     };
 
     // --- 3. TOPPER (Data Counter) ---
     const renderTopper = () => (
-        <g transform="translate(60, -10)">
-            <rect x="0" y="0" width="120" height="35" fill="#111" stroke="#333" rx="4" />
-            
-            {/* Big LED Digits */}
+        <g transform="translate(65, -5)">
+            <rect x="0" y="0" width="110" height="35" fill="#080808" stroke="#333" rx="3" />
             <g transform="translate(10, 5)">
-                <rect x="0" y="0" width="70" height="25" fill="#200" />
-                <text x="65" y="20" textAnchor="end" fill="red" fontSize="16" fontFamily="monospace" fontWeight="bold" filter="url(#ledGlow)">
+                <rect x="0" y="0" width="80" height="25" fill="#220000" />
+                <text x="75" y="20" textAnchor="end" fill="red" fontSize="14" fontFamily="monospace" fontWeight="bold" filter="url(#neonBlur)">
                     {stats?.laps || 0}
                 </text>
-                <text x="5" y="8" fill="#500" fontSize="5">GAMES</text>
+                <text x="5" y="8" fill="#500" fontSize="5" fontWeight="bold">SPINS</text>
             </g>
-            
-            {/* Battle History Lamps */}
-            <g transform="translate(85, 5)">
-                <circle cx="5" cy="5" r="3" fill={isBroken ? 'red' : '#300'} />
-                <circle cx="15" cy="5" r="3" fill={isHot ? 'yellow' : '#330'} className={isHot?'animate-pulse':''} />
-                <circle cx="25" cy="5" r="3" fill={isBusy ? 'lime' : '#030'} className={isBusy?'animate-pulse':''} />
+            <g transform="translate(95, 5)">
+                <circle cx="4" cy="4" r="3" fill={isBroken ? 'red' : '#300'} />
+                <circle cx="4" cy="12" r="3" fill={isHot ? 'yellow' : '#330'} className={isHot ? 'animate-pulse' : ''} />
+                <circle cx="4" cy="20" r="3" fill={isBusy ? 'blue' : '#003'} className={isBusy ? "animate-pulse" : ""} />
             </g>
         </g>
     );
 
-    // --- 4. SCREEN BEZEL ---
-    const renderScreen = () => {
+    // --- 4. SCREEN AREA (FIXED NAME) ---
+    const renderScreenArea = () => {
         if (mode === 'game') {
+            // Game Mode: Hollow frame for React reels
             return (
                 <g>
-                    {/* Hollow frame for HTML reels */}
-                    <path d="M45,95 H195 V205 H45 Z M10,30 H230 V390 H10 Z" fill="rgba(10,10,10,0.95)" fillRule="evenodd" />
-                    {/* Chrome Trim */}
-                    <rect x="43" y="93" width="154" height="114" fill="none" stroke="url(#chromeGradient)" strokeWidth="4" rx="2" />
+                    <path d="M40,85 H200 V205 H40 Z M10,40 H230 V390 H10 Z" fill="rgba(0,0,0,0.95)" fillRule="evenodd" />
+                    <rect x="40" y="85" width="160" height="120" fill="none" stroke="url(#chromeGradient)" strokeWidth="4" rx="2" />
                 </g>
             );
         }
+
+        // Lobby Mode: Simulated Reels
         return (
-            <g transform="translate(45, 95)">
-                <rect x="0" y="0" width="150" height="110" fill="#000" stroke="#333" strokeWidth="2" />
-                {/* Simulated Reels */}
-                <rect x="10" y="10" width="40" height="90" fill="url(#chromeGradient)" opacity="0.1"/>
-                <rect x="55" y="10" width="40" height="90" fill="url(#chromeGradient)" opacity="0.1"/>
-                <rect x="100" y="10" width="40" height="90" fill="url(#chromeGradient)" opacity="0.1"/>
-                <text x="75" y="60" textAnchor="middle" fill={isBusy ? 'red' : 'green'} fontSize="14" fontWeight="bold">{isBusy ? 'PLAY' : 'IDLE'}</text>
+            <g transform="translate(40, 85)">
+                <rect x="0" y="0" width="160" height="120" fill="#000" stroke="#333" strokeWidth="2" />
+                <rect x="10" y="10" width="40" height="100" fill="url(#cylinderShine)" opacity="0.3" />
+                <rect x="60" y="10" width="40" height="100" fill="url(#cylinderShine)" opacity="0.3" />
+                <rect x="110" y="10" width="40" height="100" fill="url(#cylinderShine)" opacity="0.3" />
+                
+                <text x="80" y="65" textAnchor="middle" fill={isBusy ? '#F00' : '#0F0'} fontWeight="bold" fontSize="18" className={!isBusy ? 'animate-pulse' : ''} style={{textShadow: '0 0 10px currentColor'}}>
+                    {isBroken ? 'ERROR' : (isBusy ? 'PLAYING' : 'OPEN')}
+                </text>
             </g>
         );
     };
 
-    // --- 5. CONTROL DECK (Pachislo Style) ---
-    const renderControls = () => (
-        <g transform="translate(10, 220)">
-            {/* Slanted Table */}
-            <path d="M0,0 L220,0 L235,60 L-15,60 Z" fill="url(#chromeGradient)" stroke="#111" />
-            <path d="M-15,60 L235,60 L235,75 L-15,75 Z" fill="#222" />
-            
-            {/* START LEVER (The Knob) */}
-            <g transform="translate(20, 30)">
-                <circle cx="0" cy="0" r="16" fill="#111" stroke="#333" strokeWidth="2" />
-                <circle cx="0" cy="0" r="12" fill="silver" />
-                <circle cx="0" cy="-8" r="12" fill="red" className={!isBusy ? "animate-pulse" : ""} /> {/* The Ball */}
-            </g>
-
-            {/* STOP BUTTONS (3 Buttons) */}
-            <g transform="translate(75, 20)">
-                {/* Button 1 */}
-                <g>
-                    <circle cx="0" cy="10" r="14" fill="#c0392b" stroke="#333" strokeWidth="2" />
-                    <text x="0" y="14" textAnchor="middle" fill="white" fontSize="8" fontWeight="bold">STOP</text>
-                </g>
-                {/* Button 2 */}
-                <g transform="translate(35, 0)">
-                    <circle cx="0" cy="10" r="14" fill="#c0392b" stroke="#333" strokeWidth="2" />
-                    <text x="0" y="14" textAnchor="middle" fill="white" fontSize="8" fontWeight="bold">STOP</text>
-                </g>
-                {/* Button 3 */}
-                <g transform="translate(70, 0)">
-                    <circle cx="0" cy="10" r="14" fill="#c0392b" stroke="#333" strokeWidth="2" />
-                    <text x="0" y="14" textAnchor="middle" fill="white" fontSize="8" fontWeight="bold">STOP</text>
-                </g>
-            </g>
-
-            {/* Coin Slot */}
-            <rect x="195" y="15" width="5" height="25" rx="2" fill="#000" stroke="#888" />
-            <rect x="197" y="18" width="1" height="19" fill="#0F0" className="animate-pulse" filter="url(#ledGlow)"/>
+    // --- 5. CONTROL DECK & BELLY ---
+    const renderButtonDeck = () => (
+        <g transform="translate(10, 230)">
+             <path d="M0,0 L220,0 L235,50 L-15,50 Z" fill="url(#blackPlastic)" stroke="#333" />
+             <path d="M-15,50 L235,50 L235,70 L-15,70 Z" fill="#111" />
+             <rect x="190" y="15" width="5" height="20" rx="2" fill="#000" stroke="#888" />
+             <rect x="192" y="18" width="1" height="14" fill="#0F0" className="animate-pulse" filter="url(#neonBlur)"/>
+             <g transform="translate(15, 25)">
+                 <circle cx="0" cy="0" r="14" fill="#111" stroke="#333" />
+                 <circle cx="0" cy="0" r="10" fill="url(#chromeGradient)" />
+                 <circle cx="0" cy="-6" r="12" fill={isBusy ? "#500" : "red"} className={!isBusy ? "animate-pulse" : ""} />
+             </g>
+             {mode !== 'game' && (
+                 <g transform="translate(70, 15)">
+                     <circle cx="0" cy="10" r="12" fill="#c0392b" stroke="#333" strokeWidth="2" />
+                     <circle cx="40" cy="10" r="12" fill="#c0392b" stroke="#333" strokeWidth="2" />
+                     <circle cx="80" cy="10" r="12" fill="#c0392b" stroke="#333" strokeWidth="2" />
+                 </g>
+             )}
         </g>
     );
 
-    // --- 6. BELLY GLASS (Art Panel) ---
-    // Note: Replace CharacterSVG with <image> tag for PNGs
-    const renderBelly = () => (
-        <g transform="translate(20, 290)">
-            <rect x="0" y="0" width="200" height="90" rx="2" fill="#000" stroke="#333" />
-            
-            <g clipPath="url(#bellyClip)">
-                {/* Placeholder for PNG Art */}
-                {/* <image href="/assets/belly/madoka.png" x="0" y="0" width="200" height="90" /> */}
-                
-                {/* Fallback Vector Art */}
-                <rect x="0" y="0" width="200" height="90" fill={islandId===6 ? '#FFC0CB' : '#220000'} opacity="0.8" />
-                <g transform="translate(150, 45) scale(0.3)">
+    const renderBellyGlass = () => (
+        <g transform="translate(30, 310)">
+             <path d="M0,0 L180,0 L170,70 L10,70 Z" fill="#000" stroke="url(#chromeGradient)" strokeWidth="2" />
+             <g clipPath="url(#bellyClip)">
+                 <rect x="5" y="5" width="170" height="60" fill={islandId===3 ? '#300' : '#101'} />
+                 <g transform="translate(130, 40) scale(0.25)">
                     <CharacterSVG type={charId} stickerMode={true} />
-                </g>
-                
-                <text x="100" y="45" textAnchor="middle" fill="white" fontSize="18" fontWeight="900" style={{textShadow: '0 0 10px #FF00FF'}}>
-                    {isHot ? 'SUPER JACKPOT' : 'SUROPARA'}
-                </text>
-                <text x="100" y="65" textAnchor="middle" fill="gold" fontSize="12" fontFamily="monospace">
-                    WIN: {stats.wins}
-                </text>
-            </g>
-            
-            {/* Glass Reflection */}
-            <path d="M0,0 L200,0 L180,90 L20,90 Z" fill="url(#plasticGloss)" opacity="0.3" pointerEvents="none" />
-            
-            {/* Serial Plate */}
-            <rect x="70" y="80" width="60" height="8" fill="silver" stroke="black" />
-            <text x="100" y="86" textAnchor="middle" fill="black" fontSize="4" fontFamily="monospace">{displaySerial}</text>
+                 </g>
+                 <text x="15" y="25" fill="#FFF" fontSize="14" fontWeight="black" style={{textShadow:'0 0 5px white'}}>BIG BONUS</text>
+                 <text x="15" y="45" fill="gold" fontSize="10" fontFamily="monospace">WIN: {stats.wins}</text>
+             </g>
+             <path d="M0,0 L180,0 L170,70 L10,70 Z" fill="url(#glassGlare)" opacity="0.3" pointerEvents="none" />
+             <rect x="60" y="55" width="60" height="10" fill="silver" stroke="black" rx="1" />
+             <text x="90" y="62" textAnchor="middle" fill="black" fontSize="5" fontFamily="monospace" fontWeight="bold">{displaySerial}</text>
         </g>
     );
 
     const renderCoinTray = () => (
-        <g transform="translate(0, 375)">
-            <path d="M10,0 Q120,15 230,0 L230,25 Q120,35 10,25 Z" fill="url(#chromeGradient)" stroke="#222" />
-            <rect x="25" y="5" width="190" height="15" rx="5" fill="#111" opacity="0.9" />
-            {isHot && (
+        <g transform="translate(0, 380)">
+             <path d="M10,0 Q120,15 230,0 L230,20 Q120,30 10,20 Z" fill="url(#chromeGradient)" stroke="#333" />
+             <rect x="20" y="5" width="200" height="15" rx="5" fill="#111" opacity="0.9" />
+             {isHot && (
                  <g>
-                    <circle cx="50" cy="12" r="5" fill="gold" stroke="orange" />
-                    <circle cx="60" cy="14" r="5" fill="gold" stroke="orange" />
-                    <circle cx="55" cy="10" r="5" fill="gold" stroke="orange" />
+                    <circle cx="40" cy="12" r="5" fill="gold" stroke="orange" />
+                    <circle cx="50" cy="14" r="5" fill="gold" stroke="orange" />
+                    <circle cx="45" cy="10" r="5" fill="gold" stroke="orange" />
                  </g>
-            )}
+             )}
         </g>
     );
 
     // --- MAIN RENDER ---
     return (
-        <svg width="240" height="400" viewBox="0 0 240 400" className={`drop-shadow-2xl transition-transform duration-300 ${mode==='hall' ? 'group-hover:-translate-y-2' : ''}`}>
+        <svg width="240" height="400" viewBox="0 0 240 400" className={`drop-shadow-2xl transition-transform group-hover:-translate-y-2 duration-300 ${isBroken ? 'animate-pulse' : ''}`}>
             {renderDefs()}
-            
-            {/* Shadow */}
-            <ellipse cx="120" cy="395" rx="100" ry="10" fill="#000" opacity="0.7" filter="blur(6px)" />
-            
-            {renderChassis()}
+            <ellipse cx="120" cy="395" rx="100" ry="10" fill="#000" opacity="0.6" filter="blur(6px)" />
+            {renderCabinetFrame()}
             {renderTopper()}
-            {renderScreenArea()}
-            {renderControls()}
-            {renderBelly()}
+            {renderScreenArea()} 
+            {renderButtonDeck()}
+            {renderBellyGlass()}
             {renderCoinTray()}
-            
-            {/* Hall Mode Occupant */}
-            {mode === 'hall' && isBusy && occupantPetId && (
-                 <g transform="translate(80, 260) scale(0.35)">
-                    <CharacterSVG type={occupantPetId} mood="idle" />
-                 </g>
-            )}
+            {mode === 'hall' && isBusy && occupantPetId && <g transform="translate(80, 260) scale(0.35)"><CharacterSVG type={occupantPetId} mood="idle" /></g>}
         </svg>
     );
 };
