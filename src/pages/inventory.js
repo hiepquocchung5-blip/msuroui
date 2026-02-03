@@ -1,226 +1,204 @@
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
 import { useAuth } from '../context/AuthContext';
-import { game, finance, user as userApi } from '../services/api';
-import { Check, Lock, RefreshCw, AlertCircle, Filter, Zap, Shield, Star, Crown, Info } from 'lucide-react';
-import GlassCard from '../components/ui/GlassCard';
+import { useToast } from '../context/ToastContext';
+import api, { user as userApi } from '../services/api';
+import { ChevronLeft, Heart, Lock, CheckCircle, Sparkles, UserCheck, Star, Coins } from 'lucide-react';
 import CharacterSVG from '../components/visuals/CharacterSVG';
+import GlassCard from '../components/ui/GlassCard';
 import BottomDock from '../components/layout/BottomDock';
+import { useGameSound } from '../hooks/useGameSound';
 
-export default function Inventory() {
-  const { user, loading, updateBalance, updateActivePet } = useAuth();
-  const router = useRouter();
-  
-  // State
-  const [activeTab, setActiveTab] = useState('owned'); 
-  const [filterRarity, setFilterRarity] = useState('ALL');
-  const [equipping, setEquipping] = useState(null);
-  const [buying, setBuying] = useState(null);
-  
-  const [allCharacters, setAllCharacters] = useState([]);
-  const [ownedIds, setOwnedIds] = useState([]); // Array of char_keys
-  const [isLoadingData, setIsLoadingData] = useState(true);
-  const [error, setError] = useState(null);
+export default function InventoryPage() {
+    const { user, loading, updateBalance } = useAuth(); // We might need to refresh user context
+    const { addToast } = useToast();
+    const router = useRouter();
+    const { playSound } = useGameSound();
 
-  // Derived Active Pet Object
-  const activePetObj = allCharacters.find(c => c.char_key === user?.active_pet_id);
+    const [roster, setRoster] = useState([]);
+    const [selectedChar, setSelectedChar] = useState(null);
+    const [isLoading, setIsLoading] = useState(true);
+    const [isEquipping, setIsEquipping] = useState(false);
 
-  const fetchData = async () => {
-      setIsLoadingData(true);
-      setError(null);
-      try {
-          const res = await game.getCharacters();
-          if (res.data.status === 'success') {
-              setAllCharacters(res.data.data);
-              
-              // Calculate ownership based on API data
-              // Logic: User owns if price is 0 OR they own the island
-              if(user?.owned_islands) {
-                  const owned = res.data.data
-                    .filter(c => user.owned_islands.includes(c.island_id) || parseFloat(c.price) === 0)
-                    .map(c => c.char_key);
-                  setOwnedIds(owned);
-              }
-          } else {
-              throw new Error("Failed to load character roster.");
-          }
-      } catch(e) { 
-          console.error("Inventory API error", e);
-          setError("Unable to connect to server roster.");
-      } finally {
-          setIsLoadingData(false);
-      }
-  };
+    // Fetch Roster
+    useEffect(() => {
+        const fetchRoster = async () => {
+            try {
+                const res = await api.get('/user/characters.php');
+                if (res.data.status === 'success') {
+                    setRoster(res.data.roster);
+                    // Default select active character or first available
+                    const active = res.data.roster.find(c => c.is_active) || res.data.roster[0];
+                    setSelectedChar(active);
+                }
+            } catch (e) {
+                console.error("Roster error", e);
+                addToast("Failed to load characters.", 'error');
+            } finally {
+                setIsLoading(false);
+            }
+        };
 
-  useEffect(() => {
-      if(user) fetchData();
-  }, [user]);
+        if (user) fetchRoster();
+    }, [user, addToast]);
 
-  const handleEquip = async (charKey) => {
-      setEquipping(charKey);
-      try {
-          const res = await userApi.equipCharacter(charKey);
-          if (res.data.status === 'success') {
-              updateActivePet(charKey);
-              // Optional: Show success toast
-          }
-      } catch (e) {
-          alert(e.response?.data?.error || "Failed to equip character");
-      } finally {
-          setEquipping(null);
-      }
-  };
+    const handleEquip = async (char) => {
+        if (!char.is_owned) return;
+        setIsEquipping(true);
+        playSound('click');
 
-  const handleBuy = async (char) => {
-      if (parseFloat(user.balance) < parseFloat(char.price)) {
-          alert("Insufficient Funds");
-          return;
-      }
-      if (confirm(`Unlock ${char.name} for ${parseFloat(char.price).toLocaleString()} MMK?`)) {
-          setBuying(char.char_key);
-          try {
-              // Purchase logic usually handled by buying the island or specific item
-              // Assuming /shop/purchase handles character unlock via 'type'
-              await finance.purchaseCharacter(char.id); 
-              updateBalance(user.balance - char.price);
-              setOwnedIds(prev => [...prev, char.char_key]);
-              alert("Character Unlocked!");
-          } catch (e) {
-              alert(e.response?.data?.error || "Purchase failed");
-          } finally {
-              setBuying(null);
-          }
-      }
-  };
+        try {
+            const res = await userApi.equipCharacter(char.char_key);
+            if (res.data.status === 'success') {
+                addToast(`Equipped ${char.name}!`, 'success');
+                
+                // Update local state to reflect change immediately
+                setRoster(prev => prev.map(c => ({
+                    ...c,
+                    is_active: c.char_key === char.char_key
+                })));
+                
+                // Force reload/update global context
+                // In a production app with SWR/React Query this would auto-revalidate.
+                // For this setup, we reload to sync the BottomDock/Header avatars.
+                setTimeout(() => window.location.reload(), 800);
+            }
+        } catch (e) {
+            addToast("Failed to equip character.", 'error');
+        } finally {
+            setIsEquipping(false);
+        }
+    };
 
-  const getRarityColor = (r) => {
-      if(r === 'UR') return 'text-purple-400 border-purple-500 bg-purple-900/50 shadow-[0_0_10px_purple]';
-      if(r === 'SSR') return 'text-yellow-400 border-yellow-500 bg-yellow-900/50 shadow-[0_0_10px_gold]';
-      if(r === 'SR') return 'text-red-400 border-red-500 bg-red-900/50';
-      return 'text-gray-300 border-gray-500 bg-gray-800';
-  };
+    if (loading || !user) return <div className="bg-black min-h-screen"/>;
 
-  if (loading || !user) return <div className="bg-black min-h-screen text-cyan-500 flex items-center justify-center">Loading...</div>;
+    return (
+        <div className="min-h-screen bg-[#050505] pb-24 relative overflow-hidden flex flex-col">
+            {/* Background */}
+            <div className="absolute inset-0 bg-gradient-to-b from-pink-900/20 to-black pointer-events-none" />
 
-  // Filter Logic
-  let displayList = activeTab === 'owned' 
-    ? allCharacters.filter(c => ownedIds.includes(c.char_key))
-    : allCharacters.filter(c => !ownedIds.includes(c.char_key));
-  
-  if (filterRarity !== 'ALL') {
-      displayList = displayList.filter(c => {
-          // Parse the JSON stored in svg_data from SQL
-          try {
-              const meta = c.svg_data ? JSON.parse(c.svg_data) : {};
-              return meta.rarity === filterRarity;
-          } catch (e) { return false; }
-      });
-  }
-
-  return (
-    <div className="min-h-screen bg-[#050505] pb-24 relative overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-b from-blue-900/10 to-black pointer-events-none" />
-
-        <div className="p-6 pt-8 relative z-10">
-            
-            {/* HERO: Active Pet */}
-            <div className="flex items-center justify-between mb-6">
-                 <div>
-                     <div className="text-xs text-gray-500 font-bold mb-1 uppercase tracking-widest">Active Companion</div>
-                     <h1 className="text-3xl font-black italic text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-blue-500 uppercase">
-                         {activePetObj?.name || 'Loading...'}
-                     </h1>
-                 </div>
-                 <div className="w-16 h-16 rounded-full border-2 border-cyan-500 shadow-[0_0_15px_cyan] overflow-hidden bg-black relative">
-                     <div className="absolute inset-0 scale-125 pt-2">
-                        <CharacterSVG type={user.active_pet_id} mood="idle" />
-                     </div>
-                 </div>
-            </div>
-
-            {/* Controls */}
-            <div className="flex gap-2 mb-4">
-                 <div className="flex bg-black/60 p-1 rounded-xl border border-white/10 flex-1">
-                    <button onClick={() => setActiveTab('owned')} className={`flex-1 py-2 rounded-lg text-[10px] font-bold transition-all ${activeTab === 'owned' ? 'bg-blue-600 text-white shadow-lg' : 'text-gray-500'}`}>ROSTER</button>
-                    <button onClick={() => setActiveTab('shop')} className={`flex-1 py-2 rounded-lg text-[10px] font-bold transition-all ${activeTab === 'shop' ? 'bg-yellow-600 text-black shadow-lg' : 'text-gray-500'}`}>SCOUT</button>
-                </div>
-                <button onClick={fetchData} className="w-10 bg-white/5 rounded-xl border border-white/10 flex items-center justify-center text-gray-400 hover:text-white">
-                    <RefreshCw size={16} className={isLoadingData ? "animate-spin" : ""} />
-                </button>
-            </div>
-
-            {/* Rarity Filter */}
-            <div className="flex gap-2 mb-6 overflow-x-auto hide-scrollbar pb-2">
-                {['ALL', 'UR', 'SSR', 'SR', 'R'].map(r => (
-                    <button 
-                        key={r} 
-                        onClick={() => setFilterRarity(r)}
-                        className={`px-3 py-1 rounded-full text-[9px] font-black border transition-all ${filterRarity === r ? 'bg-white text-black border-white' : 'bg-transparent text-gray-500 border-gray-700'}`}
-                    >
-                        {r}
+            {/* Header */}
+            <div className="p-6 pt-8 relative z-10 flex items-center justify-between">
+                <div className="flex items-center gap-4">
+                    <button onClick={() => router.back()} className="text-white hover:text-pink-400 transition-colors">
+                        <ChevronLeft size={28} />
                     </button>
-                ))}
+                    <h1 className="text-xl font-black text-white tracking-widest italic flex items-center gap-2">
+                        <Heart className="text-pink-500" fill="currentColor" /> MY GIRLS
+                    </h1>
+                </div>
+                <div className="bg-black/50 px-3 py-1 rounded-full border border-white/10 flex items-center gap-2">
+                    <Coins size={14} className="text-yellow-400" />
+                    <span className="text-white font-mono font-bold text-xs">{parseFloat(user.balance).toLocaleString()}</span>
+                </div>
             </div>
 
-            {/* Grid */}
-            {error ? (
-                <div className="text-center text-red-400 py-10 text-sm flex flex-col items-center gap-2"><AlertCircle size={24}/> {error}</div>
-            ) : (
-                <div className="grid grid-cols-2 gap-3">
-                    {displayList.map(char => {
-                        const isEquipped = user.active_pet_id === char.char_key;
-                        const isProcessing = equipping === char.char_key || buying === char.char_key;
-                        
-                        // Parse Metadata safely
-                        let meta = { rarity: 'R', element: 'Unknown', desc: '' };
-                        try { if(char.svg_data) meta = JSON.parse(char.svg_data); } catch(e){}
-                        
-                        return (
-                            <GlassCard key={char.id} className={`p-0 overflow-hidden relative group ${isEquipped ? 'border-cyan-500 shadow-[0_0_15px_rgba(6,182,212,0.2)]' : ''}`}>
-                                {/* Card Header */}
-                                <div className="absolute top-2 left-2 z-10 flex flex-col gap-1">
-                                    <span className={`px-2 py-0.5 rounded text-[8px] font-black border ${getRarityColor(meta.rarity)}`}>
-                                        {meta.rarity}
-                                    </span>
-                                </div>
-                                
-                                {/* Image */}
-                                <div className="h-40 relative bg-gradient-to-b from-gray-800/50 to-transparent flex items-end justify-center pb-2">
-                                    <div className="w-full h-full absolute inset-0 opacity-80 group-hover:opacity-100 transition-opacity flex items-center justify-center pt-4">
-                                        <CharacterSVG type={char.char_key} mood={isEquipped ? 'win' : 'idle'} scale={1.2} />
+            <div className="flex-1 flex flex-col md:flex-row px-6 gap-6 relative z-10 overflow-y-auto">
+                
+                {/* 1. Character Preview (Large) */}
+                <div className="w-full md:w-1/2 h-[50vh] md:h-auto relative flex items-center justify-center">
+                    {selectedChar && (
+                        <div className="relative w-full h-full animate-in zoom-in duration-500 flex items-center justify-center">
+                            {/* Spotlight */}
+                            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[80%] h-[80%] bg-gradient-to-t from-pink-500/20 to-transparent blur-3xl rounded-full pointer-events-none"></div>
+                            
+                            <div className="w-full h-full relative z-10 scale-125 origin-bottom">
+                                <CharacterSVG 
+                                    type={selectedChar.char_key} 
+                                    mood="idle" 
+                                    scale={1}
+                                />
+                            </div>
+                            
+                            {/* Info Overlay */}
+                            <div className="absolute bottom-0 left-0 w-full p-4 bg-gradient-to-t from-black via-black/80 to-transparent z-20">
+                                <h2 className="text-3xl font-black text-white italic uppercase drop-shadow-lg">{selectedChar.name}</h2>
+                                <div className="flex items-center gap-4 mt-2">
+                                    <div className="flex items-center gap-1 bg-white/10 px-2 py-1 rounded text-xs font-bold text-pink-300 border border-pink-500/30">
+                                        <Heart size={12} fill="currentColor"/> {selectedChar.affection}% Affection
                                     </div>
-                                </div>
-
-                                {/* Info */}
-                                <div className="p-3 bg-black/80 backdrop-blur-sm border-t border-white/5">
-                                    <div className="flex justify-between items-center mb-1">
-                                        <div className="text-xs font-bold text-white truncate w-20">{char.name}</div>
-                                        <div className="text-[9px] text-gray-400">{meta.element}</div>
-                                    </div>
-                                    <div className="text-[8px] text-gray-500 mb-2 truncate">{meta.desc}</div>
-                                    
-                                    {activeTab === 'owned' ? (
-                                        <button onClick={() => handleEquip(char.char_key)} disabled={isEquipped || isProcessing}
-                                            className={`w-full py-2 rounded text-[9px] font-bold transition-all flex items-center justify-center gap-1 ${isEquipped ? 'bg-green-500/20 text-green-400 border border-green-500/50 cursor-default' : 'bg-white/10 hover:bg-white/20 text-white border border-white/20 disabled:opacity-50'}`}>
-                                            {isProcessing ? '...' : (isEquipped ? <><Check size={10}/> ACTIVE</> : 'EQUIP')}
-                                        </button>
-                                    ) : (
-                                        <button onClick={() => handleBuy(char)} disabled={isProcessing} className="w-full py-2 rounded text-[9px] font-bold bg-yellow-600 hover:bg-yellow-500 text-white shadow-lg flex items-center justify-center gap-1 disabled:opacity-50">
-                                            {isProcessing ? '...' : <><Lock size={10} /> {parseFloat(char.price) > 0 ? (char.price/1000) + 'k' : 'FREE'}</>}
-                                        </button>
+                                    {selectedChar.is_premium == 1 && (
+                                        <div className="flex items-center gap-1 bg-yellow-500/20 px-2 py-1 rounded text-xs font-bold text-yellow-400 border border-yellow-500/30">
+                                            <Star size={12} fill="currentColor"/> PREMIUM
+                                        </div>
                                     )}
                                 </div>
-                            </GlassCard>
-                        );
-                    })}
+                            </div>
+                        </div>
+                    )}
                 </div>
-            )}
-            
-            {!isLoadingData && !error && displayList.length === 0 && (
-                <div className="text-center text-gray-500 mt-10 text-xs">No characters found in this category.</div>
-            )}
+
+                {/* 2. Selection Grid */}
+                <div className="w-full md:w-1/2 pb-10">
+                    <div className="grid grid-cols-3 gap-3">
+                        {roster.map(char => (
+                            <GlassCard 
+                                key={char.char_key}
+                                onClick={() => setSelectedChar(char)}
+                                className={`p-2 relative cursor-pointer transition-all duration-300 group overflow-hidden
+                                    ${selectedChar?.char_key === char.char_key ? 'border-pink-500 bg-pink-900/20 ring-1 ring-pink-500/50' : 'border-white/10 hover:border-white/30'}
+                                    ${!char.is_owned ? 'opacity-60 grayscale' : ''}
+                                `}
+                            >
+                                {/* Thumbnail */}
+                                <div className="aspect-[3/4] overflow-hidden rounded-lg bg-black relative">
+                                    <div className="absolute inset-0 scale-150 translate-y-4">
+                                        <CharacterSVG type={char.char_key} stickerMode={true} />
+                                    </div>
+                                    
+                                    {/* Status Badges */}
+                                    {char.is_active && (
+                                        <div className="absolute top-1 right-1 bg-green-500 text-black text-[8px] font-black px-1.5 py-0.5 rounded shadow-lg z-10">ACTIVE</div>
+                                    )}
+                                    {!char.is_owned && (
+                                        <div className="absolute inset-0 bg-black/60 flex flex-col items-center justify-center text-gray-400 gap-1 z-10 backdrop-blur-[1px]">
+                                            <Lock size={20} />
+                                            <span className="text-[8px] font-bold">LOCKED</span>
+                                        </div>
+                                    )}
+                                </div>
+                                
+                                <div className="text-center mt-2">
+                                    <div className="text-[10px] font-bold text-white truncate">{char.name}</div>
+                                </div>
+                            </GlassCard>
+                        ))}
+                    </div>
+
+                    {/* Action Bar */}
+                    <div className="fixed bottom-24 left-0 right-0 px-6 z-50 md:absolute md:bottom-0 md:left-auto md:right-auto md:w-full">
+                        {selectedChar && (
+                            selectedChar.is_owned ? (
+                                <button 
+                                    onClick={() => handleEquip(selectedChar)}
+                                    disabled={selectedChar.is_active || isEquipping}
+                                    className={`w-full py-4 rounded-xl font-black text-sm shadow-xl flex items-center justify-center gap-2 transition-all border border-white/10
+                                    ${selectedChar.is_active 
+                                        ? 'bg-gray-800 text-gray-500 cursor-default' 
+                                        : 'bg-gradient-to-r from-pink-600 to-purple-600 text-white hover:scale-[1.02] active:scale-95 shadow-pink-900/50'}`}
+                                >
+                                    {isEquipping ? <Loader2 className="animate-spin" size={18}/> : (
+                                        selectedChar.is_active ? <><CheckCircle size={18}/> CURRENTLY ACTIVE</> : <><UserCheck size={18}/> SET AS PARTNER</>
+                                    )}
+                                </button>
+                            ) : (
+                                <button 
+                                    onClick={() => router.push('/shop')}
+                                    className="w-full py-4 rounded-xl bg-gradient-to-r from-yellow-600 to-orange-600 text-white font-black text-sm shadow-xl flex items-center justify-center gap-2 hover:scale-[1.02] active:scale-95 border border-white/10 shadow-yellow-900/50"
+                                >
+                                    <Sparkles size={18} /> UNLOCK IN SHOP
+                                </button>
+                            )
+                        )}
+                    </div>
+                </div>
+            </div>
+
+            <BottomDock 
+                activeCharId={user.active_pet_id} 
+                onNavigate={(path) => router.push(`/${path}`)} 
+                onOpenBank={() => router.push('/wallet')}
+            />
         </div>
-        <BottomDock activeCharId={user?.active_pet_id} onNavigate={(path) => router.push(`/${path}`)} onOpenBank={() => router.push('/wallet')} />
-    </div>
-  );
+    );
 }
