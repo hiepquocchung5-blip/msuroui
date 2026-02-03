@@ -234,7 +234,6 @@ const PlayView = ({ machine, island, user, onLeave, updateBalance }) => {
                 </div>
 
                 {/* 2. CABINET CONTAINER (Maintains Aspect Ratio 240/400 = 0.6) */}
-                {/* This ensures SVG and HTML overlays always line up perfectly on any device */}
                 <div className="relative h-[80vh] max-h-[850px] aspect-[0.6] flex-shrink-0">
                     
                     {/* The SVG Artwork */}
@@ -250,7 +249,7 @@ const PlayView = ({ machine, island, user, onLeave, updateBalance }) => {
                         />
                     </div>
 
-                    {/* --- INTERACTIVE SCREEN OVERLAY (21% Top, 30% Height of container) --- */}
+                    {/* --- INTERACTIVE SCREEN OVERLAY (21.25% Top, 30% Height of container) --- */}
                     <div className="absolute top-[21.25%] left-[16.6%] w-[66.6%] h-[28.75%] flex flex-col pointer-events-none z-20">
                         {/* Win Marquee */}
                         <div className={`bg-black/90 h-[15%] flex items-center justify-center overflow-hidden mb-[1%] shadow-inner ${isTeaser ? 'border-t-2 border-red-500' : ''}`}>
@@ -261,7 +260,7 @@ const PlayView = ({ machine, island, user, onLeave, updateBalance }) => {
                         {/* Reels */}
                         <div className="flex-1 grid grid-cols-3 gap-[2%] bg-black p-[2%] overflow-hidden relative shadow-[inset_0_0_20px_black]">
                             {reels.map((s, i) => (
-                                <div key={i} className={`relative h-full overflow-hidden bg-gradient-to-b from-[#111] via-[#333] to-[#111] border-x border-black/50 ${lockedReels && lockedReels[i] ? 'border-2 border-yellow-400' : ''}`}>
+                                <div key={i} className={`relative h-full overflow-hidden bg-gradient-to-b from-[#111] via-[#333] to-[#111] border-x border-black/50 ${lockedReels && lockedReels[i] ? 'border-2 border-yellow-400 shadow-[inset_0_0_15px_gold]' : ''}`}>
                                     {lockedReels && lockedReels[i] && <div className="absolute inset-0 bg-yellow-400/20 z-30 animate-pulse flex items-center justify-center"><Lock size={12} className="text-yellow-400"/></div>}
                                     {expandedReels && expandedReels[i] && <div className="absolute inset-0 bg-red-600/80 z-40 flex items-center justify-center animate-in fade-in"><Flame size={24} className="text-white animate-bounce"/></div>}
                                     
@@ -278,20 +277,36 @@ const PlayView = ({ machine, island, user, onLeave, updateBalance }) => {
                     <div className="absolute top-[57.5%] left-[5%] w-[90%] h-[15%] z-50 pointer-events-none" style={{ perspective: '600px' }}>
                         <div className="w-full h-full relative pointer-events-auto" style={{ transform: 'rotateX(20deg)', transformOrigin: 'top center' }}>
                             
-                            {/* Left: Bet */}
+                            {/* Left: Bet Config */}
                             <div className="absolute left-[5%] top-[10%] flex gap-1">
-                                <button onClick={() => changeBet(-1)} className="w-8 h-8 sm:w-10 sm:h-10 bg-gray-800 rounded-lg border-b-4 border-black text-white flex items-center justify-center active:border-b-0 active:translate-y-1 shadow-lg touch-manipulation"><Minus size={14}/></button>
+                                <button 
+                                    onClick={() => changeBet(-1)} 
+                                    className="w-8 h-8 sm:w-10 sm:h-10 bg-gray-800 rounded-lg border-b-4 border-black text-white flex items-center justify-center active:border-b-0 active:translate-y-1 shadow-lg touch-manipulation active:bg-gray-700"
+                                >
+                                    <Minus size={14}/>
+                                </button>
                                 <div className="bg-black border border-gray-600 w-12 h-8 sm:w-16 sm:h-10 flex items-center justify-center text-[9px] sm:text-xs text-yellow-400 font-mono tracking-tighter shadow-inner">{currentBet.toLocaleString()}</div>
-                                <button onClick={() => changeBet(1)} className="w-8 h-8 sm:w-10 sm:h-10 bg-gray-800 rounded-lg border-b-4 border-black text-white flex items-center justify-center active:border-b-0 active:translate-y-1 shadow-lg touch-manipulation"><Plus size={14}/></button>
+                                <button 
+                                    onClick={() => changeBet(1)} 
+                                    className="w-8 h-8 sm:w-10 sm:h-10 bg-gray-800 rounded-lg border-b-4 border-black text-white flex items-center justify-center active:border-b-0 active:translate-y-1 shadow-lg touch-manipulation active:bg-gray-700"
+                                >
+                                    <Plus size={14}/>
+                                </button>
                             </div>
-                            <button onClick={handleMaxBet} className="absolute left-[5%] top-[60%] w-10 h-6 sm:w-12 sm:h-8 bg-orange-700 rounded border-b-4 border-black text-[8px] font-black text-white flex items-center justify-center active:border-b-0 active:translate-y-1 shadow-lg touch-manipulation">MAX</button>
+                            
+                            <button 
+                                onClick={handleMaxBet} 
+                                className="absolute left-[5%] top-[60%] w-10 h-6 sm:w-12 sm:h-8 bg-orange-700 rounded border-b-4 border-black text-[8px] font-black text-white flex items-center justify-center active:border-b-0 active:translate-y-1 shadow-lg touch-manipulation active:bg-orange-600"
+                            >
+                                MAX
+                            </button>
 
-                            {/* Right: SPIN */}
+                            {/* Right: SPIN Button */}
                             <button 
                                 onClick={handleSpin} 
                                 disabled={isSpinning.some(s=>s) || (winStage !== 'idle' && winStage !== 'celebrating')} 
                                 className={`absolute right-[5%] top-[5%] w-16 h-16 sm:w-20 sm:h-20 rounded-full border-b-[6px] shadow-xl flex flex-col items-center justify-center active:border-b-0 active:translate-y-1 transition-all touch-manipulation
-                                ${isSpinning.some(s=>s) ? 'bg-gray-800 border-gray-950 opacity-50' : 'bg-gradient-to-b from-red-600 to-red-800 border-red-950 text-white hover:brightness-110'}`}
+                                ${isSpinning.some(s=>s) ? 'bg-gray-800 border-gray-950 opacity-50' : 'bg-gradient-to-b from-red-600 to-red-800 border-red-950 text-white hover:brightness-110 hover:shadow-red-500/80 active:bg-red-700'}`}
                             >
                                 <Gamepad2 size={24} strokeWidth={3} />
                                 <span className="text-[8px] font-black tracking-widest">SPIN</span>
@@ -299,10 +314,16 @@ const PlayView = ({ machine, island, user, onLeave, updateBalance }) => {
 
                             {/* Center: Toggles */}
                             <div className="absolute right-[35%] top-[15%] flex flex-col gap-2">
-                                <button onClick={toggleTurbo} className={`w-8 h-8 sm:w-9 sm:h-9 rounded-lg border-b-4 border-black flex items-center justify-center active:border-b-0 active:translate-y-1 shadow-md touch-manipulation ${turboMode ? 'bg-yellow-500 text-black' : 'bg-gray-700 text-gray-400'}`}>
+                                <button 
+                                    onClick={toggleTurbo} 
+                                    className={`w-8 h-8 sm:w-9 sm:h-9 rounded-lg border-b-4 border-black flex items-center justify-center active:border-b-0 active:translate-y-1 shadow-md touch-manipulation ${turboMode ? 'bg-yellow-500 text-black shadow-[0_0_10px_gold]' : 'bg-gray-700 text-gray-400'}`}
+                                >
                                     <Zap size={14} fill={turboMode ? "currentColor" : "none"}/>
                                 </button>
-                                <button onClick={toggleAuto} className={`w-8 h-8 sm:w-9 sm:h-9 rounded-lg border-b-4 border-black flex items-center justify-center active:border-b-0 active:translate-y-1 shadow-md touch-manipulation ${autoPlay ? 'bg-green-600 text-white' : 'bg-gray-700 text-gray-400'}`}>
+                                <button 
+                                    onClick={toggleAuto} 
+                                    className={`w-8 h-8 sm:w-9 sm:h-9 rounded-lg border-b-4 border-black flex items-center justify-center active:border-b-0 active:translate-y-1 shadow-md touch-manipulation ${autoPlay ? 'bg-green-600 text-white shadow-[0_0_10px_green]' : 'bg-gray-700 text-gray-400'}`}
+                                >
                                     {autoPlay ? <StopCircle size={14}/> : <Repeat size={14}/>}
                                 </button>
                             </div>
@@ -315,7 +336,7 @@ const PlayView = ({ machine, island, user, onLeave, updateBalance }) => {
             {/* COIN VFX */}
             {coins.map(c => (
                 <div key={c.id} className="absolute top-[-20px] animate-fall z-50 pointer-events-none" style={{ left: `${c.left}%`, animationDuration: '2.5s', animationDelay: `${c.delay}s`, transform: `scale(${c.scale}) rotate(${c.rotation}deg)` }}>
-                    <div className="w-5 h-5 bg-yellow-400 rounded-full border-2 border-yellow-200 shadow-lg flex items-center justify-center font-black text-yellow-700 text-[8px]"><Coins size={10} strokeWidth={3}/></div>
+                    <div className="w-6 h-6 bg-yellow-400 rounded-full border-2 border-yellow-200 shadow-lg flex items-center justify-center font-black text-yellow-700 text-[8px]"><Coins size={10} strokeWidth={3}/></div>
                 </div>
             ))}
 
