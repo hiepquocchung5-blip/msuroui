@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from 'react';
-import { ChevronLeft, Filter, Flame, Users, Zap, Search, Trophy, Sparkles, X, BarChart3, History, Coins } from 'lucide-react';
+import { ChevronLeft, Filter, Flame, Users, Zap, Search, Trophy, Sparkles, X, BarChart3, History, Coins, Lock } from 'lucide-react';
 import CabinetSVG from '../visuals/CabinetSVG';
+import CharacterSVG from '../visuals/CharacterSVG'; // Import Character for occupants
 import IslandLandscapeSVG from '../visuals/IslandLandscapeSVG';
 import BottomDock from '../layout/BottomDock';
 import GlobalTicker from '../ui/GlobalTicker';
@@ -135,10 +136,10 @@ const HallView = ({ island, machines, user, onSelectMachine, onBack }) => {
                                     key={m.id} 
                                     onClick={() => handleMachineClick(m)} 
                                     className={`relative group cursor-pointer transition-all duration-300 transform hover:-translate-y-4 hover:scale-105 flex-shrink-0
-                                        ${isOccupied && !isMe ? 'grayscale-[0.5] opacity-80' : ''}
+                                        ${isOccupied && !isMe ? 'opacity-90' : ''}
                                     `}
                                     style={{ 
-                                        width: '240px',
+                                        width: '260px', // Wider to fit character
                                         zIndex: isOccupied ? 10 : 20 
                                     }}
                                 >
@@ -164,21 +165,44 @@ const HallView = ({ island, machines, user, onSelectMachine, onBack }) => {
                                         </div>
                                     )}
 
-                                    {/* The Machine */}
-                                    <div className="w-full aspect-[0.6] relative">
-                                        <CabinetSVG 
-                                            islandId={island.id} 
-                                            visualState={isOccupied ? 'BUSY' : (isHot ? 'JACKPOT_HOT' : 'FREE')} 
-                                            mode="hall" 
-                                            stats={{ laps: m.total_laps, wins: m.total_payout }} 
-                                            charId={island.hostess_char_id} 
-                                            occupantPetId={isOccupied ? (m.sticker_char_id || 'luna') : null}
-                                            machineNumber={m.machine_number}
-                                            serialNumber={m.serial_number}
-                                        />
+                                    {/* The Machine & Occupant Wrapper */}
+                                    <div className="relative w-full aspect-[0.65] flex items-end justify-center">
+                                        
+                                        {/* 1. Cabinet */}
+                                        <div className="absolute inset-0 z-10 w-full h-full">
+                                            <CabinetSVG 
+                                                islandId={island.id} 
+                                                visualState={isOccupied ? 'BUSY' : (isHot ? 'JACKPOT_HOT' : 'FREE')} 
+                                                mode="hall" 
+                                                stats={{ laps: m.total_laps, wins: m.total_payout }} 
+                                                charId={island.hostess_char_id} 
+                                                // occupantPetId removed here, rendered externally below
+                                                machineNumber={m.machine_number}
+                                                serialNumber={m.serial_number}
+                                            />
+                                        </div>
+
+                                        {/* 2. Occupant Overlay (If Busy) */}
+                                        {isOccupied && (
+                                            <div className="absolute bottom-[5%] right-[-10%] w-[50%] h-[55%] z-20 pointer-events-none drop-shadow-xl">
+                                                <CharacterSVG 
+                                                    type={m.sticker_char_id || 'luna'} 
+                                                    mood="idle" 
+                                                />
+                                            </div>
+                                        )}
+                                        
+                                        {/* 3. "Locked" Overlay if occupied by other */}
+                                        {isOccupied && !isMe && (
+                                            <div className="absolute inset-0 bg-black/40 z-10 flex items-center justify-center rounded-lg backdrop-blur-[1px]">
+                                                <div className="bg-red-600 text-white font-black text-[10px] px-3 py-1 rounded border border-red-400 rotate-12 shadow-lg flex items-center gap-1">
+                                                    <Lock size={10}/> OCCUPIED
+                                                </div>
+                                            </div>
+                                        )}
                                     </div>
                                     
-                                    {/* Quick Status Overlay (Instead of Button) */}
+                                    {/* Action Button Overlay */}
                                     {!isOccupied && (
                                         <div className="absolute bottom-24 left-0 right-0 flex justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-50">
                                             <div className="bg-white/90 text-black font-black text-[10px] px-3 py-1 rounded-full shadow-xl flex items-center gap-1">
@@ -192,7 +216,7 @@ const HallView = ({ island, machines, user, onSelectMachine, onBack }) => {
                                     
                                     {/* Recent Win Badge */}
                                     {m.last_win_amount > 10000 && !isOccupied && (
-                                        <div className="absolute bottom-10 right-2 bg-black/80 text-yellow-400 text-[9px] font-mono px-2 py-0.5 rounded border border-yellow-500/30 flex items-center gap-1">
+                                        <div className="absolute bottom-10 right-2 bg-black/80 text-yellow-400 text-[9px] font-mono px-2 py-0.5 rounded border border-yellow-500/30 flex items-center gap-1 z-30">
                                             <Sparkles size={8}/> Last: {m.last_win_amount/1000}k
                                         </div>
                                     )}
