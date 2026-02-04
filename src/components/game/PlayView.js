@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { ChevronLeft, Settings, Minus, Plus, Zap, StopCircle, Gamepad2, Sparkles, Gift, Info, Volume2, VolumeX, Maximize2, Repeat, Coins, LogOut, Wallet, Trophy, Lock, Flame, MessageCircle, Shield, Sword, Skull } from 'lucide-react';
+import { ChevronLeft, Settings, Minus, Plus, Zap, StopCircle, Gamepad2, Sparkles, Gift, Info, Volume2, VolumeX, Maximize2, Repeat, Coins, LogOut, Wallet, Trophy, Lock, Flame, MessageCircle, Shield, Sword, Skull, Snowflake, Wind, Leaf, Cpu, Disc, Palmtree } from 'lucide-react';
 import CabinetSVG from '../visuals/CabinetSVG';
 import CharacterSVG from '../visuals/CharacterSVG';
 import SymbolSVG from '../visuals/SymbolSVG';
@@ -25,8 +25,8 @@ const PlayView = ({ machine, island, user, onLeave, updateBalance }) => {
     const [betIndex, setBetIndex] = useState(0);
     const [winStage, setWinStage] = useState('idle'); // 'idle' | 'celebrating' | 'gambling'
     const [gamblePending, setGamblePending] = useState(false);
-    const [gambleLost, setGambleLost] = useState(false); // Triggers "Boo!" mood
-    const [charInteraction, setCharInteraction] = useState(null); // Text bubble for character click
+    const [gambleLost, setGambleLost] = useState(false); 
+    const [charInteraction, setCharInteraction] = useState(null); 
     
     // Modals
     const [showPaytable, setShowPaytable] = useState(false);
@@ -43,8 +43,6 @@ const PlayView = ({ machine, island, user, onLeave, updateBalance }) => {
     const currentBet = BET_AMOUNTS[betIndex];
 
     // --- HELPER FUNCTIONS ---
-
-    // Determine Machine Visual State (Lights/LEDs)
     const getCabinetState = () => {
         if (winStage === 'celebrating') return 'JACKPOT_HOT'; 
         if (isSpinning.some(s => s)) return 'BUSY';
@@ -52,7 +50,6 @@ const PlayView = ({ machine, island, user, onLeave, updateBalance }) => {
         return 'FREE';
     };
     
-    // Determine Character Animation State
     const getMood = () => {
         if (gambleLost) return 'sad'; 
         if (winStage === 'celebrating' || (winStage === 'gambling' && !gamblePending)) return 'win';
@@ -72,7 +69,6 @@ const PlayView = ({ machine, island, user, onLeave, updateBalance }) => {
                 if (!autoPlay) {
                     setWinStage('celebrating');
                     setGambleLost(false);
-                    // Delay before showing Gamble option
                     setTimeout(() => setWinStage('gambling'), isBigWin ? 2500 : 1000);
                 }
             }
@@ -96,13 +92,11 @@ const PlayView = ({ machine, island, user, onLeave, updateBalance }) => {
     // --- 4. HANDLERS ---
     const handleSpin = useCallback(() => {
         if (winStage !== 'idle') return; 
-        
         if (parseFloat(user.balance) < currentBet) {
             setShowLowBalance(true);
             playSound('stop');
             return;
         }
-
         setGambleLost(false);
         setCharInteraction(null);
         playSound('spin');
@@ -112,34 +106,25 @@ const PlayView = ({ machine, island, user, onLeave, updateBalance }) => {
 
     const handleStopReel = useCallback((idx) => {
         if (isSpinning[idx]) {
-            playSound('click'); // Click sound for button press
+            playSound('click'); 
             if (navigator.vibrate) navigator.vibrate(20);
-            stopReel(idx); // Call hook function
+            stopReel(idx);
         }
     }, [isSpinning, playSound, stopReel]);
 
-    // Character Click Interaction
     const handleCharacterClick = () => {
         playSound('click');
-        const lines = [
-            "Let's win big!",
-            "I'm feeling lucky!",
-            "One more spin?",
-            "You can do it!",
-            "Nice to see you!"
-        ];
+        const lines = ["Let's win big!", "I'm feeling lucky!", "One more spin?", "You can do it!", "Nice to see you!"];
         setCharInteraction(lines[Math.floor(Math.random() * lines.length)]);
         setTimeout(() => setCharInteraction(null), 3000);
     };
 
-    // Keyboard Shortcuts
     useEffect(() => {
         const handleKeyDown = (e) => {
             if (e.code === 'Space') {
                 e.preventDefault();
                 if (!isSpinning.some(s=>s) && winStage === 'idle') handleSpin();
             }
-            // Stop Buttons (1, 2, 3)
             if (e.key === '1') handleStopReel(0);
             if (e.key === '2') handleStopReel(1);
             if (e.key === '3') handleStopReel(2);
@@ -162,28 +147,18 @@ const PlayView = ({ machine, island, user, onLeave, updateBalance }) => {
             const res = await gameApi.gamble(choice);
             if (res.data.status === 'success') {
                 if (res.data.won) {
-                    // WON: Celebrate then Close (One Shot Logic)
                     setLastWin(res.data.new_win_amount); 
                     updateBalance(res.data.new_balance);
-                    
                     playSound('win');
                     triggerCoinShower();
                     setWinStage('celebrating'); 
-                    
-                    // Auto close after celebration
-                    setTimeout(() => {
-                        setWinStage('idle');
-                    }, 3000);
+                    setTimeout(() => setWinStage('idle'), 3000);
                 } else {
-                    // LOST: Show Boo then Close
                     setLastWin(0); 
                     updateBalance(res.data.new_balance);
-                    
-                    playSound('stop'); // Sad sound
-                    setGambleLost(true); // Character cries
-                    setWinStage('idle'); // Close modal immediately to show character
-                    
-                    // Reset Boo after 2s
+                    playSound('stop'); 
+                    setGambleLost(true); 
+                    setWinStage('idle');
                     setTimeout(() => setGambleLost(false), 2000);
                 }
             } else {
@@ -215,9 +190,7 @@ const PlayView = ({ machine, island, user, onLeave, updateBalance }) => {
     
     const toggleTurbo = () => {
         playSound('click');
-        if (setTurboMode) {
-            setTurboMode(!turboMode);
-        }
+        if (setTurboMode) setTurboMode(!turboMode);
     };
   
     const toggleAuto = () => {
@@ -233,62 +206,168 @@ const PlayView = ({ machine, island, user, onLeave, updateBalance }) => {
 
     // --- ISLAND SPECIFIC GAMBLE UI ---
     const renderGambleContent = () => {
-        // 1. Vegas (High Card)
-        if (island.id === 1) {
-            return (
-                <div className="grid grid-cols-2 gap-4 mb-6">
-                    <button onClick={() => handleGamble('red')} disabled={gamblePending} className="h-24 bg-gradient-to-br from-red-600 to-red-900 rounded-2xl border-4 border-red-400 flex flex-col items-center justify-center shadow-lg active:scale-95 group">
-                        <div className="w-10 h-14 bg-white rounded flex items-center justify-center text-red-600 font-bold border border-gray-300 shadow-sm mb-1 group-hover:-translate-y-1 transition-transform">♥</div>
-                        <span className="text-white font-black text-xs">RED</span>
-                    </button>
-                    <button onClick={() => handleGamble('black')} disabled={gamblePending} className="h-24 bg-gradient-to-br from-gray-800 to-black rounded-2xl border-4 border-gray-600 flex flex-col items-center justify-center shadow-lg active:scale-95 group">
-                        <div className="w-10 h-14 bg-white rounded flex items-center justify-center text-black font-bold border border-gray-300 shadow-sm mb-1 group-hover:-translate-y-1 transition-transform">♠</div>
-                        <span className="text-white font-black text-xs">BLACK</span>
-                    </button>
-                </div>
-            );
-        }
-        
-        // 3. Inferna (Dragon Breath)
-        if (island.id === 3) {
-            return (
-                <div className="grid grid-cols-2 gap-4 mb-6">
-                    <button onClick={() => handleGamble('red')} disabled={gamblePending} className="h-24 bg-gradient-to-br from-orange-600 to-red-900 rounded-2xl border-4 border-orange-400 flex flex-col items-center justify-center shadow-lg active:scale-95 group relative overflow-hidden">
-                        <Flame size={32} className="text-yellow-300 animate-pulse mb-1 group-hover:scale-125 transition-transform" />
-                        <span className="text-white font-black text-xs z-10 relative">BLOCK FIRE</span>
-                        <div className="absolute inset-0 bg-red-500/20 group-hover:bg-red-500/40 transition-colors"></div>
-                    </button>
-                    <button onClick={() => handleGamble('black')} disabled={gamblePending} className="h-24 bg-gradient-to-br from-gray-700 to-gray-900 rounded-2xl border-4 border-gray-500 flex flex-col items-center justify-center shadow-lg active:scale-95 group relative overflow-hidden">
-                        <Shield size={32} className="text-gray-300 mb-1 group-hover:scale-125 transition-transform" />
-                        <span className="text-white font-black text-xs z-10 relative">DEFEND</span>
-                    </button>
-                </div>
-            );
-        }
-        
-        // 4. Noctyra (Bat Hunt)
-        if (island.id === 4) {
-             return (
-                <div className="grid grid-cols-2 gap-4 mb-6">
-                    <button onClick={() => handleGamble('red')} disabled={gamblePending} className="h-24 bg-gradient-to-br from-purple-800 to-black rounded-2xl border-4 border-purple-500 flex flex-col items-center justify-center shadow-lg active:scale-95 group">
-                        <div className="text-3xl mb-1 group-hover:-translate-y-2 transition-transform">🦇</div>
-                        <span className="text-purple-200 font-black text-xs">LEFT BAT</span>
-                    </button>
-                    <button onClick={() => handleGamble('black')} disabled={gamblePending} className="h-24 bg-gradient-to-br from-purple-800 to-black rounded-2xl border-4 border-purple-500 flex flex-col items-center justify-center shadow-lg active:scale-95 group">
-                        <div className="text-3xl mb-1 group-hover:-translate-y-2 transition-transform">🧛‍♀️</div>
-                        <span className="text-purple-200 font-black text-xs">RIGHT BAT</span>
-                    </button>
-                </div>
-            );
-        }
+        const commonBtnClass = "h-24 rounded-2xl border-4 flex flex-col items-center justify-center shadow-lg active:scale-95 transition-all group relative overflow-hidden";
 
-        // Default (Red/Black)
-        return (
-            <div className="grid grid-cols-2 gap-4 mb-6">
-                <button onClick={() => handleGamble('red')} disabled={gamblePending} className="h-24 bg-gradient-to-br from-red-600 to-red-900 rounded-2xl border-4 border-red-400 flex items-center justify-center shadow-lg active:scale-95"><span className="text-white font-black">RED</span></button>
-                <button onClick={() => handleGamble('black')} disabled={gamblePending} className="h-24 bg-gradient-to-br from-gray-800 to-black rounded-2xl border-4 border-gray-600 flex items-center justify-center shadow-lg active:scale-95"><span className="text-white font-black">BLACK</span></button>
-            </div>
-        );
+        switch(island.id) {
+            // 1. Vegas (High Card)
+            case 1:
+                return (
+                    <div className="grid grid-cols-2 gap-4 mb-6">
+                        <button onClick={() => handleGamble('red')} disabled={gamblePending} className={`${commonBtnClass} bg-gradient-to-br from-red-600 to-red-900 border-red-400`}>
+                            <div className="w-10 h-14 bg-white rounded flex items-center justify-center text-red-600 font-bold border border-gray-300 shadow-sm mb-1 group-hover:-translate-y-1 transition-transform">♥</div>
+                            <span className="text-white font-black text-xs">RED</span>
+                        </button>
+                        <button onClick={() => handleGamble('black')} disabled={gamblePending} className={`${commonBtnClass} bg-gradient-to-br from-gray-800 to-black border-gray-600`}>
+                            <div className="w-10 h-14 bg-white rounded flex items-center justify-center text-black font-bold border border-gray-300 shadow-sm mb-1 group-hover:-translate-y-1 transition-transform">♠</div>
+                            <span className="text-white font-black text-xs">BLACK</span>
+                        </button>
+                    </div>
+                );
+
+            // 2. Aloha (Coconut Shell)
+            case 2:
+                 return (
+                    <div className="grid grid-cols-2 gap-4 mb-6">
+                        <button onClick={() => handleGamble('red')} disabled={gamblePending} className={`${commonBtnClass} bg-gradient-to-br from-amber-600 to-amber-800 border-amber-400`}>
+                            <Palmtree size={32} className="text-yellow-200 mb-1 group-hover:rotate-12 transition-transform" />
+                            <span className="text-white font-black text-xs">LEFT SHELL</span>
+                        </button>
+                        <button onClick={() => handleGamble('black')} disabled={gamblePending} className={`${commonBtnClass} bg-gradient-to-br from-amber-600 to-amber-800 border-amber-400`}>
+                            <Palmtree size={32} className="text-yellow-200 mb-1 group-hover:-rotate-12 transition-transform" />
+                            <span className="text-white font-black text-xs">RIGHT SHELL</span>
+                        </button>
+                    </div>
+                );
+
+            // 3. Inferna (Dragon Breath)
+            case 3:
+                return (
+                    <div className="grid grid-cols-2 gap-4 mb-6">
+                        <button onClick={() => handleGamble('red')} disabled={gamblePending} className={`${commonBtnClass} bg-gradient-to-br from-orange-600 to-red-900 border-orange-400`}>
+                            <Flame size={32} className="text-yellow-300 animate-pulse mb-1 group-hover:scale-125 transition-transform" />
+                            <span className="text-white font-black text-xs z-10">BLOCK FIRE</span>
+                        </button>
+                        <button onClick={() => handleGamble('black')} disabled={gamblePending} className={`${commonBtnClass} bg-gradient-to-br from-gray-700 to-gray-900 border-gray-500`}>
+                            <Shield size={32} className="text-gray-300 mb-1 group-hover:scale-125 transition-transform" />
+                            <span className="text-white font-black text-xs z-10">DEFEND</span>
+                        </button>
+                    </div>
+                );
+            
+            // 4. Noctyra (Bat Hunt)
+            case 4:
+                return (
+                    <div className="grid grid-cols-2 gap-4 mb-6">
+                        <button onClick={() => handleGamble('red')} disabled={gamblePending} className={`${commonBtnClass} bg-gradient-to-br from-purple-800 to-black border-purple-500`}>
+                            <div className="text-3xl mb-1 group-hover:-translate-y-2 transition-transform">🦇</div>
+                            <span className="text-purple-200 font-black text-xs">BAT</span>
+                        </button>
+                        <button onClick={() => handleGamble('black')} disabled={gamblePending} className={`${commonBtnClass} bg-gradient-to-br from-purple-800 to-black border-purple-500`}>
+                            <div className="text-3xl mb-1 group-hover:-translate-y-2 transition-transform">🧛‍♀️</div>
+                            <span className="text-purple-200 font-black text-xs">VAMPIRE</span>
+                        </button>
+                    </div>
+                );
+
+            // 5. Glacia (Ice Crack)
+            case 5:
+                return (
+                    <div className="grid grid-cols-2 gap-4 mb-6">
+                        <button onClick={() => handleGamble('red')} disabled={gamblePending} className={`${commonBtnClass} bg-gradient-to-br from-cyan-400 to-blue-600 border-white`}>
+                            <Snowflake size={32} className="text-white mb-1 group-hover:spin-slow transition-transform" />
+                            <span className="text-white font-black text-xs">CRACK ICE</span>
+                        </button>
+                        <button onClick={() => handleGamble('black')} disabled={gamblePending} className={`${commonBtnClass} bg-gradient-to-br from-cyan-400 to-blue-600 border-white`}>
+                            <Snowflake size={32} className="text-white mb-1 group-hover:spin-slow transition-transform" />
+                            <span className="text-white font-black text-xs">SMASH IT</span>
+                        </button>
+                    </div>
+                );
+
+            // 6. Sky (Feather Fall)
+            case 6:
+                return (
+                    <div className="grid grid-cols-2 gap-4 mb-6">
+                        <button onClick={() => handleGamble('red')} disabled={gamblePending} className={`${commonBtnClass} bg-gradient-to-br from-blue-300 to-blue-500 border-yellow-300`}>
+                            <Wind size={32} className="text-white mb-1 group-hover:translate-x-2 transition-transform" />
+                            <span className="text-white font-black text-xs">GOLD WING</span>
+                        </button>
+                        <button onClick={() => handleGamble('black')} disabled={gamblePending} className={`${commonBtnClass} bg-gradient-to-br from-gray-300 to-gray-500 border-gray-400`}>
+                            <Wind size={32} className="text-white mb-1 group-hover:translate-x-2 transition-transform" />
+                            <span className="text-white font-black text-xs">GREY WING</span>
+                        </button>
+                    </div>
+                );
+
+            // 7. Bio (Spore Choice)
+            case 7:
+                 return (
+                    <div className="grid grid-cols-2 gap-4 mb-6">
+                        <button onClick={() => handleGamble('red')} disabled={gamblePending} className={`${commonBtnClass} bg-gradient-to-br from-green-600 to-green-900 border-green-400`}>
+                            <Leaf size={32} className="text-lime-300 mb-1 group-hover:scale-110 transition-transform" />
+                            <span className="text-white font-black text-xs">LEFT SPORE</span>
+                        </button>
+                        <button onClick={() => handleGamble('black')} disabled={gamblePending} className={`${commonBtnClass} bg-gradient-to-br from-green-600 to-green-900 border-green-400`}>
+                            <Leaf size={32} className="text-lime-300 mb-1 group-hover:scale-110 transition-transform" />
+                            <span className="text-white font-black text-xs">RIGHT SPORE</span>
+                        </button>
+                    </div>
+                );
+
+            // 8. Cyber (Hack)
+            case 8:
+                 return (
+                    <div className="grid grid-cols-2 gap-4 mb-6">
+                        <button onClick={() => handleGamble('red')} disabled={gamblePending} className={`${commonBtnClass} bg-black border-green-500`}>
+                            <Cpu size={32} className="text-green-500 mb-1 animate-pulse" />
+                            <span className="text-green-500 font-mono font-bold text-xs">EXECUTE_A</span>
+                        </button>
+                        <button onClick={() => handleGamble('black')} disabled={gamblePending} className={`${commonBtnClass} bg-black border-red-500`}>
+                            <Cpu size={32} className="text-red-500 mb-1 animate-pulse" />
+                            <span className="text-red-500 font-mono font-bold text-xs">EXECUTE_B</span>
+                        </button>
+                    </div>
+                );
+
+            // 9. Gold (Gear Grind)
+            case 9:
+                 return (
+                    <div className="grid grid-cols-2 gap-4 mb-6">
+                        <button onClick={() => handleGamble('red')} disabled={gamblePending} className={`${commonBtnClass} bg-gradient-to-br from-yellow-700 to-yellow-900 border-yellow-500`}>
+                            <Settings size={32} className="text-yellow-200 mb-1 group-hover:rotate-90 transition-transform duration-1000" />
+                            <span className="text-white font-black text-xs">GEAR UP</span>
+                        </button>
+                        <button onClick={() => handleGamble('black')} disabled={gamblePending} className={`${commonBtnClass} bg-gradient-to-br from-yellow-700 to-yellow-900 border-yellow-500`}>
+                            <Settings size={32} className="text-yellow-200 mb-1 group-hover:-rotate-90 transition-transform duration-1000" />
+                            <span className="text-white font-black text-xs">GEAR DOWN</span>
+                        </button>
+                    </div>
+                );
+            
+            // 10. Void (Event Horizon)
+            case 10:
+                return (
+                    <div className="grid grid-cols-2 gap-4 mb-6">
+                        <button onClick={() => handleGamble('red')} disabled={gamblePending} className={`${commonBtnClass} bg-black border-purple-500`}>
+                            <Disc size={32} className="text-purple-500 mb-1 animate-spin" />
+                            <span className="text-purple-300 font-black text-xs">EXPAND</span>
+                        </button>
+                        <button onClick={() => handleGamble('black')} disabled={gamblePending} className={`${commonBtnClass} bg-black border-white`}>
+                            <Disc size={32} className="text-white mb-1 animate-pulse" />
+                            <span className="text-gray-300 font-black text-xs">COLLAPSE</span>
+                        </button>
+                    </div>
+                );
+
+            // Default
+            default:
+                return (
+                    <div className="grid grid-cols-2 gap-4 mb-6">
+                        <button onClick={() => handleGamble('red')} disabled={gamblePending} className={`${commonBtnClass} bg-gradient-to-br from-red-600 to-red-900 border-red-400`}><span className="text-white font-black text-lg">RED</span></button>
+                        <button onClick={() => handleGamble('black')} disabled={gamblePending} className={`${commonBtnClass} bg-gradient-to-br from-gray-800 to-black border-gray-600`}><span className="text-white font-black text-lg">BLACK</span></button>
+                    </div>
+                );
+        }
     };
 
     return (
@@ -408,10 +487,10 @@ const PlayView = ({ machine, island, user, onLeave, updateBalance }) => {
                                         key={idx}
                                         onClick={() => handleStopReel(idx)}
                                         disabled={!isSpinning[idx]}
-                                        className={`w-8 h-8 sm:w-10 sm:h-10 rounded-full border-2 flex items-center justify-center transition-all active:scale-95 touch-manipulation
+                                        className={`w-8 h-8 sm:w-10 sm:h-10 rounded-full border-2 flex items-center justify-center transition-all active:scale-95 touch-manipulation shadow-md
                                         ${isSpinning[idx] 
                                             ? 'bg-red-600 border-red-400 text-white animate-pulse cursor-pointer hover:bg-red-500 shadow-red-500/50' 
-                                            : 'bg-black/50 border-gray-800 text-gray-700 cursor-default opacity-50'}`}
+                                            : 'bg-black/50 border-gray-800 text-gray-700 cursor-default opacity-30'}`}
                                     >
                                         <StopCircle size={16} fill={isSpinning[idx] ? "currentColor" : "none"}/>
                                     </button>
