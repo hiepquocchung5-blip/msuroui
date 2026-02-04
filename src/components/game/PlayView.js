@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { ChevronLeft, Settings, Minus, Plus, Zap, StopCircle, Gamepad2, Sparkles, Gift, Info, Volume2, VolumeX, Maximize2, Repeat, Coins, LogOut, Wallet, Trophy, Lock, Flame, MessageCircle } from 'lucide-react';
+import { ChevronLeft, Settings, Minus, Plus, Zap, StopCircle, Gamepad2, Sparkles, Gift, Info, Volume2, VolumeX, Maximize2, Repeat, Coins, LogOut, Wallet, Trophy, Lock, Flame, MessageCircle, Shield, Sword, Skull } from 'lucide-react';
 import CabinetSVG from '../visuals/CabinetSVG';
 import CharacterSVG from '../visuals/CharacterSVG';
 import SymbolSVG from '../visuals/SymbolSVG';
@@ -25,7 +25,7 @@ const PlayView = ({ machine, island, user, onLeave, updateBalance }) => {
     const [betIndex, setBetIndex] = useState(0);
     const [winStage, setWinStage] = useState('idle'); // 'idle' | 'celebrating' | 'gambling'
     const [gamblePending, setGamblePending] = useState(false);
-    const [gambleLost, setGambleLost] = useState(false); 
+    const [gambleLost, setGambleLost] = useState(false); // Triggers "Boo!" mood
     const [charInteraction, setCharInteraction] = useState(null); // Text bubble for character click
     
     // Modals
@@ -44,6 +44,7 @@ const PlayView = ({ machine, island, user, onLeave, updateBalance }) => {
 
     // --- HELPER FUNCTIONS ---
 
+    // Determine Machine Visual State (Lights/LEDs)
     const getCabinetState = () => {
         if (winStage === 'celebrating') return 'JACKPOT_HOT'; 
         if (isSpinning.some(s => s)) return 'BUSY';
@@ -51,6 +52,7 @@ const PlayView = ({ machine, island, user, onLeave, updateBalance }) => {
         return 'FREE';
     };
     
+    // Determine Character Animation State
     const getMood = () => {
         if (gambleLost) return 'sad'; 
         if (winStage === 'celebrating' || (winStage === 'gambling' && !gamblePending)) return 'win';
@@ -160,18 +162,28 @@ const PlayView = ({ machine, island, user, onLeave, updateBalance }) => {
             const res = await gameApi.gamble(choice);
             if (res.data.status === 'success') {
                 if (res.data.won) {
+                    // WON: Celebrate then Close (One Shot Logic)
                     setLastWin(res.data.new_win_amount); 
                     updateBalance(res.data.new_balance);
+                    
                     playSound('win');
                     triggerCoinShower();
                     setWinStage('celebrating'); 
-                    setTimeout(() => setWinStage('idle'), 3000);
+                    
+                    // Auto close after celebration
+                    setTimeout(() => {
+                        setWinStage('idle');
+                    }, 3000);
                 } else {
+                    // LOST: Show Boo then Close
                     setLastWin(0); 
                     updateBalance(res.data.new_balance);
-                    playSound('stop'); 
-                    setGambleLost(true); 
-                    setWinStage('idle');
+                    
+                    playSound('stop'); // Sad sound
+                    setGambleLost(true); // Character cries
+                    setWinStage('idle'); // Close modal immediately to show character
+                    
+                    // Reset Boo after 2s
                     setTimeout(() => setGambleLost(false), 2000);
                 }
             } else {
@@ -217,6 +229,66 @@ const PlayView = ({ machine, island, user, onLeave, updateBalance }) => {
         const newVal = !isMuted;
         setIsMuted(newVal);
         localStorage.setItem('suro_game_muted', newVal);
+    };
+
+    // --- ISLAND SPECIFIC GAMBLE UI ---
+    const renderGambleContent = () => {
+        // 1. Vegas (High Card)
+        if (island.id === 1) {
+            return (
+                <div className="grid grid-cols-2 gap-4 mb-6">
+                    <button onClick={() => handleGamble('red')} disabled={gamblePending} className="h-24 bg-gradient-to-br from-red-600 to-red-900 rounded-2xl border-4 border-red-400 flex flex-col items-center justify-center shadow-lg active:scale-95 group">
+                        <div className="w-10 h-14 bg-white rounded flex items-center justify-center text-red-600 font-bold border border-gray-300 shadow-sm mb-1 group-hover:-translate-y-1 transition-transform">♥</div>
+                        <span className="text-white font-black text-xs">RED</span>
+                    </button>
+                    <button onClick={() => handleGamble('black')} disabled={gamblePending} className="h-24 bg-gradient-to-br from-gray-800 to-black rounded-2xl border-4 border-gray-600 flex flex-col items-center justify-center shadow-lg active:scale-95 group">
+                        <div className="w-10 h-14 bg-white rounded flex items-center justify-center text-black font-bold border border-gray-300 shadow-sm mb-1 group-hover:-translate-y-1 transition-transform">♠</div>
+                        <span className="text-white font-black text-xs">BLACK</span>
+                    </button>
+                </div>
+            );
+        }
+        
+        // 3. Inferna (Dragon Breath)
+        if (island.id === 3) {
+            return (
+                <div className="grid grid-cols-2 gap-4 mb-6">
+                    <button onClick={() => handleGamble('red')} disabled={gamblePending} className="h-24 bg-gradient-to-br from-orange-600 to-red-900 rounded-2xl border-4 border-orange-400 flex flex-col items-center justify-center shadow-lg active:scale-95 group relative overflow-hidden">
+                        <Flame size={32} className="text-yellow-300 animate-pulse mb-1 group-hover:scale-125 transition-transform" />
+                        <span className="text-white font-black text-xs z-10 relative">BLOCK FIRE</span>
+                        <div className="absolute inset-0 bg-red-500/20 group-hover:bg-red-500/40 transition-colors"></div>
+                    </button>
+                    <button onClick={() => handleGamble('black')} disabled={gamblePending} className="h-24 bg-gradient-to-br from-gray-700 to-gray-900 rounded-2xl border-4 border-gray-500 flex flex-col items-center justify-center shadow-lg active:scale-95 group relative overflow-hidden">
+                        <Shield size={32} className="text-gray-300 mb-1 group-hover:scale-125 transition-transform" />
+                        <span className="text-white font-black text-xs z-10 relative">DEFEND</span>
+                    </button>
+                </div>
+            );
+        }
+        
+        // 4. Noctyra (Bat Hunt)
+        if (island.id === 4) {
+             return (
+                <div className="grid grid-cols-2 gap-4 mb-6">
+                    <button onClick={() => handleGamble('red')} disabled={gamblePending} className="h-24 bg-gradient-to-br from-purple-800 to-black rounded-2xl border-4 border-purple-500 flex flex-col items-center justify-center shadow-lg active:scale-95 group">
+                        <div className="text-3xl mb-1 group-hover:-translate-y-2 transition-transform">🦇</div>
+                        <span className="text-purple-200 font-black text-xs">LEFT BAT</span>
+                    </button>
+                    <button onClick={() => handleGamble('black')} disabled={gamblePending} className="h-24 bg-gradient-to-br from-purple-800 to-black rounded-2xl border-4 border-purple-500 flex flex-col items-center justify-center shadow-lg active:scale-95 group">
+                        <div className="text-3xl mb-1 group-hover:-translate-y-2 transition-transform">🧛‍♀️</div>
+                        <span className="text-purple-200 font-black text-xs">RIGHT BAT</span>
+                    </button>
+                </div>
+            );
+        }
+
+        // Default (Red/Black)
+        return (
+            <div className="grid grid-cols-2 gap-4 mb-6">
+                <button onClick={() => handleGamble('red')} disabled={gamblePending} className="h-24 bg-gradient-to-br from-red-600 to-red-900 rounded-2xl border-4 border-red-400 flex items-center justify-center shadow-lg active:scale-95"><span className="text-white font-black">RED</span></button>
+                <button onClick={() => handleGamble('black')} disabled={gamblePending} className="h-24 bg-gradient-to-br from-gray-800 to-black rounded-2xl border-4 border-gray-600 flex items-center justify-center shadow-lg active:scale-95"><span className="text-white font-black">BLACK</span></button>
+            </div>
+        );
     };
 
     return (
@@ -310,14 +382,6 @@ const PlayView = ({ machine, island, user, onLeave, updateBalance }) => {
                                     <div className={`absolute inset-0 flex flex-col items-center justify-center ${isSpinning[i] ? 'blur-[2px]' : ''} ${turboMode && isSpinning[i] ? 'blur-[4px]' : ''} ${avalancheTriggered && !isSpinning[i] ? 'animate-ping' : ''}`}>
                                         <div className="w-[80%] aspect-square"><SymbolSVG id={s} /></div>
                                     </div>
-                                    
-                                    {/* Win Line Overlay */}
-                                    {lastWin > 0 && winStage !== 'gambling' && (
-                                        <div className="absolute inset-0 z-40 pointer-events-none flex items-center justify-center">
-                                            <div className="w-[90%] h-1 bg-yellow-400 shadow-[0_0_15px_gold,0_0_30px_red] animate-pulse"></div>
-                                        </div>
-                                    )}
-
                                     <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-transparent to-black/60 z-20"></div>
                                 </div>
                             ))}
@@ -334,6 +398,7 @@ const PlayView = ({ machine, island, user, onLeave, updateBalance }) => {
                                 <div className="bg-black border border-gray-600 w-12 h-8 sm:w-16 sm:h-10 flex items-center justify-center text-[9px] sm:text-xs text-yellow-400 font-mono tracking-tighter shadow-inner select-none">{currentBet.toLocaleString()}</div>
                                 <button onClick={() => changeBet(1)} className="w-8 h-8 sm:w-10 sm:h-10 bg-gray-800 rounded-lg border-b-4 border-black text-white flex items-center justify-center active:border-b-0 active:translate-y-1 shadow-lg touch-manipulation active:bg-gray-700"><Plus size={14}/></button>
                             </div>
+                            
                             <button onClick={handleMaxBet} className="absolute left-[5%] top-[60%] w-10 h-6 sm:w-12 sm:h-8 bg-orange-700 rounded border-b-4 border-black text-[8px] font-black text-white flex items-center justify-center active:border-b-0 active:translate-y-1 shadow-lg touch-manipulation active:bg-orange-600">MAX</button>
 
                             {/* Center: STOP BUTTONS (Pachislo Style) */}
@@ -343,7 +408,7 @@ const PlayView = ({ machine, island, user, onLeave, updateBalance }) => {
                                         key={idx}
                                         onClick={() => handleStopReel(idx)}
                                         disabled={!isSpinning[idx]}
-                                        className={`w-8 h-8 sm:w-10 sm:h-10 rounded-full border-2 flex items-center justify-center transition-all active:scale-95 touch-manipulation shadow-lg
+                                        className={`w-8 h-8 sm:w-10 sm:h-10 rounded-full border-2 flex items-center justify-center transition-all active:scale-95 touch-manipulation
                                         ${isSpinning[idx] 
                                             ? 'bg-red-600 border-red-400 text-white animate-pulse cursor-pointer hover:bg-red-500 shadow-red-500/50' 
                                             : 'bg-black/50 border-gray-800 text-gray-700 cursor-default opacity-50'}`}
@@ -390,10 +455,9 @@ const PlayView = ({ machine, island, user, onLeave, updateBalance }) => {
                             <span>RISK: <b className="text-white">{lastWin.toLocaleString()}</b></span>
                             <span className="text-green-400">WIN: <b className="text-lg">{(lastWin*2).toLocaleString()}</b></span>
                         </div>
-                        <div className="grid grid-cols-2 gap-4 mb-6">
-                            <button onClick={() => handleGamble('red')} disabled={gamblePending} className="h-24 bg-gradient-to-br from-red-600 to-red-900 rounded-2xl border-4 border-red-400 flex items-center justify-center shadow-lg active:scale-95"><span className="text-white font-black">RED</span></button>
-                            <button onClick={() => handleGamble('black')} disabled={gamblePending} className="h-24 bg-gradient-to-br from-gray-800 to-black rounded-2xl border-4 border-gray-600 flex items-center justify-center shadow-lg active:scale-95"><span className="text-white font-black">BLACK</span></button>
-                        </div>
+                        
+                        {renderGambleContent()}
+
                         <button onClick={collectWin} className="text-gray-400 text-xs font-bold underline">COLLECT WIN</button>
                     </GlassCard>
                 </div>
