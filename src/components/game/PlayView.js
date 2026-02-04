@@ -70,6 +70,7 @@ const PlayView = ({ machine, island, user, onLeave, updateBalance }) => {
                 if (!autoPlay) {
                     setWinStage('celebrating');
                     setGambleLost(false);
+                    // Delay before showing Gamble option
                     setTimeout(() => setWinStage('gambling'), isBigWin ? 2500 : 1000);
                 }
             }
@@ -129,16 +130,14 @@ const PlayView = ({ machine, island, user, onLeave, updateBalance }) => {
         setTimeout(() => setCharInteraction(null), 3000);
     };
 
-    // Keyboard Shortcuts (Updated for 1, 2, 3 stops)
+    // Keyboard Shortcuts
     useEffect(() => {
         const handleKeyDown = (e) => {
             if (e.code === 'Space') {
                 e.preventDefault();
-                // If reels aren't spinning, Spin.
                 if (!isSpinning.some(s=>s) && winStage === 'idle') handleSpin();
-                // If auto play is off and reels are spinning, could map Space to "Stop All" or "Stop Next" logic here if desired.
             }
-            // Stop Buttons
+            // Stop Buttons (1, 2, 3)
             if (e.key === '1') handleStopReel(0);
             if (e.key === '2') handleStopReel(1);
             if (e.key === '3') handleStopReel(2);
@@ -311,6 +310,14 @@ const PlayView = ({ machine, island, user, onLeave, updateBalance }) => {
                                     <div className={`absolute inset-0 flex flex-col items-center justify-center ${isSpinning[i] ? 'blur-[2px]' : ''} ${turboMode && isSpinning[i] ? 'blur-[4px]' : ''} ${avalancheTriggered && !isSpinning[i] ? 'animate-ping' : ''}`}>
                                         <div className="w-[80%] aspect-square"><SymbolSVG id={s} /></div>
                                     </div>
+                                    
+                                    {/* Win Line Overlay */}
+                                    {lastWin > 0 && winStage !== 'gambling' && (
+                                        <div className="absolute inset-0 z-40 pointer-events-none flex items-center justify-center">
+                                            <div className="w-[90%] h-1 bg-yellow-400 shadow-[0_0_15px_gold,0_0_30px_red] animate-pulse"></div>
+                                        </div>
+                                    )}
+
                                     <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-transparent to-black/60 z-20"></div>
                                 </div>
                             ))}
@@ -329,20 +336,19 @@ const PlayView = ({ machine, island, user, onLeave, updateBalance }) => {
                             </div>
                             <button onClick={handleMaxBet} className="absolute left-[5%] top-[60%] w-10 h-6 sm:w-12 sm:h-8 bg-orange-700 rounded border-b-4 border-black text-[8px] font-black text-white flex items-center justify-center active:border-b-0 active:translate-y-1 shadow-lg touch-manipulation active:bg-orange-600">MAX</button>
 
-                            {/* Center: STOP BUTTONS (New) */}
-                            {/* These overlay the visual stop buttons in CabinetSVG. Only active when spinning. */}
-                            <div className="absolute left-[30%] top-[25%] flex gap-2 sm:gap-3 pointer-events-auto z-50">
+                            {/* Center: STOP BUTTONS (Pachislo Style) */}
+                            <div className="absolute left-[33%] top-[25%] flex gap-2 sm:gap-4 z-50">
                                 {[0, 1, 2].map((idx) => (
                                     <button 
                                         key={idx}
                                         onClick={() => handleStopReel(idx)}
                                         disabled={!isSpinning[idx]}
-                                        className={`w-8 h-8 sm:w-10 sm:h-10 rounded-full border-2 flex items-center justify-center transition-all active:scale-95 touch-manipulation
+                                        className={`w-8 h-8 sm:w-10 sm:h-10 rounded-full border-2 flex items-center justify-center transition-all active:scale-95 touch-manipulation shadow-lg
                                         ${isSpinning[idx] 
-                                            ? 'bg-red-600 border-red-400 shadow-[0_0_10px_red] text-white animate-pulse cursor-pointer' 
-                                            : 'bg-black/50 border-gray-700 text-gray-600 cursor-default opacity-50'}`}
+                                            ? 'bg-red-600 border-red-400 text-white animate-pulse cursor-pointer hover:bg-red-500 shadow-red-500/50' 
+                                            : 'bg-black/50 border-gray-800 text-gray-700 cursor-default opacity-50'}`}
                                     >
-                                        <StopCircle size={14} fill={isSpinning[idx] ? "white" : "none"}/>
+                                        <StopCircle size={16} fill={isSpinning[idx] ? "currentColor" : "none"}/>
                                     </button>
                                 ))}
                             </div>
@@ -352,7 +358,7 @@ const PlayView = ({ machine, island, user, onLeave, updateBalance }) => {
                                 onClick={handleSpin} 
                                 disabled={isSpinning.some(s=>s) || (winStage !== 'idle' && winStage !== 'celebrating')} 
                                 className={`absolute right-[5%] top-[5%] w-16 h-16 sm:w-20 sm:h-20 rounded-full border-b-[6px] shadow-xl flex flex-col items-center justify-center active:border-b-0 active:translate-y-1 transition-all touch-manipulation
-                                ${isSpinning.some(s=>s) ? 'bg-gray-800 border-gray-950 opacity-50' : 'bg-gradient-to-b from-red-600 to-red-800 hover:brightness-110 hover:shadow-red-500/80 active:bg-red-700'}`}
+                                ${isSpinning.some(s=>s) ? 'bg-gray-800 border-gray-950 opacity-50' : 'bg-gradient-to-b from-red-600 to-red-800 border-red-950 text-white hover:brightness-110 hover:shadow-red-500/80 active:bg-red-700'}`}
                             >
                                 <Gamepad2 size={24} strokeWidth={3} className="text-white"/>
                                 <span className="text-[8px] font-black tracking-widest text-white mt-0.5 select-none">SPIN</span>
