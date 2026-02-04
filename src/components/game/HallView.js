@@ -1,14 +1,19 @@
 import React, { useState, useMemo } from 'react';
-import { ChevronLeft, Filter, Flame, Users, Zap, Search, Trophy, Sparkles } from 'lucide-react';
+import { ChevronLeft, Filter, Flame, Users, Zap, Search, Trophy, Sparkles, X, BarChart3, History, Coins } from 'lucide-react';
 import CabinetSVG from '../visuals/CabinetSVG';
 import IslandLandscapeSVG from '../visuals/IslandLandscapeSVG';
 import BottomDock from '../layout/BottomDock';
 import GlobalTicker from '../ui/GlobalTicker';
 import ActiveEvents from '../ui/ActiveEvents';
+import GlassCard from '../ui/GlassCard';
+import { useGameSound } from '../../hooks/useGameSound';
 
 const HallView = ({ island, machines, user, onSelectMachine, onBack }) => {
     const [filter, setFilter] = useState('ALL'); // ALL, EMPTY, HOT
     const [search, setSearch] = useState('');
+    const [inspectingMachine, setInspectingMachine] = useState(null); // Machine being viewed
+    
+    const { playSound } = useGameSound();
 
     // --- LOGIC: Filter Machines ---
     const filteredMachines = useMemo(() => {
@@ -28,6 +33,28 @@ const HallView = ({ island, machines, user, onSelectMachine, onBack }) => {
     const occupiedCount = machines.filter(m => m.status === 'occupied').length;
     const occupancyRate = Math.round((occupiedCount / machines.length) * 100);
 
+    // Handlers
+    const handleMachineClick = (m) => {
+        playSound('click');
+        if (m.status === 'occupied' && m.current_user_id !== user.id) {
+            // If occupied by someone else, maybe show a toast (omitted for brevity)
+            return;
+        }
+        // Open Inspector
+        setInspectingMachine(m);
+    };
+
+    const handleEnterMachine = (m) => {
+        playSound('click');
+        setInspectingMachine(null);
+        onSelectMachine(m);
+    };
+
+    const handleFilterChange = (newFilter) => {
+        playSound('click');
+        setFilter(newFilter);
+    };
+
     return (
         <div className="min-h-screen bg-black pb-24 relative overflow-hidden flex flex-col">
             
@@ -46,7 +73,7 @@ const HallView = ({ island, machines, user, onSelectMachine, onBack }) => {
             <div className="p-4 pt-6 bg-black/80 backdrop-blur-md sticky top-8 z-30 border-b border-white/10 shadow-xl">
                 <div className="flex items-center justify-between mb-4">
                     <div className="flex items-center gap-3">
-                        <button onClick={onBack} className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center text-white hover:bg-white/20 transition-colors active:scale-95">
+                        <button onClick={() => { playSound('click'); onBack(); }} className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center text-white hover:bg-white/20 transition-colors active:scale-95">
                             <ChevronLeft />
                         </button>
                         <div>
@@ -75,13 +102,13 @@ const HallView = ({ island, machines, user, onSelectMachine, onBack }) => {
 
                 {/* Filter Tabs */}
                 <div className="flex gap-2 overflow-x-auto hide-scrollbar">
-                    <button onClick={() => setFilter('ALL')} className={`px-4 py-2 rounded-lg text-[10px] font-bold border transition-all whitespace-nowrap ${filter === 'ALL' ? 'bg-white text-black border-white' : 'bg-white/5 text-gray-400 border-transparent hover:bg-white/10'}`}>
+                    <button onClick={() => handleFilterChange('ALL')} className={`px-4 py-2 rounded-lg text-[10px] font-bold border transition-all whitespace-nowrap ${filter === 'ALL' ? 'bg-white text-black border-white' : 'bg-white/5 text-gray-400 border-transparent hover:bg-white/10'}`}>
                         ALL MACHINES
                     </button>
-                    <button onClick={() => setFilter('EMPTY')} className={`px-4 py-2 rounded-lg text-[10px] font-bold border transition-all flex items-center gap-1 whitespace-nowrap ${filter === 'EMPTY' ? 'bg-green-600 text-white border-green-600 shadow-[0_0_10px_green]' : 'bg-white/5 text-gray-400 border-transparent hover:bg-white/10'}`}>
+                    <button onClick={() => handleFilterChange('EMPTY')} className={`px-4 py-2 rounded-lg text-[10px] font-bold border transition-all flex items-center gap-1 whitespace-nowrap ${filter === 'EMPTY' ? 'bg-green-600 text-white border-green-600 shadow-[0_0_10px_green]' : 'bg-white/5 text-gray-400 border-transparent hover:bg-white/10'}`}>
                         <Users size={12}/> EMPTY SEATS
                     </button>
-                    <button onClick={() => setFilter('HOT')} className={`px-4 py-2 rounded-lg text-[10px] font-bold border transition-all flex items-center gap-1 whitespace-nowrap ${filter === 'HOT' ? 'bg-red-600 text-white border-red-600 shadow-[0_0_10px_red]' : 'bg-white/5 text-gray-400 border-transparent hover:bg-white/10'}`}>
+                    <button onClick={() => handleFilterChange('HOT')} className={`px-4 py-2 rounded-lg text-[10px] font-bold border transition-all flex items-center gap-1 whitespace-nowrap ${filter === 'HOT' ? 'bg-red-600 text-white border-red-600 shadow-[0_0_10px_red]' : 'bg-white/5 text-gray-400 border-transparent hover:bg-white/10'}`}>
                         <Flame size={12}/> HOT
                     </button>
                 </div>
@@ -106,7 +133,7 @@ const HallView = ({ island, machines, user, onSelectMachine, onBack }) => {
                             return (
                                 <div 
                                     key={m.id} 
-                                    onClick={() => onSelectMachine(m)} 
+                                    onClick={() => handleMachineClick(m)} 
                                     className={`relative group cursor-pointer transition-all duration-300 transform hover:-translate-y-4 hover:scale-105 flex-shrink-0
                                         ${isOccupied && !isMe ? 'grayscale-[0.5] opacity-80' : ''}
                                     `}
@@ -138,7 +165,6 @@ const HallView = ({ island, machines, user, onSelectMachine, onBack }) => {
                                     )}
 
                                     {/* The Machine */}
-                                    {/* Fixed aspect ratio container for the SVG */}
                                     <div className="w-full aspect-[0.6] relative">
                                         <CabinetSVG 
                                             islandId={island.id} 
@@ -152,12 +178,12 @@ const HallView = ({ island, machines, user, onSelectMachine, onBack }) => {
                                         />
                                     </div>
                                     
-                                    {/* Action Button Overlay */}
+                                    {/* Quick Status Overlay (Instead of Button) */}
                                     {!isOccupied && (
                                         <div className="absolute bottom-24 left-0 right-0 flex justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-50">
-                                            <button className="bg-white text-black font-black text-xs px-6 py-2 rounded-full shadow-xl flex items-center gap-2 hover:bg-cyan-400 transform hover:scale-110 transition-transform">
-                                                <Zap size={14} fill="black"/> SIT DOWN
-                                            </button>
+                                            <div className="bg-white/90 text-black font-black text-[10px] px-3 py-1 rounded-full shadow-xl flex items-center gap-1">
+                                                <Search size={10}/> INSPECT
+                                            </div>
                                         </div>
                                     )}
 
@@ -179,6 +205,71 @@ const HallView = ({ island, machines, user, onSelectMachine, onBack }) => {
                     <div className="w-12 flex-shrink-0"></div>
                 </div>
             </div>
+
+            {/* --- MACHINE INSPECTOR MODAL --- */}
+            {inspectingMachine && (
+                <div className="fixed inset-0 z-50 bg-black/90 flex items-center justify-center p-6 backdrop-blur-sm animate-in zoom-in-95" onClick={() => setInspectingMachine(null)}>
+                    <GlassCard className="w-full max-w-sm p-0 overflow-hidden border-cyan-500/50" onClick={e => e.stopPropagation()}>
+                        
+                        {/* Modal Header */}
+                        <div className="bg-gradient-to-r from-cyan-900 to-blue-900 p-4 flex justify-between items-center border-b border-white/10">
+                            <div>
+                                <h3 className="text-white font-black text-lg italic">MACHINE #{inspectingMachine.machine_number}</h3>
+                                <div className="text-[10px] text-cyan-300 font-bold tracking-widest">{island.name} FLOOR</div>
+                            </div>
+                            <button onClick={() => setInspectingMachine(null)} className="text-white/70 hover:text-white"><X size={20}/></button>
+                        </div>
+
+                        {/* Stats Body */}
+                        <div className="p-6 space-y-4">
+                            
+                            <div className="flex justify-between items-center bg-white/5 p-3 rounded-xl border border-white/5">
+                                <div className="flex items-center gap-3">
+                                    <div className="w-10 h-10 rounded-full bg-black flex items-center justify-center border border-white/20">
+                                        <History size={18} className="text-gray-400"/>
+                                    </div>
+                                    <div>
+                                        <div className="text-[10px] text-gray-500 font-bold uppercase">Total Spins</div>
+                                        <div className="text-white font-mono font-bold text-lg">{inspectingMachine.total_laps.toLocaleString()}</div>
+                                    </div>
+                                </div>
+                                <div className="text-right">
+                                    <div className="text-[10px] text-gray-500 font-bold uppercase">Payouts</div>
+                                    <div className="text-yellow-400 font-mono font-bold">{inspectingMachine.total_payout.toLocaleString()}</div>
+                                </div>
+                            </div>
+
+                            {/* Fake Graph */}
+                            <div className="bg-black/40 p-4 rounded-xl border border-white/5">
+                                <div className="flex items-center gap-2 mb-2 text-[10px] text-gray-400 font-bold uppercase">
+                                    <BarChart3 size={12}/> Performance Trend (Last 100)
+                                </div>
+                                <div className="h-16 flex items-end gap-1">
+                                    {[...Array(20)].map((_, i) => (
+                                        <div 
+                                            key={i} 
+                                            className={`flex-1 rounded-t ${Math.random() > 0.7 ? 'bg-yellow-500' : 'bg-gray-800'}`} 
+                                            style={{height: `${Math.random() * 100}%`}}
+                                        ></div>
+                                    ))}
+                                </div>
+                            </div>
+
+                            {/* Action Button */}
+                            <button 
+                                onClick={() => handleEnterMachine(inspectingMachine)}
+                                className="w-full py-4 bg-gradient-to-r from-cyan-500 to-blue-600 rounded-xl font-black text-white shadow-[0_0_20px_rgba(6,182,212,0.4)] flex items-center justify-center gap-2 hover:scale-[1.02] active:scale-95 transition-all"
+                            >
+                                <Zap size={18} fill="currentColor"/> SIT DOWN & PLAY
+                            </button>
+                            
+                            <div className="text-center text-[9px] text-gray-500">
+                                Serial: {inspectingMachine.serial_number}
+                            </div>
+                        </div>
+                    </GlassCard>
+                </div>
+            )}
 
             <BottomDock activeCharId={user.active_pet_id} onNavigate={(path) => router.push(`/${path}`)} onOpenBank={() => router.push('/wallet')} />
         </div>
