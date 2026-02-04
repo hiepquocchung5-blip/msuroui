@@ -32,13 +32,12 @@ const CabinetSVG = ({
             <linearGradient id="goldGradient" x1="0" y1="0" x2="1" y2="1">
                 <stop offset="0%" stopColor="#8B4513" /><stop offset="40%" stopColor="#FFD700" /><stop offset="60%" stopColor="#FFFACD" /><stop offset="100%" stopColor="#B8860B" />
             </linearGradient>
-            <linearGradient id="darkPlastic" x1="0" y1="0" x2="1" y2="0">
+            <linearGradient id="blackPlastic" x1="0" y1="0" x2="1" y2="0">
                  <stop offset="0%" stopColor="#0a0a0a"/><stop offset="50%" stopColor="#222"/><stop offset="100%" stopColor="#0a0a0a"/>
             </linearGradient>
 
             {/* TEXTURES */}
             <pattern id="graffitiPattern" width="100" height="100" patternUnits="userSpaceOnUse">
-                 {/* Simulated Graffiti/Grunge Scratches */}
                  <path d="M10,10 L30,40 M80,20 L60,80 M10,90 L40,80" stroke="#000" strokeWidth="1" opacity="0.3" />
                  <circle cx="50" cy="50" r="20" fill="none" stroke="#000" strokeWidth="0.5" opacity="0.2" />
             </pattern>
@@ -128,7 +127,6 @@ const CabinetSVG = ({
     // --- 3. TOPPER (Header PNG + Data) ---
     const renderTopper = () => (
         <g transform="translate(60, -5)">
-            {/* Device Box */}
             <rect x="0" y="0" width="120" height="35" fill="#080808" stroke="#333" rx="3" />
             
             {/* Header Image Area */}
@@ -141,17 +139,24 @@ const CabinetSVG = ({
             </g>
 
             {/* Status Lights */}
-            <circle cx="115" cy="5" r="3" fill={isHot ? 'yellow' : '#330'} className={isHot ? 'animate-pulse' : ''} />
+            <g transform="translate(95, 5)">
+                <circle cx="4" cy="4" r="3" fill={isBroken ? 'red' : '#300'} className={isBroken ? "animate-pulse" : ""} />
+                <circle cx="4" cy="12" r="3" fill={isHot ? 'yellow' : '#330'} className={isHot ? 'animate-pulse' : ''} />
+                <circle cx="4" cy="20" r="3" fill={isBusy ? 'blue' : '#003'} className={isBusy ? "animate-pulse" : ""} />
+            </g>
         </g>
     );
 
     // --- 4. SCREEN BEZEL ---
     const renderScreenArea = () => {
         if (mode === 'game') {
+            // Game Mode: Hollow frame for React reels
             return (
                 <g>
+                    {/* Bezel Frame */}
                     <path d="M40,85 H200 V205 H40 Z M10,40 H230 V390 H10 Z" fill="rgba(0,0,0,0.95)" fillRule="evenodd" />
-                    <rect x="40" y="85" width="160" height="120" fill="none" stroke="url(#chromeGradient)" strokeWidth="4" rx="2" />
+                    {/* Chrome Inner Trim */}
+                    <rect x="40" y="85" width="160" height="115" fill="none" stroke="url(#chromeGradient)" strokeWidth="4" rx="2" />
                 </g>
             );
         }
@@ -191,8 +196,11 @@ const CabinetSVG = ({
              {mode !== 'game' && (
                  <g transform="translate(70, 15)">
                      <circle cx="0" cy="10" r="12" fill="#c0392b" stroke="#333" strokeWidth="2" />
+                     <text x="0" y="14" textAnchor="middle" fill="white" fontSize="8" fontWeight="bold">1</text>
                      <circle cx="40" cy="10" r="12" fill="#c0392b" stroke="#333" strokeWidth="2" />
+                     <text x="40" y="14" textAnchor="middle" fill="white" fontSize="8" fontWeight="bold">2</text>
                      <circle cx="80" cy="10" r="12" fill="#c0392b" stroke="#333" strokeWidth="2" />
+                     <text x="80" y="14" textAnchor="middle" fill="white" fontSize="8" fontWeight="bold">3</text>
                  </g>
              )}
         </g>
@@ -252,28 +260,19 @@ const CabinetSVG = ({
 
     // --- MAIN RENDER ---
     return (
-        <svg width="240" height="400" viewBox="0 0 240 400" className={`drop-shadow-2xl transition-transform group-hover:-translate-y-2 duration-300 ${isBroken ? 'animate-pulse' : ''}`}>
+        <svg width="100%" height="100%" viewBox="0 0 240 400" preserveAspectRatio="xMidYMid meet" className={`drop-shadow-2xl transition-transform duration-300 ${mode==='hall' ? 'group-hover:-translate-y-2' : ''}`}>
             {renderDefs()}
-            
-            {/* Floor Shadow */}
             <ellipse cx="120" cy="395" rx="100" ry="10" fill="#000" opacity="0.6" filter="blur(6px)" />
-            
             {renderChassis()}
             {renderTopper()}
             {renderScreenArea()} 
             {renderButtonDeck()}
             {renderBellyGlass()}
             {renderCoinTray()}
-            
-            {/* Occupant (Hall Mode Only) */}
-            {mode === 'hall' && isBusy && occupantPetId && (
-                 <g transform="translate(80, 260) scale(0.35)">
-                    <CharacterSVG type={occupantPetId} mood="idle" />
-                 </g>
-            )}
+            {mode === 'hall' && isBusy && occupantPetId && <g transform="translate(80, 260) scale(0.35)"><CharacterSVG type={occupantPetId} mood="idle" /></g>}
             
             {/* Overall Glare */}
-            <path d="M20,40 L220,40 L220,390 L20,390 Z" fill="url(#glassGlare)" opacity="0.1" pointerEvents="none" style={{mixBlendMode:'screen'}} />
+            <path d="M10,40 L230,40 L240,400 L0,400 Z" fill="url(#glassGlare)" opacity="0.1" pointerEvents="none" style={{mixBlendMode:'screen'}} />
         </svg>
     );
 };
