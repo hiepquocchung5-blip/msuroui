@@ -25,7 +25,7 @@ function MyApp({ Component, pageProps }) {
             <ChatWidget />
             
             {/* Vercel Analytics */}
-            <Analytics />
+            {/* <Analytics /> */}
         </main>
       </ToastProvider>
     </AuthProvider>
