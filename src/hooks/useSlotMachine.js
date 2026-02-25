@@ -5,17 +5,18 @@ import { useAuth } from '../context/AuthContext';
 export const useSlotMachine = (machineId, islandId) => {
     const { user, updateBalance } = useAuth();
     
-    // --- GAME STATE (Now 3x3 Grid = 9 items) ---
+    // --- GAME STATE (3x3 Grid) ---
     const [reels, setReels] = useState([7, 7, 7, 7, 7, 7, 7, 7, 7]); 
-    const [winningLines, setWinningLines] = useState([]); // Array of line indices that won
-    const [isSpinning, setIsSpinning] = useState([false, false, false]); // Spinning state per COLUMN
+    const [winningLines, setWinningLines] = useState([]); 
+    const [isSpinning, setIsSpinning] = useState([false, false, false]); 
     const [isTeaser, setIsTeaser] = useState(false); 
     
-    // --- RESULTS STATE ---
+    // --- RESULTS & PROGRESSION STATE ---
     const [lastWin, setLastWin] = useState(0);
     const [winStreak, setWinStreak] = useState(0); 
     const [isJackpot, setIsJackpot] = useState(false); 
     const [mysteryItem, setMysteryItem] = useState(null); 
+    const [levelUpData, setLevelUpData] = useState(null); // Captured from API
     
     // --- SPECIAL MECHANICS STATE ---
     const [lockedReels, setLockedReels] = useState([false, false, false]); 
@@ -69,7 +70,7 @@ export const useSlotMachine = (machineId, islandId) => {
         }
         
         setIsSpinning(prev => prev.map((val, i) => lockedReels[i] ? false : true));
-        setWinningLines([]); // Clear previous lines
+        setWinningLines([]);
         setExpandedReels([false, false, false]);
         setAvalancheTriggered(false);
         setIsTeaser(false);
@@ -87,10 +88,6 @@ export const useSlotMachine = (machineId, islandId) => {
             if (data.session_token) setSessionToken(data.session_token);
 
             const baseTime = turboMode ? 150 : 400;
-            
-            // Render columns stopping one by one.
-            // data.stops is a flat array [0..8]. 
-            // Col 1 = [0, 3, 6] | Col 2 = [1, 4, 7] | Col 3 = [2, 5, 8]
             
             // --- REEL 1 STOP ---
             if (!lockedReels[0]) {
@@ -126,10 +123,10 @@ export const useSlotMachine = (machineId, islandId) => {
                     setReels(data.stops);
                     setIsSpinning([false, false, false]);
                     setIsTeaser(false);
-                    handlePostSpinEffects(data);
+                    handlePostSpinEffects(data, betAmount);
                 }, reel3Delay));
             } else {
-                 timers.current.push(setTimeout(() => handlePostSpinEffects(data), baseTime * 2 + 100));
+                 timers.current.push(setTimeout(() => handlePostSpinEffects(data, betAmount), baseTime * 2 + 100));
             }
 
         } catch (err) {
@@ -141,7 +138,7 @@ export const useSlotMachine = (machineId, islandId) => {
         }
     }, [user, machineId, sessionToken, autoPlay, turboMode, updateBalance, enter, islandId, lockedReels]);
 
-    const handlePostSpinEffects = (data) => {
+    const handlePostSpinEffects = (data, currentBetAmount) => {
         if (data.winning_lines) {
             setWinningLines(data.winning_lines);
         }
@@ -157,18 +154,24 @@ export const useSlotMachine = (machineId, islandId) => {
         }
         
         if (data.mystery_item) setMysteryItem(data.mystery_item);
+        
+        // Handle Level Up Progression
+        if (data.level_up) {
+            setLevelUpData(data.level_up);
+            setAutoPlay(false); // Pause autoplay so they see the level up screen
+        }
 
-        if (autoPlay) {
-            if (data.is_jackpot) setAutoPlay(false);
-            else timers.current.push(setTimeout(() => spin(data.bet_amount || 1000), turboMode ? 500 : 1500));
+        // Loop Autoplay (if active, and no massive interruptions occurred)
+        if (autoPlay && !data.is_jackpot && !data.level_up) {
+            timers.current.push(setTimeout(() => spin(currentBetAmount), turboMode ? 500 : 1500));
         }
     };
 
-    const stopReel = (index) => {};
+    const stopReel = (index) => {}; // Skill stop placeholder
 
     return {
-        reels, winningLines, lastWin, winStreak, mysteryItem,
-        isSpinning, isTeaser, isJackpot, error, sessionToken,
+        reels, winningLines, lastWin, winStreak, mysteryItem, levelUpData, setLevelUpData,
+        isSpinning, isTeaser, isJackpot, setIsJackpot, error, sessionToken,
         expandedReels, lockedReels, avalancheTriggered,
         autoPlay, setAutoPlay, turboMode, setTurboMode,
         spin, stopReel, setLastWin
