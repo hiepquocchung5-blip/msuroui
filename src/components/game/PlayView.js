@@ -32,11 +32,15 @@ const PAYLINES = [
     [6, 4, 2]  // Diag /
 ];
 
+// Production Bet Ranges (80 to 5 Lakhs)
+const BET_AMOUNTS = [80, 200, 500, 1000, 5000, 10000, 50000, 100000, 250000, 500000];
+
 const PlayView = ({ machine, island, user, onLeave, updateBalance }) => {
     const slotLogic = useSlotMachine(machine.id, island.id);
     const { addToast } = useToast();
     const { 
         reels, winningLines, isSpinning, isTeaser, lastWin, mysteryItem, 
+        levelUpData, setLevelUpData, isJackpot, setIsJackpot,
         autoPlay, spin, stopReel, setAutoPlay, setLastWin, 
         turboMode, setTurboMode, 
         expandedReels, lockedReels, avalancheTriggered 
@@ -56,7 +60,6 @@ const PlayView = ({ machine, island, user, onLeave, updateBalance }) => {
     const [coins, setCoins] = useState([]); 
     
     const { playSound } = useGameSound(!isMuted);
-    const BET_AMOUNTS = [200, 500, 1000, 2000, 5000, 10000, 50000];
     const currentBet = BET_AMOUNTS[betIndex];
 
     const getCabinetState = () => {
@@ -72,10 +75,8 @@ const PlayView = ({ machine, island, user, onLeave, updateBalance }) => {
         return 'idle';
     };
 
-    // Extract Win Details
     const getWinDetails = () => {
         if (!winningLines || winningLines.length === 0) return null;
-        // Get the first winning line's first symbol index to determine the matched symbol
         const firstWinningLineIndex = winningLines[0];
         const symbolPosition = PAYLINES[firstWinningLineIndex][0];
         const symbolId = reels[symbolPosition];
@@ -84,23 +85,28 @@ const PlayView = ({ machine, island, user, onLeave, updateBalance }) => {
 
     useEffect(() => {
         if (lastWin > 0) {
+            if (isJackpot) {
+                playSound('bigwin');
+                triggerCoinShower();
+                return; 
+            }
+
             if (winStage === 'idle') {
                 const isBigWin = lastWin > currentBet * 10;
                 playSound(isBigWin ? 'bigwin' : 'win');
                 if (navigator.vibrate) navigator.vibrate(isBigWin ? [200, 100, 200] : 100);
                 if (isBigWin) triggerCoinShower();
 
-                if (!autoPlay) {
+                if (!autoPlay && !levelUpData) {
                     setWinStage('celebrating');
                     setGambleLost(false);
-                    // Extend celebration slightly for bigger wins before gambling
                     setTimeout(() => setWinStage('gambling'), isBigWin ? 3000 : 2000);
                 }
             }
         } else {
              if (winStage !== 'gambling' && winStage !== 'celebrating') setWinStage('idle');
         }
-    }, [lastWin, autoPlay, currentBet, playSound]);
+    }, [lastWin, autoPlay, currentBet, playSound, isJackpot, levelUpData]);
 
     const triggerCoinShower = () => {
         const newParticles = Array.from({length: 50}).map((_, i) => ({
@@ -112,14 +118,14 @@ const PlayView = ({ machine, island, user, onLeave, updateBalance }) => {
     };
 
     const handleSpin = useCallback(() => {
-        if (winStage !== 'idle') return; 
+        if (winStage !== 'idle' || levelUpData || isJackpot) return; 
         if (parseFloat(user.balance) < currentBet) {
             setShowLowBalance(true); playSound('stop'); return;
         }
         setGambleLost(false); setCharInteraction(null); setGambleFeedback(null); playSound('spin');
         if (navigator.vibrate) navigator.vibrate(50);
         spin(currentBet);
-    }, [user.balance, currentBet, winStage, playSound, spin]);
+    }, [user.balance, currentBet, winStage, playSound, spin, levelUpData, isJackpot]);
 
     const handleStopReel = useCallback((idx) => {
         if (isSpinning[idx]) {
@@ -161,8 +167,7 @@ const PlayView = ({ machine, island, user, onLeave, updateBalance }) => {
                     if (res.data.is_critical) {
                         setGambleFeedback('critical');
                         addToast("CRITICAL HIT! 3X MULTIPLIER!", "success");
-                        playSound('bigwin');
-                        triggerCoinShower();
+                        playSound('bigwin'); triggerCoinShower();
                     } else {
                         playSound('win');
                     }
@@ -206,11 +211,11 @@ const PlayView = ({ machine, island, user, onLeave, updateBalance }) => {
     const drawPaylines = () => {
         if (!winningLines || winningLines.length === 0 || winStage === 'gambling') return null;
         const linePaths = {
-            0: "M 0 16.6% L 100% 16.6%",  // Top Row
-            1: "M 0 50% L 100% 50%",      // Middle Row
-            2: "M 0 83.3% L 100% 83.3%",  // Bottom Row
-            3: "M 0 0 L 100% 100%",       // Diagonal 1 (\)
-            4: "M 0 100% L 100% 0"        // Diagonal 2 (/)
+            0: "M 0 16.6% L 100% 16.6%",  
+            1: "M 0 50% L 100% 50%",      
+            2: "M 0 83.3% L 100% 83.3%",  
+            3: "M 0 0 L 100% 100%",       
+            4: "M 0 100% L 100% 0"        
         };
 
         return (
@@ -223,6 +228,7 @@ const PlayView = ({ machine, island, user, onLeave, updateBalance }) => {
         );
     };
 
+    // Exactly 3 Columns, 3 Rows
     const columns = [ [0, 3, 6], [1, 4, 7], [2, 5, 8] ];
     const winDetails = getWinDetails();
 
@@ -281,7 +287,7 @@ const PlayView = ({ machine, island, user, onLeave, updateBalance }) => {
                 <button onClick={onLeave} className="pointer-events-auto w-10 h-10 bg-white/10 rounded-full text-white backdrop-blur flex items-center justify-center border border-white/20 hover:bg-white/20 active:scale-95 transition-transform shadow-lg"><ChevronLeft/></button>
                 <div className="pointer-events-auto bg-black/60 px-4 sm:px-5 py-2 rounded-full border border-yellow-500/50 flex items-center gap-2 sm:gap-3 shadow-[0_0_20px_rgba(234,179,8,0.3)] backdrop-blur-md">
                     <div className="text-[10px] text-yellow-500 font-bold tracking-widest hidden md:block">CREDIT</div>
-                    <span className="text-yellow-400 font-mono font-black text-base sm:text-lg">{user.balance.toLocaleString()}</span>
+                    <span className="text-yellow-400 font-mono font-black text-base sm:text-lg">{parseFloat(user.balance).toLocaleString()}</span>
                 </div>
                 <div className="flex gap-2 pointer-events-auto">
                      <button onClick={() => setShowPaytable(true)} className="w-10 h-10 bg-white/10 rounded-full text-white backdrop-blur flex items-center justify-center border border-white/20 hover:bg-white/20 active:scale-95"><Info size={20}/></button>
@@ -294,7 +300,6 @@ const PlayView = ({ machine, island, user, onLeave, updateBalance }) => {
             {/* MAIN STAGE CONTAINER */}
             <div className="flex-1 flex flex-col items-center justify-center relative z-10 w-full h-full overflow-hidden px-2 pt-16 pb-6">
                 
-                {/* Responsive Fixed-Ratio Wrapper */}
                 <div className="relative flex items-center justify-center w-full max-w-[400px] sm:max-w-[450px] aspect-[0.6] max-h-[80vh]">
                     
                     {/* 1. CABINET */}
@@ -303,9 +308,7 @@ const PlayView = ({ machine, island, user, onLeave, updateBalance }) => {
                             islandId={parseInt(island.id)} 
                             mode="game" 
                             charId={island.hostess_char_id} 
-                            stats={{laps: machine.total_laps, wins: machine.total_payout}} 
-                            machineNumber={machine.machine_number}
-                            serialNumber={machine.serial_number}
+                            machine={machine} // Pass full machine object for DB columns
                             visualState={getCabinetState()}
                         />
                     </div>
@@ -339,25 +342,26 @@ const PlayView = ({ machine, island, user, onLeave, updateBalance }) => {
                         )}
                     </div>
 
-                    {/* 3. SCREEN CONTENT LAYER */}
+                    {/* 3. 3x3 SCREEN CONTENT LAYER */}
                     <div className="absolute top-[21.25%] left-[16.67%] w-[66.67%] h-[28.75%] flex flex-col pointer-events-none z-20">
-                        {/* Win Marquee */}
                         <div className={`bg-black/90 h-[15%] flex items-center justify-center overflow-hidden mb-[1%] shadow-inner ${isTeaser ? 'border-t-2 border-red-500' : ''}`}>
                             <p className="font-mono text-[10px] sm:text-[12px] text-cyan-400 font-bold tracking-widest animate-marquee whitespace-nowrap">
                                 {lastWin > 0 ? `*** WIN ${lastWin.toLocaleString()} ***` : (isTeaser ? 'NEAR MISS...' : 'INSERT COIN')}
                             </p>
                         </div>
-                        {/* Reels Container */}
-                        <div className="flex-1 flex gap-[2%] bg-[#0a0a0a] p-[2%] relative shadow-[inset_0_0_20px_black] rounded-sm">
+                        
+                        {/* 3x3 Grid Visual Container */}
+                        <div className="flex-1 flex gap-[1%] bg-[#0a0a0a] p-[1.5%] relative shadow-[inset_0_0_20px_black] rounded-sm border-2 border-gray-900">
                             {columns.map((colIndices, colIdx) => (
-                                <div key={colIdx} className={`flex-1 flex flex-col gap-[2%] relative h-full bg-gradient-to-b from-[#111] via-[#222] to-[#111] border-x border-black/50 ${lockedReels && lockedReels[colIdx] ? 'border-2 border-yellow-400 shadow-[inset_0_0_10px_gold]' : ''}`}>
+                                <div key={colIdx} className={`flex-1 flex flex-col gap-[2%] relative h-full bg-gradient-to-b from-[#111] via-[#222] to-[#111] border-x border-black/80 rounded-sm ${lockedReels && lockedReels[colIdx] ? 'border-2 border-yellow-400 shadow-[inset_0_0_10px_gold]' : ''}`}>
                                     {lockedReels && lockedReels[colIdx] && <div className="absolute inset-0 bg-yellow-400/20 z-30 animate-pulse flex items-center justify-center"><Lock size={12} className="text-yellow-400"/></div>}
                                     {expandedReels && expandedReels[colIdx] && <div className="absolute inset-0 bg-red-600/80 z-40 flex items-center justify-center animate-in fade-in"><Flame size={24} className="text-white animate-bounce"/></div>}
                                     
+                                    {/* 3 Rows within this Column */}
                                     {colIndices.map((symIndex) => (
-                                        <div key={symIndex} className="flex-1 relative flex items-center justify-center w-full">
-                                            <div className={`w-[85%] aspect-square flex items-center justify-center ${isSpinning[colIdx] ? 'blur-[4px] animate-[spin_0.1s_linear_infinite]' : ''} ${avalancheTriggered && !isSpinning[colIdx] ? 'animate-ping' : ''}`}>
-                                                <SymbolSVG id={reels[symIndex]} isWinning={winningLines.length > 0 && winningLines.some(lId => [0,1,2,3,4].includes(lId))} />
+                                        <div key={symIndex} className="flex-1 relative flex items-center justify-center w-full bg-black/40 border border-white/5 rounded-sm shadow-inner overflow-hidden">
+                                            <div className={`w-[80%] aspect-square flex items-center justify-center ${isSpinning[colIdx] ? 'blur-[4px] animate-[spin_0.1s_linear_infinite]' : ''} ${avalancheTriggered && !isSpinning[colIdx] ? 'animate-ping' : ''}`}>
+                                                <SymbolSVG id={reels[symIndex]} isWinning={winningLines.length > 0 && winningLines.some(lId => [0,1,2,3,4].includes(lId))} islandId={parseInt(island.id)} />
                                             </div>
                                         </div>
                                     ))}
@@ -368,11 +372,10 @@ const PlayView = ({ machine, island, user, onLeave, updateBalance }) => {
                         </div>
                     </div>
 
-                    {/* 4. BUTTON DECK & STOP BUTTONS (Interactive Layer) */}
+                    {/* 4. BUTTON DECK & STOP BUTTONS */}
                     <div className="absolute top-[57.5%] left-[5%] w-[90%] h-[15%] z-50 pointer-events-auto touch-manipulation" style={{ perspective: '600px' }}>
                         <div className="w-full h-full relative" style={{ transform: 'rotateX(20deg)', transformOrigin: 'top center' }}>
                             
-                            {/* Left: Bet Config */}
                             <div className="absolute left-[2%] top-[10%] flex gap-1">
                                 <button onClick={() => changeBet(-1)} className="w-7 h-7 sm:w-10 sm:h-10 bg-gray-800 rounded-lg border-b-4 border-black text-white flex items-center justify-center active:border-b-0 active:translate-y-1 shadow-lg touch-manipulation active:bg-gray-700"><Minus size={14}/></button>
                                 <div className="bg-black border border-gray-600 w-12 h-7 sm:w-16 sm:h-10 flex items-center justify-center text-[9px] sm:text-xs text-yellow-400 font-mono tracking-tighter shadow-inner select-none">{currentBet.toLocaleString()}</div>
@@ -381,7 +384,6 @@ const PlayView = ({ machine, island, user, onLeave, updateBalance }) => {
                             
                             <button onClick={handleMaxBet} className="absolute left-[2%] top-[60%] w-10 h-6 sm:w-16 sm:h-8 bg-orange-700 rounded border-b-4 border-black text-[8px] font-black text-white flex items-center justify-center active:border-b-0 active:translate-y-1 shadow-lg touch-manipulation active:bg-orange-600">MAX</button>
 
-                            {/* Center: STOP BUTTONS */}
                             <div className="absolute left-[31%] top-[25%] flex gap-[10%] w-[38%] justify-between z-50">
                                 {[0, 1, 2].map((idx) => (
                                     <button 
@@ -398,18 +400,16 @@ const PlayView = ({ machine, island, user, onLeave, updateBalance }) => {
                                 ))}
                             </div>
 
-                            {/* Right: SPIN Button */}
                             <button 
                                 onClick={handleSpin} 
-                                disabled={isSpinning.some(s=>s) || (winStage !== 'idle' && winStage !== 'celebrating')} 
+                                disabled={isSpinning.some(s=>s) || (winStage !== 'idle' && winStage !== 'celebrating') || levelUpData !== null || isJackpot} 
                                 className={`absolute right-[2%] top-[5%] w-16 h-16 sm:w-20 sm:h-20 rounded-full border-b-[6px] shadow-xl flex flex-col items-center justify-center active:border-b-0 active:translate-y-1 transition-all touch-manipulation
-                                ${isSpinning.some(s=>s) ? 'bg-gray-800 border-gray-950 opacity-50' : 'bg-gradient-to-b from-red-600 to-red-800 border-red-950 text-white hover:brightness-110 hover:shadow-red-500/80 active:bg-red-700'}`}
+                                ${(isSpinning.some(s=>s) || levelUpData || isJackpot) ? 'bg-gray-800 border-gray-950 opacity-50' : 'bg-gradient-to-b from-red-600 to-red-800 border-red-950 text-white hover:brightness-110 hover:shadow-red-500/80 active:bg-red-700'}`}
                             >
                                 <Gamepad2 size={24} strokeWidth={3} className="text-white"/>
                                 <span className="text-[8px] font-black tracking-widest text-white mt-0.5 select-none">SPIN</span>
                             </button>
 
-                            {/* Center-Right: Toggles */}
                             <div className="absolute right-[30%] top-[15%] flex flex-col gap-2">
                                 <button onClick={toggleTurbo} className={`w-8 h-8 sm:w-9 sm:h-9 rounded-lg border-b-4 border-black flex items-center justify-center active:border-b-0 active:translate-y-1 shadow-md touch-manipulation ${turboMode ? 'bg-yellow-500 text-black shadow-[0_0_10px_gold]' : 'bg-gray-700 text-gray-400'}`}><Zap size={14} fill={turboMode ? "currentColor" : "none"}/></button>
                                 <button onClick={toggleAuto} className={`w-8 h-8 sm:w-9 sm:h-9 rounded-lg border-b-4 border-black flex items-center justify-center active:border-b-0 active:translate-y-1 shadow-md touch-manipulation ${autoPlay ? 'bg-green-600 text-white shadow-[0_0_10px_green]' : 'bg-gray-700 text-gray-400'}`}>{autoPlay ? <StopCircle size={14}/> : <Repeat size={14}/>}</button>
@@ -428,35 +428,75 @@ const PlayView = ({ machine, island, user, onLeave, updateBalance }) => {
 
             {/* --- MODALS & OVERLAYS --- */}
 
-            {/* NEW: DETAILED WIN PRESENTATION OVERLAY */}
-            {winStage === 'celebrating' && winDetails && (
+            {levelUpData && (
+                <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/90 backdrop-blur-md px-4">
+                    <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/circuit-board.png')] opacity-10"></div>
+                    <GlassCard className="w-full max-w-sm p-8 text-center border-t-4 border-cyan-500 shadow-[0_0_50px_rgba(6,182,212,0.4)] relative overflow-hidden">
+                        <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-cyan-500 to-transparent animate-pulse"></div>
+                        <Cpu className="mx-auto text-cyan-500 mb-4 animate-bounce" size={40} />
+                        <h2 className="text-3xl font-black text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-blue-600 mb-1 italic tracking-tighter">SYSTEM UPGRADE</h2>
+                        <p className="text-gray-400 text-[10px] tracking-[0.3em] uppercase mb-6">Security Clearance Granted</p>
+                        
+                        <div className="w-24 h-24 mx-auto rounded-full border-4 border-cyan-500/30 flex items-center justify-center shadow-[0_0_30px_rgba(6,182,212,0.3)] mb-6 relative">
+                            <div className="absolute inset-0 border-2 border-dashed border-cyan-400 rounded-full animate-[spin_4s_linear_infinite]"></div>
+                            <span className="text-4xl font-black text-white">{levelUpData.new_level}</span>
+                        </div>
+
+                        <div className="bg-black/60 border border-cyan-500/30 rounded-xl p-4 mb-6 relative overflow-hidden group">
+                            <div className="absolute inset-0 bg-cyan-500/10 group-hover:bg-cyan-500/20 transition-colors"></div>
+                            <span className="block text-[10px] text-cyan-400 font-bold mb-1">REWARD INJECTED</span>
+                            <span className="text-2xl font-mono text-yellow-400 font-black">+{levelUpData.reward.toLocaleString()} MMK</span>
+                        </div>
+
+                        <button onClick={() => setLevelUpData(null)} className="w-full py-4 bg-gradient-to-r from-cyan-600 to-blue-600 text-white font-black rounded-xl shadow-[0_0_20px_rgba(6,182,212,0.4)] active:scale-95 transition-all">
+                            ACKNOWLEDGE
+                        </button>
+                    </GlassCard>
+                </div>
+            )}
+
+            {isJackpot && (
+                <div className="fixed inset-0 z-[80] flex items-center justify-center bg-black/95 px-4 animate-in fade-in duration-500">
+                    <div className="absolute inset-0 bg-[radial-gradient(circle,_var(--tw-gradient-stops))] from-yellow-900/40 via-black to-black"></div>
+                    <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-[150vw] h-[150vw] sm:w-[100vw] sm:h-[100vw] bg-[radial-gradient(circle,rgba(255,215,0,0.15)_0%,transparent_60%)] animate-[spin_10s_linear_infinite] pointer-events-none"></div>
+
+                    <div className="relative z-10 text-center flex flex-col items-center w-full max-w-lg">
+                        <Trophy size={80} className="text-yellow-400 mb-6 animate-bounce drop-shadow-[0_0_30px_gold]" />
+                        <h1 className="text-5xl md:text-7xl font-black italic text-transparent bg-clip-text bg-gradient-to-b from-yellow-200 to-yellow-600 drop-shadow-2xl mb-4 text-center leading-none">
+                            GRAND<br/>JACKPOT
+                        </h1>
+                        <p className="text-sm md:text-xl text-yellow-200 tracking-widest font-mono mb-8 bg-yellow-900/50 px-4 py-1 rounded-full border border-yellow-500/50">SYSTEM OVERRIDE DETECTED</p>
+                        
+                        <div className="text-5xl md:text-7xl font-mono text-white font-black drop-shadow-[0_0_20px_white] mb-12">
+                            {lastWin.toLocaleString()} <span className="text-2xl md:text-3xl text-yellow-500 block md:inline mt-2 md:mt-0">MMK</span>
+                        </div>
+
+                        <button onClick={() => { setIsJackpot(false); setWinStage('idle'); }} className="w-full md:w-auto px-12 py-4 bg-gradient-to-r from-yellow-300 to-yellow-500 text-black font-black rounded-full hover:scale-105 active:scale-95 transition-transform shadow-[0_0_40px_rgba(255,215,0,0.6)] text-lg">
+                            CLAIM FORTUNE
+                        </button>
+                    </div>
+                </div>
+            )}
+
+            {winStage === 'celebrating' && winDetails && !isJackpot && !levelUpData && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center pointer-events-none">
                     <div className="absolute inset-0 bg-black/60 backdrop-blur-sm animate-in fade-in duration-300"></div>
-                    
                     <div className="relative z-10 flex flex-col items-center animate-in zoom-in-50 duration-500 delay-100 ease-out">
-                        {/* Sunburst background effect */}
                         <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-[200vw] h-[200vw] sm:w-[100vw] sm:h-[100vw] bg-[radial-gradient(circle,rgba(255,255,255,0.1)_0%,transparent_60%)] animate-[spin_10s_linear_infinite] pointer-events-none"></div>
 
                         <GlassCard className={`p-8 text-center flex flex-col items-center border-t-4 border-b-4 ${winDetails.color.replace('text-', 'border-')} ${winDetails.glow}`}>
                             <div className="text-[10px] font-bold text-white tracking-[0.3em] uppercase opacity-80 mb-2">WINNING COMBO</div>
-                            
-                            {/* Giant Symbol Render */}
                             <div className="w-24 h-24 sm:w-32 sm:h-32 mb-4 animate-bounce">
                                 <SymbolSVG id={winDetails.symbolId} islandId={parseInt(island.id)} isWinning={true} />
                             </div>
-
                             <h2 className={`text-4xl sm:text-5xl font-black italic tracking-tighter uppercase drop-shadow-lg ${winDetails.color}`}>
                                 {winDetails.name}
                             </h2>
-                            
                             <div className="flex items-center gap-3 my-4">
                                 <div className="h-[1px] w-12 bg-white/20"></div>
-                                <span className="bg-white text-black font-black px-3 py-1 rounded-lg text-sm shadow-md">
-                                    {winDetails.mult}x MULTIPLIER
-                                </span>
+                                <span className="bg-white text-black font-black px-3 py-1 rounded-lg text-sm shadow-md">{winDetails.mult}x MULTIPLIER</span>
                                 <div className="h-[1px] w-12 bg-white/20"></div>
                             </div>
-
                             <div className="text-5xl sm:text-6xl font-mono font-black text-white drop-shadow-[0_0_20px_rgba(255,255,255,0.8)]">
                                 +{lastWin.toLocaleString()}
                             </div>
@@ -465,8 +505,7 @@ const PlayView = ({ machine, island, user, onLeave, updateBalance }) => {
                 </div>
             )}
 
-            {/* GAMBLE MODAL */}
-            {winStage === 'gambling' && (
+            {winStage === 'gambling' && !isJackpot && !levelUpData && (
                 <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/90 backdrop-blur-sm p-4 animate-in zoom-in-95">
                     <GlassCard className={`w-full max-w-sm p-6 text-center border-t-4 shadow-2xl ${gambleFeedback === 'critical' ? 'border-yellow-400 shadow-yellow-500/50' : 'border-cyan-500/50 shadow-cyan-500/20'}`}>
                         {gambleFeedback === 'critical' && <div className="absolute -top-3 left-1/2 transform -translate-x-1/2 bg-yellow-500 text-black font-black text-xs px-3 py-1 rounded-full animate-bounce">CRITICAL MULTIPLIER!</div>}
