@@ -1,20 +1,38 @@
 import React, { useState, useMemo } from 'react';
-import { ChevronLeft, Filter, Flame, Users, Zap, Search, Trophy, Sparkles, X, BarChart3, History, Coins, Lock } from 'lucide-react';
+import { ChevronLeft, Flame, Users, Zap, Search, Trophy, Sparkles, X, BarChart3, History, Coins, Lock, Leaf, Gamepad2, Castle, Flower, Ghost, Waves, CloudRain, Cpu, Palmtree, Sword, ShieldAlert } from 'lucide-react';
 import CabinetSVG from '../visuals/CabinetSVG';
-import CharacterSVG from '../visuals/CharacterSVG'; // Import Character for occupants
+import CharacterSVG from '../visuals/CharacterSVG';
 import IslandLandscapeSVG from '../visuals/IslandLandscapeSVG';
 import BottomDock from '../layout/BottomDock';
 import GlobalTicker from '../ui/GlobalTicker';
 import ActiveEvents from '../ui/ActiveEvents';
 import GlassCard from '../ui/GlassCard';
 import { useGameSound } from '../../hooks/useGameSound';
+import { useRouter } from 'next/router';
+
+// Map the DB 'icon_key' string to a Lucide React Component for the 10 Japanese Themes
+const getIslandIcon = (key) => {
+    switch(key) {
+        case 'leaf': return <Leaf size={20} />;         // Kyoto Zen
+        case 'gamepad': return <Gamepad2 size={20} />;  // Neon Arcade
+        case 'castle': return <Castle size={20} />;     // Edo Castle
+        case 'flower': return <Flower size={20} />;     // Hanami
+        case 'ghost': return <Ghost size={20} />;       // Yokai
+        case 'hotspring': return <Waves size={20} />;   // Onsen
+        case 'wheat': return <CloudRain size={20} />;   // Rural
+        case 'cpu': return <Cpu size={20} />;           // Cyber
+        case 'palmtree': return <Palmtree size={20} />; // Okinawa
+        case 'sword': return <Sword size={20} />;       // Ninja
+        default: return <MapPin size={20} />;
+    }
+};
 
 const HallView = ({ island, machines, user, onSelectMachine, onBack }) => {
     const [filter, setFilter] = useState('ALL'); // ALL, EMPTY, HOT
     const [search, setSearch] = useState('');
-    const [inspectingMachine, setInspectingMachine] = useState(null); // Machine being viewed
-    
+    const [inspectingMachine, setInspectingMachine] = useState(null); 
     const { playSound } = useGameSound();
+    const router = useRouter();
 
     // --- LOGIC: Filter Machines ---
     const filteredMachines = useMemo(() => {
@@ -24,7 +42,7 @@ const HallView = ({ island, machines, user, onSelectMachine, onBack }) => {
             
             // 2. Tab Filters
             if (filter === 'EMPTY') return m.status === 'free';
-            if (filter === 'HOT') return m.total_payout > 500000; // Example threshold
+            if (filter === 'HOT') return m.total_payout > 50000; // Adjusted threshold for micro-wins
             
             return true;
         });
@@ -32,13 +50,13 @@ const HallView = ({ island, machines, user, onSelectMachine, onBack }) => {
 
     // Calculate Occupancy
     const occupiedCount = machines.filter(m => m.status === 'occupied').length;
-    const occupancyRate = Math.round((occupiedCount / machines.length) * 100);
+    const occupancyRate = machines.length > 0 ? Math.round((occupiedCount / machines.length) * 100) : 0;
 
     // Handlers
     const handleMachineClick = (m) => {
         playSound('click');
         if (m.status === 'occupied' && m.current_user_id !== user.id) {
-            // If occupied by someone else, maybe show a toast (omitted for brevity)
+            // If occupied by someone else, prevent interaction
             return;
         }
         // Open Inspector
@@ -78,11 +96,14 @@ const HallView = ({ island, machines, user, onSelectMachine, onBack }) => {
                             <ChevronLeft />
                         </button>
                         <div>
+                            <div className="flex items-center gap-2 text-cyan-400 mb-1 drop-shadow-[0_0_8px_rgba(34,211,238,0.8)]">
+                                {getIslandIcon(island.icon_emoji)}
+                            </div>
                             <h2 className="text-white font-black text-xl italic uppercase tracking-wider leading-none drop-shadow-md">
                                 {island.name}
                             </h2>
                             <div className="flex items-center gap-2 mt-1">
-                                <span className={`w-2 h-2 rounded-full ${occupancyRate > 80 ? 'bg-red-500' : 'bg-green-500'} animate-pulse`}></span>
+                                <span className={`w-2 h-2 rounded-full ${occupancyRate > 80 ? 'bg-red-500 shadow-[0_0_8px_red]' : 'bg-green-500 shadow-[0_0_8px_green]'} animate-pulse`}></span>
                                 <span className="text-[10px] text-gray-400 font-bold tracking-widest">{occupancyRate}% OCCUPIED</span>
                             </div>
                         </div>
@@ -95,15 +116,15 @@ const HallView = ({ island, machines, user, onSelectMachine, onBack }) => {
                             placeholder="#ID" 
                             value={search}
                             onChange={(e) => setSearch(e.target.value)}
-                            className="w-full bg-black/50 border border-white/20 rounded-full py-1.5 pl-8 pr-3 text-xs text-white outline-none focus:border-cyan-500 transition-colors font-mono"
+                            className="w-full bg-black/50 border border-white/20 rounded-full py-1.5 pl-8 pr-3 text-xs text-white outline-none focus:border-cyan-500 transition-colors font-mono shadow-inner"
                         />
                         <Search size={12} className="absolute left-2.5 top-2 text-gray-500"/>
                     </div>
                 </div>
 
                 {/* Filter Tabs */}
-                <div className="flex gap-2 overflow-x-auto hide-scrollbar">
-                    <button onClick={() => handleFilterChange('ALL')} className={`px-4 py-2 rounded-lg text-[10px] font-bold border transition-all whitespace-nowrap ${filter === 'ALL' ? 'bg-white text-black border-white' : 'bg-white/5 text-gray-400 border-transparent hover:bg-white/10'}`}>
+                <div className="flex gap-2 overflow-x-auto hide-scrollbar pb-1">
+                    <button onClick={() => handleFilterChange('ALL')} className={`px-4 py-2 rounded-lg text-[10px] font-bold border transition-all whitespace-nowrap ${filter === 'ALL' ? 'bg-white text-black border-white shadow-[0_0_10px_white]' : 'bg-white/5 text-gray-400 border-transparent hover:bg-white/10'}`}>
                         ALL MACHINES
                     </button>
                     <button onClick={() => handleFilterChange('EMPTY')} className={`px-4 py-2 rounded-lg text-[10px] font-bold border transition-all flex items-center gap-1 whitespace-nowrap ${filter === 'EMPTY' ? 'bg-green-600 text-white border-green-600 shadow-[0_0_10px_green]' : 'bg-white/5 text-gray-400 border-transparent hover:bg-white/10'}`}>
@@ -117,29 +138,31 @@ const HallView = ({ island, machines, user, onSelectMachine, onBack }) => {
 
             {/* --- CASINO FLOOR (3D Perspective Scroll) --- */}
             <div className="flex-1 overflow-x-auto overflow-y-hidden perspective-1000 flex items-center py-4 px-8 hide-scrollbar z-10">
-                <div className="flex gap-6 items-end" style={{ transformStyle: 'preserve-3d' }}>
+                <div className="flex gap-6 items-end h-full" style={{ transformStyle: 'preserve-3d' }}>
                     
                     {filteredMachines.length === 0 ? (
                         <div className="text-center w-full text-gray-500 mt-20 flex flex-col items-center">
                             <Search className="w-12 h-12 opacity-20 mb-2"/>
-                            <p className="text-xs">No machines found matching filter.</p>
+                            <p className="text-xs font-mono">NO_MACHINES_MATCHING_QUERY</p>
                         </div>
                     ) : (
-                        filteredMachines.map((m, idx) => {
+                        filteredMachines.map((m) => {
                             const isOccupied = m.status === 'occupied';
                             const isMe = m.current_user_id === user.id;
-                            const isHot = m.total_payout > 500000;
-                            const isJackpot = m.total_payout > 2000000; // Mega win
+                            const isHot = m.total_payout > 50000;
+                            const isJackpot = m.total_payout > 500000; // Mega win threshold
                             
                             return (
                                 <div 
                                     key={m.id} 
                                     onClick={() => handleMachineClick(m)} 
-                                    className={`relative group cursor-pointer transition-all duration-300 transform hover:-translate-y-4 hover:scale-105 flex-shrink-0
-                                        ${isOccupied && !isMe ? 'opacity-90' : ''}
+                                    className={`relative group cursor-pointer transition-all duration-300 transform hover:-translate-y-4 hover:scale-105 flex-shrink-0 flex items-end
+                                        ${isOccupied && !isMe ? 'opacity-80 grayscale-[0.2]' : ''}
                                     `}
                                     style={{ 
-                                        width: '260px', // Wider to fit character
+                                        width: '260px',
+                                        height: '70vh',
+                                        maxHeight: '750px',
                                         zIndex: isOccupied ? 10 : 20 
                                     }}
                                 >
@@ -165,18 +188,17 @@ const HallView = ({ island, machines, user, onSelectMachine, onBack }) => {
                                         </div>
                                     )}
 
-                                    {/* The Machine & Occupant Wrapper */}
-                                    <div className="relative w-full aspect-[0.65] flex items-end justify-center">
+                                    {/* The Machine & Occupant Wrapper (Fixed Aspect Ratio 0.6) */}
+                                    <div className="relative w-full aspect-[0.6] flex items-end justify-center mb-4">
                                         
                                         {/* 1. Cabinet */}
                                         <div className="absolute inset-0 z-10 w-full h-full">
                                             <CabinetSVG 
-                                                islandId={island.id} 
+                                                islandId={parseInt(island.id)} 
                                                 visualState={isOccupied ? 'BUSY' : (isHot ? 'JACKPOT_HOT' : 'FREE')} 
                                                 mode="hall" 
                                                 stats={{ laps: m.total_laps, wins: m.total_payout }} 
                                                 charId={island.hostess_char_id} 
-                                                // occupantPetId removed here, rendered externally below
                                                 machineNumber={m.machine_number}
                                                 serialNumber={m.serial_number}
                                             />
@@ -184,7 +206,7 @@ const HallView = ({ island, machines, user, onSelectMachine, onBack }) => {
 
                                         {/* 2. Occupant Overlay (If Busy) */}
                                         {isOccupied && (
-                                            <div className="absolute bottom-[5%] right-[-10%] w-[50%] h-[55%] z-20 pointer-events-none drop-shadow-xl">
+                                            <div className="absolute bottom-[5%] right-[-25%] w-[50%] h-[60%] z-20 pointer-events-none drop-shadow-2xl">
                                                 <CharacterSVG 
                                                     type={m.sticker_char_id || 'luna'} 
                                                     mood="idle" 
@@ -194,8 +216,8 @@ const HallView = ({ island, machines, user, onSelectMachine, onBack }) => {
                                         
                                         {/* 3. "Locked" Overlay if occupied by other */}
                                         {isOccupied && !isMe && (
-                                            <div className="absolute inset-0 bg-black/40 z-10 flex items-center justify-center rounded-lg backdrop-blur-[1px]">
-                                                <div className="bg-red-600 text-white font-black text-[10px] px-3 py-1 rounded border border-red-400 rotate-12 shadow-lg flex items-center gap-1">
+                                            <div className="absolute inset-0 bg-black/50 z-30 flex items-center justify-center rounded-lg backdrop-blur-[2px]">
+                                                <div className="bg-red-600 text-white font-black text-[10px] px-3 py-1 rounded border border-red-400 rotate-12 shadow-[0_0_15px_red] flex items-center gap-1">
                                                     <Lock size={10}/> OCCUPIED
                                                 </div>
                                             </div>
@@ -204,91 +226,106 @@ const HallView = ({ island, machines, user, onSelectMachine, onBack }) => {
                                     
                                     {/* Action Button Overlay */}
                                     {!isOccupied && (
-                                        <div className="absolute bottom-24 left-0 right-0 flex justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-50">
-                                            <div className="bg-white/90 text-black font-black text-[10px] px-3 py-1 rounded-full shadow-xl flex items-center gap-1">
-                                                <Search size={10}/> INSPECT
+                                        <div className="absolute bottom-32 left-0 right-0 flex justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-50">
+                                            <div className="bg-white text-black font-black text-[10px] px-4 py-2 rounded-full shadow-[0_0_20px_white] flex items-center gap-1 hover:scale-110 transition-transform">
+                                                <Search size={12}/> INSPECT DATA
                                             </div>
                                         </div>
                                     )}
 
                                     {/* Floor Reflection */}
-                                    <div className="absolute -bottom-2 left-4 right-4 h-6 bg-black/40 blur-md rounded-full scale-x-90"></div>
-                                    
-                                    {/* Recent Win Badge */}
-                                    {m.last_win_amount > 10000 && !isOccupied && (
-                                        <div className="absolute bottom-10 right-2 bg-black/80 text-yellow-400 text-[9px] font-mono px-2 py-0.5 rounded border border-yellow-500/30 flex items-center gap-1 z-30">
-                                            <Sparkles size={8}/> Last: {m.last_win_amount/1000}k
-                                        </div>
-                                    )}
+                                    <div className="absolute -bottom-2 left-4 right-4 h-6 bg-black/60 blur-md rounded-full scale-x-90"></div>
                                 </div>
                             );
                         })
                     )}
                     
                     {/* Spacer for scroll end */}
-                    <div className="w-12 flex-shrink-0"></div>
+                    <div className="w-12 flex-shrink-0 h-full"></div>
                 </div>
             </div>
 
             {/* --- MACHINE INSPECTOR MODAL --- */}
             {inspectingMachine && (
-                <div className="fixed inset-0 z-50 bg-black/90 flex items-center justify-center p-6 backdrop-blur-sm animate-in zoom-in-95" onClick={() => setInspectingMachine(null)}>
-                    <GlassCard className="w-full max-w-sm p-0 overflow-hidden border-cyan-500/50" onClick={e => e.stopPropagation()}>
+                <div className="fixed inset-0 z-[60] bg-black/90 flex items-center justify-center p-6 backdrop-blur-md animate-in zoom-in-95 duration-300" onClick={() => setInspectingMachine(null)}>
+                    <GlassCard className="w-full max-w-sm p-0 overflow-hidden border-cyan-500/50 shadow-[0_0_40px_rgba(0,243,255,0.15)]" onClick={e => e.stopPropagation()}>
                         
                         {/* Modal Header */}
-                        <div className="bg-gradient-to-r from-cyan-900 to-blue-900 p-4 flex justify-between items-center border-b border-white/10">
+                        <div className="bg-gradient-to-r from-cyan-900 to-blue-900 p-4 flex justify-between items-center border-b border-cyan-500/30">
                             <div>
-                                <h3 className="text-white font-black text-lg italic">MACHINE #{inspectingMachine.machine_number}</h3>
-                                <div className="text-[10px] text-cyan-300 font-bold tracking-widest">{island.name} FLOOR</div>
+                                <h3 className="text-white font-black text-xl italic drop-shadow-md">UNIT #{inspectingMachine.machine_number}</h3>
+                                <div className="text-[10px] text-cyan-300 font-bold tracking-widest uppercase flex items-center gap-1">
+                                    <MapPin size={10} /> {island.name} FLOOR
+                                </div>
                             </div>
-                            <button onClick={() => setInspectingMachine(null)} className="text-white/70 hover:text-white"><X size={20}/></button>
+                            <button onClick={() => setInspectingMachine(null)} className="text-white/70 hover:text-white bg-black/20 p-1 rounded-full"><X size={20}/></button>
                         </div>
 
                         {/* Stats Body */}
-                        <div className="p-6 space-y-4">
+                        <div className="p-6 space-y-4 bg-black/80">
                             
-                            <div className="flex justify-between items-center bg-white/5 p-3 rounded-xl border border-white/5">
+                            {/* RTP & Volatility Tags */}
+                            <div className="flex gap-2 mb-2">
+                                <div className="flex-1 bg-white/5 border border-white/10 rounded-lg p-2 text-center">
+                                    <div className="text-[9px] text-gray-500 font-bold uppercase">Base RTP</div>
+                                    <div className="text-cyan-400 font-mono font-bold">{island.rtp_rate}%</div>
+                                </div>
+                                <div className="flex-1 bg-white/5 border border-white/10 rounded-lg p-2 text-center">
+                                    <div className="text-[9px] text-gray-500 font-bold uppercase">Grid System</div>
+                                    <div className="text-purple-400 font-mono font-bold">3x3 / 5-LINE</div>
+                                </div>
+                            </div>
+
+                            <div className="flex justify-between items-center bg-white/5 p-3 rounded-xl border border-white/5 shadow-inner">
                                 <div className="flex items-center gap-3">
-                                    <div className="w-10 h-10 rounded-full bg-black flex items-center justify-center border border-white/20">
+                                    <div className="w-10 h-10 rounded-full bg-black flex items-center justify-center border border-white/20 shadow-lg">
                                         <History size={18} className="text-gray-400"/>
                                     </div>
                                     <div>
-                                        <div className="text-[10px] text-gray-500 font-bold uppercase">Total Spins</div>
+                                        <div className="text-[10px] text-gray-500 font-bold uppercase">Lifetime Spins</div>
                                         <div className="text-white font-mono font-bold text-lg">{inspectingMachine.total_laps.toLocaleString()}</div>
                                     </div>
                                 </div>
                                 <div className="text-right">
-                                    <div className="text-[10px] text-gray-500 font-bold uppercase">Payouts</div>
-                                    <div className="text-yellow-400 font-mono font-bold">{inspectingMachine.total_payout.toLocaleString()}</div>
+                                    <div className="text-[10px] text-gray-500 font-bold uppercase">Total Payouts</div>
+                                    <div className="text-yellow-400 font-mono font-bold flex items-center justify-end gap-1">
+                                        {inspectingMachine.total_payout.toLocaleString()}
+                                    </div>
                                 </div>
                             </div>
 
-                            {/* Fake Graph */}
-                            <div className="bg-black/40 p-4 rounded-xl border border-white/5">
-                                <div className="flex items-center gap-2 mb-2 text-[10px] text-gray-400 font-bold uppercase">
-                                    <BarChart3 size={12}/> Performance Trend (Last 100)
+                            {/* Fake Trend Graph for Cyber Vibe */}
+                            <div className="bg-black/40 p-4 rounded-xl border border-white/5 relative overflow-hidden">
+                                <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')] opacity-10"></div>
+                                <div className="flex items-center gap-2 mb-2 text-[10px] text-gray-400 font-bold uppercase relative z-10">
+                                    <BarChart3 size={12} className="text-cyan-500"/> Performance Trend (Last 50)
                                 </div>
-                                <div className="h-16 flex items-end gap-1">
-                                    {[...Array(20)].map((_, i) => (
+                                <div className="h-12 flex items-end gap-1 relative z-10">
+                                    {[...Array(24)].map((_, i) => (
                                         <div 
                                             key={i} 
-                                            className={`flex-1 rounded-t ${Math.random() > 0.7 ? 'bg-yellow-500' : 'bg-gray-800'}`} 
+                                            className={`flex-1 rounded-t opacity-80 ${Math.random() > 0.8 ? 'bg-yellow-500 shadow-[0_0_5px_gold]' : 'bg-cyan-900'}`} 
                                             style={{height: `${Math.random() * 100}%`}}
                                         ></div>
                                     ))}
                                 </div>
                             </div>
 
+                            {/* Security Note */}
+                            <div className="text-[9px] text-gray-500 flex items-center gap-1 justify-center">
+                                <ShieldAlert size={10} /> Certified RNG & Anti-Cheat Active
+                            </div>
+
                             {/* Action Button */}
                             <button 
                                 onClick={() => handleEnterMachine(inspectingMachine)}
-                                className="w-full py-4 bg-gradient-to-r from-cyan-500 to-blue-600 rounded-xl font-black text-white shadow-[0_0_20px_rgba(6,182,212,0.4)] flex items-center justify-center gap-2 hover:scale-[1.02] active:scale-95 transition-all"
+                                className="w-full py-4 bg-gradient-to-r from-cyan-500 to-blue-600 rounded-xl font-black text-white shadow-[0_0_20px_rgba(6,182,212,0.4)] flex items-center justify-center gap-2 hover:scale-[1.02] active:scale-95 transition-all mt-2 border border-cyan-400/50"
                             >
-                                <Zap size={18} fill="currentColor"/> SIT DOWN & PLAY
+                                <Zap size={18} fill="currentColor"/> INITIALIZE LINK & PLAY
                             </button>
                             
-                            <div className="text-center text-[9px] text-gray-500">
-                                Serial: {inspectingMachine.serial_number}
+                            <div className="text-center text-[9px] text-gray-600 font-mono">
+                                S/N: {inspectingMachine.serial_number || `SRO-${island.id}-${inspectingMachine.machine_number}`}
                             </div>
                         </div>
                     </GlassCard>
