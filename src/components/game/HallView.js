@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { ChevronLeft, Flame, Users, Zap, Search, Trophy, Sparkles, X, BarChart3, History, Coins, Lock, Leaf, Gamepad2, Castle, Flower, Ghost, Waves, CloudRain, Cpu, Palmtree, Sword, ShieldAlert } from 'lucide-react';
+import { ChevronLeft, Flame, Users, Zap, Search, Trophy, Sparkles, X, BarChart3, History, Coins, Lock, Leaf, Gamepad2, Castle, Flower, Ghost, Waves, CloudRain, Cpu, Palmtree, Sword, ShieldAlert, MapPin } from 'lucide-react';
 import CabinetSVG from '../visuals/CabinetSVG';
 import CharacterSVG from '../visuals/CharacterSVG';
 import IslandLandscapeSVG from '../visuals/IslandLandscapeSVG';
