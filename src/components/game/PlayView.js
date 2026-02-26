@@ -129,6 +129,7 @@ const PlayView = ({ machine, island, user, onLeave, updateBalance }) => {
     const [isMuted, setIsMuted] = useState(false);
     const [coins, setCoins] = useState([]); 
     const [showCutIn, setShowCutIn] = useState(false); 
+    const [reelThud, setReelThud] = useState([false, false, false]); // For tactile button feedback
     
     const { playSound } = useGameSound(!isMuted);
     const currentBet = BET_AMOUNTS[betIndex];
@@ -203,7 +204,6 @@ const PlayView = ({ machine, island, user, onLeave, updateBalance }) => {
         setTimeout(() => setCoins([]), 4000);
     };
 
-    // Add back the Character Click Handler
     const handleCharacterClick = useCallback(() => {
         playSound('click');
         const lines = ["Let's win big!", "I'm feeling lucky!", "Watch the Navi markers!", "You can do it!"];
@@ -227,6 +227,11 @@ const PlayView = ({ machine, island, user, onLeave, updateBalance }) => {
             }
             playSound('click'); 
             if (navigator.vibrate) navigator.vibrate(20);
+            
+            // Visual thud effect
+            setReelThud(prev => { const n = [...prev]; n[idx] = true; return n; });
+            setTimeout(() => { setReelThud(prev => { const n = [...prev]; n[idx] = false; return n; }); }, 150);
+            
             stopReel(idx);
         }
     }, [isSpinning, playSound, stopReel, atSequence, atCurrentStep]);
@@ -291,7 +296,17 @@ const PlayView = ({ machine, island, user, onLeave, updateBalance }) => {
                 {winningLines.map(lineIdx => {
                     if (lineIdx === 99) return null; // Cherry line special case
                     return (
-                    <path key={lineIdx} d={linePaths[lineIdx]} stroke="#00f3ff" strokeWidth="4" fill="none" filter="url(#neonLine)" className="animate-pulse drop-shadow-[0_0_15px_rgba(0,243,255,1)]" />
+                    <path 
+                        key={lineIdx} 
+                        d={linePaths[lineIdx]} 
+                        stroke="#00f3ff" 
+                        strokeWidth="5" 
+                        fill="none" 
+                        filter="url(#neonLine)" 
+                        strokeDasharray="15, 10"
+                        strokeLinecap="round"
+                        className="animate-stroke-flow drop-shadow-[0_0_15px_rgba(0,243,255,1)]" 
+                    />
                 )})}
             </svg>
         );
@@ -341,6 +356,13 @@ const PlayView = ({ machine, island, user, onLeave, updateBalance }) => {
                 .animate-shake {
                     animation: screen-shake 0.4s ease-in-out infinite;
                 }
+                @keyframes stroke-flow {
+                    from { stroke-dashoffset: 0; }
+                    to { stroke-dashoffset: -50; }
+                }
+                .animate-stroke-flow {
+                    animation: stroke-flow 0.5s linear infinite;
+                }
             `}} />
 
             {/* Backgrounds */}
@@ -381,7 +403,7 @@ const PlayView = ({ machine, island, user, onLeave, updateBalance }) => {
             </div>
 
             {/* MAIN STAGE WITH DYNAMIC SHAKE EFFECTS */}
-            <div className={`flex-1 flex flex-col items-center justify-center relative z-10 w-full h-full overflow-hidden px-2 pt-16 pb-6 ${(showCutIn || isJackpot) ? 'animate-shake' : ''}`}>
+            <div className={`flex-1 flex flex-col items-center justify-center relative z-10 w-full h-full overflow-hidden px-2 pt-16 pb-6 ${(showCutIn || isJackpot || reelThud.some(Boolean)) ? 'animate-shake' : ''}`}>
                 <div className="relative flex items-center justify-center w-full max-w-[400px] sm:max-w-[450px] aspect-[0.6] max-h-[80vh] overflow-visible">
                     
                     <div className="absolute inset-0 z-10 w-full h-full">
@@ -445,7 +467,7 @@ const PlayView = ({ machine, island, user, onLeave, updateBalance }) => {
                             
                             <button onClick={handleMaxBet} className="absolute left-[-2%] sm:left-[2%] top-[60%] w-10 h-6 sm:w-16 sm:h-8 bg-orange-700 rounded border-b-4 border-black text-[8px] font-black text-white flex items-center justify-center active:translate-y-1 scale-90 sm:scale-100 origin-left">MAX</button>
 
-                            {/* STOP BUTTONS w/ NAVI-OSHI Logic */}
+                            {/* STOP BUTTONS w/ NAVI-OSHI Logic & Thud Response */}
                             <div className="absolute left-[26%] sm:left-[31%] top-[25%] flex gap-[8%] sm:gap-[10%] w-[45%] sm:w-[38%] justify-between z-50">
                                 {[0, 1, 2].map((idx) => {
                                     const naviOrder = atSequence ? atSequence.indexOf(idx) : -1;
@@ -457,7 +479,7 @@ const PlayView = ({ machine, island, user, onLeave, updateBalance }) => {
                                             key={idx} 
                                             onClick={() => handleStopReel(idx)}
                                             disabled={!isSpinning[idx]} 
-                                            className={`relative w-10 h-10 sm:w-12 sm:h-12 rounded-full border-2 flex items-center justify-center transition-all touch-manipulation shadow-md ${isSpinning[idx] ? 'bg-red-600 border-red-400 text-white cursor-pointer shadow-red-500/50' : 'bg-black/50 border-gray-800 text-gray-700 cursor-default opacity-30'} ${isCurrentNavi && !autoPlay ? 'animate-pulse ring-4 ring-yellow-400' : ''}`}
+                                            className={`relative w-10 h-10 sm:w-12 sm:h-12 rounded-full border-2 flex items-center justify-center transition-all touch-manipulation shadow-md ${isSpinning[idx] ? 'bg-red-600 border-red-400 text-white cursor-pointer shadow-red-500/50 hover:bg-red-500' : 'bg-black/50 border-gray-800 text-gray-700 cursor-default opacity-30'} ${isCurrentNavi && !autoPlay ? 'animate-pulse ring-4 ring-yellow-400' : ''} ${reelThud[idx] ? 'scale-90 border-0' : 'scale-100'}`}
                                         >
                                             <StopCircle size={18} fill={isSpinning[idx] ? "currentColor" : "none"}/>
                                             
@@ -623,4 +645,4 @@ const PlayView = ({ machine, island, user, onLeave, updateBalance }) => {
     );
 };
 
-export default PlayView;
+export default PlayView;    
