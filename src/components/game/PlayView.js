@@ -43,7 +43,6 @@ const getGambleTheme = (islandId) => {
 };
 
 // --- ROLLUP COUNTER COMPONENT ---
-// Simulates the fast "counting up" of numbers for big wins
 const RollupNumber = ({ value, duration = 1500 }) => {
     const [count, setCount] = useState(0);
 
@@ -60,7 +59,6 @@ const RollupNumber = ({ value, duration = 1500 }) => {
         const step = (timestamp) => {
             if (!startTime) startTime = timestamp;
             const progress = Math.min((timestamp - startTime) / duration, 1);
-            // easeOutExpo for that fast-start, slow-end feel
             const easeOut = progress === 1 ? 1 : 1 - Math.pow(2, -10 * progress);
             
             setCount(Math.floor(easeOut * endValue));
@@ -68,7 +66,7 @@ const RollupNumber = ({ value, duration = 1500 }) => {
             if (progress < 1) {
                 animationFrame = requestAnimationFrame(step);
             } else {
-                setCount(endValue); // Ensure it perfectly hits the end value
+                setCount(endValue);
             }
         };
 
@@ -204,6 +202,14 @@ const PlayView = ({ machine, island, user, onLeave, updateBalance }) => {
         setCoins(newParticles);
         setTimeout(() => setCoins([]), 4000);
     };
+
+    // Add back the Character Click Handler
+    const handleCharacterClick = useCallback(() => {
+        playSound('click');
+        const lines = ["Let's win big!", "I'm feeling lucky!", "Watch the Navi markers!", "You can do it!"];
+        setCharInteraction(lines[Math.floor(Math.random() * lines.length)]);
+        setTimeout(() => setCharInteraction(null), 3000);
+    }, [playSound]);
 
     const handleSpin = useCallback(() => {
         if (winStage !== 'idle' && !bonusMode) return; 
