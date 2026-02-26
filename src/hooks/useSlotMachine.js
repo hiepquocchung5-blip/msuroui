@@ -21,7 +21,8 @@ export const useSlotMachine = (machineId, islandId) => {
     const [momentumMult, setMomentumMult] = useState(1.0);
     const [inZone, setInZone] = useState(false);
     
-    const [winTier, setWinTier] = useState('NONE'); 
+    // NEW v6.0 STATES
+    const [winTier, setWinTier] = useState('NONE'); // SMALL, BIG, MEGA, EPIC
     const [sessionWinStreak, setSessionWinStreak] = useState(0);
     const [streakMult, setStreakMult] = useState(1.0);
     const [volatility, setVolatility] = useState('medium');
@@ -38,19 +39,17 @@ export const useSlotMachine = (machineId, islandId) => {
     const [levelUpData, setLevelUpData] = useState(null);
     const [error, setError] = useState(null);
     
-    // --- AFK / IDLE SYSTEM ---
+    // --- SMART AUTO-PLAY & AFK SYSTEM ---
     const [showIdleWarning, setShowIdleWarning] = useState(false);
     const [isIdleKicked, setIsIdleKicked] = useState(false); 
-    const idleTimerRef = useRef(null); 
-    const warningTimerRef = useRef(null);
-    
-    // --- CONTROL STATE ---
-    const [sessionToken, setSessionToken] = useState(null); 
     const [autoPlay, setAutoPlay] = useState(false);
     const [turboMode, setTurboMode] = useState(false); 
+    const [sessionToken, setSessionToken] = useState(null); 
 
     // --- REFS FOR STABLE CALLBACKS ---
     const timers = useRef([]);
+    const idleTimerRef = useRef(null); 
+    const warningTimerRef = useRef(null);
     const spinDataRef = useRef(null); 
     const currentBetRef = useRef(0);
     const autoPlayRef = useRef(autoPlay);
@@ -69,26 +68,45 @@ export const useSlotMachine = (machineId, islandId) => {
     
     useEffect(() => () => clearTimers(), [clearTimers]);
 
-    // --- SMART AFK SYSTEM ---
-    const handleIdleTimeout = useCallback(async () => {
+    // --- SERVER HEARTBEAT (Anti-Ghost Session) ---
+    useEffect(() => {
+        let pingInterval;
+        if (sessionToken && machineId && !isIdleKicked) {
+            // Ping the server every 60 seconds to keep the seat locked
+            pingInterval = setInterval(() => {
+                api.post('/game/machine_actions.php', { action: 'ping', machine_id: machineId })
+                   .catch(() => {}); // Silent fail on heartbeat drop
+            }, 60000); 
+        }
+        return () => clearInterval(pingInterval);
+    }, [sessionToken, machineId, isIdleKicked]);
+
+    // --- SMART AFK TIMEOUT SYSTEM ---
+    const leave = useCallback(async () => {
+        clearTimers();
+        setSessionToken(null);
+        setAutoPlay(false);
         try {
             await api.post('/game/machine_actions.php', { action: 'leave', machine_id: machineId });
         } catch (e) {
-            console.error("Failed to free machine on AFK timeout", e);
+            console.error("Failed to free machine cleanly", e);
         }
+    }, [machineId, clearTimers]);
+
+    const handleIdleTimeout = useCallback(async () => {
         setIsIdleKicked(true);
         setShowIdleWarning(false);
         setError("Disconnected due to 5 minutes of inactivity.");
-        setSessionToken(null);
-        setAutoPlay(false);
-    }, [machineId]);
+        await leave();
+    }, [leave]);
 
     const handleIdleWarning = useCallback(() => {
-        if (autoPlayRef.current) return; // Don't warn if autoplay is running
+        if (autoPlayRef.current) return; 
         setShowIdleWarning(true);
     }, []);
 
     const resetIdleTimer = useCallback(() => {
+        if (isIdleKicked) return;
         setShowIdleWarning(false);
         if (idleTimerRef.current) clearTimeout(idleTimerRef.current);
         if (warningTimerRef.current) clearTimeout(warningTimerRef.current);
@@ -96,9 +114,9 @@ export const useSlotMachine = (machineId, islandId) => {
         // 4 Minutes = Warning | 5 Minutes = Kick
         warningTimerRef.current = setTimeout(handleIdleWarning, 240000);
         idleTimerRef.current = setTimeout(handleIdleTimeout, 300000);
-    }, [handleIdleTimeout, handleIdleWarning]);
+    }, [handleIdleTimeout, handleIdleWarning, isIdleKicked]);
 
-    // 1. Enter Machine
+    // 1. Enter Machine & Recover State
     const enter = useCallback(async () => {
         if(!machineId) return;
         try {
@@ -107,6 +125,16 @@ export const useSlotMachine = (machineId, islandId) => {
                 setSessionToken(res.data.session_token);
                 setError(null);
                 resetIdleTimer();
+
+                // Advanced Session Recovery (If returning to a live game)
+                if (res.data.recovered_state) {
+                    const state = res.data.recovered_state;
+                    setBonusMode(state.bonus_mode);
+                    setBonusSpinsLeft(state.bonus_spins_left || 0);
+                    setFreeSpins(state.free_spins || 0);
+                    setLapsSinceBonus(state.laps_since_bonus || 0);
+                    setSessionWinStreak(state.session_win_streak || 0);
+                }
             }
         } catch (e) { setError(e.response?.data?.error || "Failed to connect to machine."); }
     }, [machineId, resetIdleTimer]);
@@ -145,10 +173,26 @@ export const useSlotMachine = (machineId, islandId) => {
             setLastWin(0);
         }
 
-        if (autoPlayRef.current && !showBonusSummary && !data.level_up && !data.is_jackpot && !data.is_freeze) {
-            timers.current.push(setTimeout(() => {
-                if (spinRef.current) spinRef.current(currentBetAmount);
-            }, turboModeRef.current ? 400 : 1200));
+        // --- SMART AUTO-PLAY INTERRUPTION ---
+        // Interrupt AutoPlay on major cinematic events so the player can enjoy them
+        let shouldInterruptAutoPlay = false;
+        if (data.is_freeze || data.is_jackpot || data.level_up) {
+            shouldInterruptAutoPlay = true;
+        } else if (data.bonus_mode && !bonusMode) {
+            // Just entered bonus mode
+            shouldInterruptAutoPlay = true;
+        } else if (showBonusSummary) {
+            shouldInterruptAutoPlay = true;
+        }
+
+        if (autoPlayRef.current) {
+            if (shouldInterruptAutoPlay) {
+                setAutoPlay(false);
+            } else {
+                timers.current.push(setTimeout(() => {
+                    if (spinRef.current) spinRef.current(currentBetAmount);
+                }, turboModeRef.current ? 400 : 1200));
+            }
         }
     }, [updateBalance, bonusMode, showBonusSummary]);
 
@@ -268,7 +312,7 @@ export const useSlotMachine = (machineId, islandId) => {
         } catch (err) {
             const errMsg = err.response?.data?.error || err.message;
             setError(errMsg);
-            if (errMsg.includes("sync")) enter(); 
+            if (errMsg.includes("sync") || errMsg.includes("token")) enter(); 
             setAutoPlay(false); 
             setIsSpinning([false, false, false]);
         }
@@ -284,7 +328,7 @@ export const useSlotMachine = (machineId, islandId) => {
     return {
         reels, winningLines, lastWin, 
         isSpinning, isTeaser, isReachEye, isFreeze, isJackpot, setIsJackpot, error,
-        showIdleWarning, isIdleKicked, resetIdleTimer, // EXPORTED AFK TOOLS
+        showIdleWarning, isIdleKicked, resetIdleTimer, leave,
         freeSpins, bonusMode, bonusSpinsLeft, atSequence, atCurrentStep,
         lapsSinceBonus, momentumMult, inZone, winTier, sessionWinStreak, streakMult, volatility,
         showBonusSummary, bonusTotalWin, clearBonusTotal, levelUpData, setLevelUpData,
