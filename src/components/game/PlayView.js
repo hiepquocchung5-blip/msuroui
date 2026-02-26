@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ChevronLeft, Minus, Plus, Zap, StopCircle, Gamepad2, Sparkles, LogOut, Trophy, Flame, MessageCircle, Square, Circle, Timer, TrendingUp, ArrowUpCircle, AlertTriangle, ShieldAlert } from 'lucide-react';
+import { ChevronLeft, Minus, Plus, Zap, StopCircle, Gamepad2, Sparkles, LogOut, Trophy, Flame, MessageCircle, Square, Circle, Timer, TrendingUp, ArrowUpCircle, AlertTriangle, ShieldAlert, Info, HelpCircle, X } from 'lucide-react';
 import CabinetSVG from '../visuals/CabinetSVG';
 import CharacterSVG from '../visuals/CharacterSVG';
 import SymbolSVG from '../visuals/SymbolSVG';
@@ -125,11 +125,32 @@ const PlayView = ({ machine, island, user, onLeave, updateBalance }) => {
     const [gambleFeedback, setGambleFeedback] = useState(null);
     const [coins, setCoins] = useState([]);
     
+    // UI Modals
+    const [showPaytable, setShowPaytable] = useState(false);
+
+    // 3D Parallax State
+    const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
+    
     const { playSound } = useGameSound(!isMuted);
     const currentBet = BET_AMOUNTS[betIndex];
 
     const isProcessing = useRef(false);
     const [reelThud, setReelThud] = useState([false, false, false]); 
+
+    // --- INTERACTION & 3D ENGINE ---
+    const handlePointerMove = useCallback((e) => {
+        // Reset AFK Timer on movement
+        resetIdleTimer();
+        
+        // Calculate 3D Tilt (-5 to 5 degrees)
+        if (typeof window !== 'undefined') {
+            const { clientX, clientY } = e;
+            const { innerWidth, innerHeight } = window;
+            const x = ((clientX / innerWidth) - 0.5) * 10;
+            const y = ((clientY / innerHeight) - 0.5) * -10;
+            setMousePos({ x, y });
+        }
+    }, [resetIdleTimer]);
 
     // Auto-Kick & Error Catcher
     useEffect(() => {
@@ -279,7 +300,8 @@ const PlayView = ({ machine, island, user, onLeave, updateBalance }) => {
     return (
         <div 
             className={`min-h-screen bg-black relative flex flex-col overflow-hidden transition-colors duration-1000 ${bonusMode === 'HEAVEN' ? 'bg-purple-950' : (bonusMode ? 'bg-red-950' : '')}`}
-            onPointerDown={resetIdleTimer} // ANY TOUCH RESETS AFK TIMER
+            onPointerMove={handlePointerMove} // Tracks mouse for 3D Tilt & AFK Reset
+            onPointerDown={resetIdleTimer}    // Tracks taps for AFK Reset
         >
             <style dangerouslySetInnerHTML={{__html: `
                 /* HEAVY REALISTIC SPIN */
@@ -302,8 +324,8 @@ const PlayView = ({ machine, island, user, onLeave, updateBalance }) => {
                 .animate-shake-epic { animation: shake-epic 0.4s infinite; }
             `}} />
 
-            {/* BACKGROUND LAYER */}
-            <div className="absolute inset-0 z-0 pointer-events-none">
+            {/* BACKGROUND LAYER (Dims during spin) */}
+            <div className={`absolute inset-0 z-0 pointer-events-none transition-opacity duration-500 ${isSpinning.some(s=>s) ? 'opacity-40' : 'opacity-100'}`}>
                 <IslandLandscapeSVG islandId={island.id} />
                 <div className="absolute inset-0 bg-gradient-to-b from-black/80 via-black/20 to-black"></div>
                 {inZone && <div className="absolute inset-0 bg-yellow-500/10 mix-blend-overlay animate-pulse"></div>}
@@ -373,27 +395,40 @@ const PlayView = ({ machine, island, user, onLeave, updateBalance }) => {
                         <Timer size={16} className={lapsSinceBonus > 700 ? 'text-white' : 'text-red-400'} />
                     </div>
 
-                    {/* Volatility Indicator */}
-                    <div className="pointer-events-auto bg-black/60 border border-white/10 rounded-full px-3 py-1 flex items-center gap-1 backdrop-blur-sm">
-                        <span className="text-[8px] text-gray-400 uppercase font-bold">VOL:</span>
-                        <span className={`text-[10px] font-black uppercase tracking-widest ${volatility === 'high' || volatility === 'extreme' ? 'text-red-400' : 'text-blue-400'}`}>
-                            {volatility}
-                        </span>
+                    {/* Paytable & Volatility Group */}
+                    <div className="flex items-center gap-2 pointer-events-auto">
+                        <button 
+                            onClick={() => { playSound('click'); setShowPaytable(true); }}
+                            className="w-8 h-8 rounded-full bg-black/60 border border-white/10 flex items-center justify-center text-gray-400 hover:text-white backdrop-blur-sm transition-colors"
+                        >
+                            <Info size={14} />
+                        </button>
+                        <div className="bg-black/60 border border-white/10 rounded-full px-3 py-1 flex items-center gap-1 backdrop-blur-sm">
+                            <span className="text-[8px] text-gray-400 uppercase font-bold">VOL:</span>
+                            <span className={`text-[10px] font-black uppercase tracking-widest ${volatility === 'high' || volatility === 'extreme' ? 'text-red-400' : 'text-blue-400'}`}>
+                                {volatility}
+                            </span>
+                        </div>
                     </div>
                 </div>
             </div>
 
-            {/* MAIN GAME STAGE */}
-            <div className={`flex-1 flex items-center justify-center relative z-10 px-2 pt-16 pb-6 ${isFreeze || winTier === 'EPIC' ? 'animate-shake-epic' : ''}`}>
-                <div className="relative w-full max-w-[400px] aspect-[0.6] flex items-center justify-center">
+            {/* MAIN GAME STAGE with 3D Parallax Tilt */}
+            <div className={`flex-1 flex items-center justify-center relative z-10 px-2 pt-16 pb-6 ${isFreeze || winTier === 'EPIC' ? 'animate-shake-epic' : ''}`} style={{ perspective: '1200px' }}>
+                <motion.div 
+                    className="relative w-full max-w-[400px] aspect-[0.6] flex items-center justify-center"
+                    animate={{ rotateX: mousePos.y, rotateY: mousePos.x }}
+                    transition={{ type: 'spring', stiffness: 75, damping: 15 }}
+                    style={{ transformStyle: 'preserve-3d' }}
+                >
                     
                     {/* CABINET ENGINE */}
-                    <div className="absolute inset-0 z-10 w-full h-full pointer-events-none">
+                    <div className="absolute inset-0 z-10 w-full h-full pointer-events-none" style={{ transform: 'translateZ(-10px)' }}>
                         <CabinetSVG islandId={parseInt(island.id)} mode="game" charId={island.hostess_char_id} visualState={getCabinetState()} />
                     </div>
 
                     {/* CHARACTER INTERACTION */}
-                    <div className="absolute bottom-[5%] right-[-20%] w-[60%] h-[65%] z-20 pointer-events-auto cursor-pointer group" onClick={() => {playSound('click'); setCharInteraction("Target acquired.");}}>
+                    <div className="absolute bottom-[5%] right-[-20%] w-[60%] h-[65%] z-20 pointer-events-auto cursor-pointer group" style={{ transform: 'translateZ(30px)' }} onClick={() => {playSound('click'); setCharInteraction("Target acquired.");}}>
                         <CharacterSVG type={user.active_pet_id} mood={bonusMode || winTier !== 'NONE' ? 'win' : 'idle'} />
                         <AnimatePresence>
                             {charInteraction && (
@@ -410,7 +445,7 @@ const PlayView = ({ machine, island, user, onLeave, updateBalance }) => {
                     </div>
 
                     {/* 3x3 REEL SCREEN */}
-                    <div className="absolute top-[21.25%] left-[16.67%] w-[66.67%] h-[28.75%] flex flex-col z-20">
+                    <div className="absolute top-[21.25%] left-[16.67%] w-[66.67%] h-[28.75%] flex flex-col z-20" style={{ transform: 'translateZ(5px)' }}>
                         {/* Display Bar */}
                         <div className={`h-[15%] flex items-center justify-between px-3 bg-black/90 border-b border-white/5 ${inZone && !bonusMode ? 'border-yellow-500 shadow-[0_0_10px_gold] bg-yellow-900/30' : ''}`}>
                             <span className={`text-[10px] font-black tracking-widest uppercase ${inZone ? 'text-yellow-400 animate-pulse' : 'text-cyan-400'}`}>
@@ -433,7 +468,7 @@ const PlayView = ({ machine, island, user, onLeave, updateBalance }) => {
                                 />
                             ))}
 
-                            {/* DYNAMIC CINEMATIC PAYLINES (Laser Effect) */}
+                            {/* DYNAMIC CINEMATIC PAYLINES (Laser Effect with Nodes) */}
                             {winningLines.length > 0 && winStage !== 'gambling' && (
                                 <svg className="absolute inset-0 w-full h-full pointer-events-none z-40" preserveAspectRatio="none">
                                     <defs>
@@ -443,22 +478,34 @@ const PlayView = ({ machine, island, user, onLeave, updateBalance }) => {
                                         </filter>
                                     </defs>
                                     {winningLines.map(lineIdx => {
-                                        if (lineIdx === 99) return null; // Cherry line (handled by symbol glow)
+                                        if (lineIdx === 99) return null; // Cherry line
                                         const paths = { 0: "M 0 16.6% L 100% 16.6%", 1: "M 0 50% L 100% 50%", 2: "M 0 83.3% L 100% 83.3%", 3: "M 0 0 L 100% 100%", 4: "M 0 100% L 100% 0" };
+                                        
+                                        // Coordinates for glowing nodes at the ends of the lines
+                                        const nodes = {
+                                            0: [{x: '0', y: '16.6%'}, {x: '100%', y: '16.6%'}],
+                                            1: [{x: '0', y: '50%'}, {x: '100%', y: '50%'}],
+                                            2: [{x: '0', y: '83.3%'}, {x: '100%', y: '83.3%'}],
+                                            3: [{x: '0', y: '0'}, {x: '100%', y: '100%'}],
+                                            4: [{x: '0', y: '100%'}, {x: '100%', y: '0'}],
+                                        };
+
                                         return (
-                                            <motion.path 
-                                                key={lineIdx} 
-                                                d={paths[lineIdx]} 
-                                                stroke={lineStyle.color} 
-                                                strokeWidth={strokeWidths[winTier] || 4} 
-                                                fill="none" 
-                                                filter="url(#winlineGlow)" 
-                                                strokeLinecap="round" 
-                                                style={{ filter: `drop-shadow(0 0 10px ${lineStyle.shadow})` }}
-                                                initial={{ pathLength: 0, opacity: 1 }}
-                                                animate={{ pathLength: 1, opacity: [1, 0.5, 1] }}
-                                                transition={{ duration: 0.4, ease: "easeOut", opacity: { repeat: Infinity, duration: 0.2 } }}
-                                            />
+                                            <g key={lineIdx} filter="url(#winlineGlow)">
+                                                <motion.path 
+                                                    d={paths[lineIdx]} 
+                                                    stroke={lineStyle.color} 
+                                                    strokeWidth={strokeWidths[winTier] || 4} 
+                                                    fill="none" 
+                                                    strokeLinecap="round" 
+                                                    initial={{ pathLength: 0, opacity: 1 }}
+                                                    animate={{ pathLength: 1, opacity: [1, 0.5, 1] }}
+                                                    transition={{ duration: 0.4, ease: "easeOut", opacity: { repeat: Infinity, duration: 0.2 } }}
+                                                />
+                                                {/* Start/End Impact Nodes */}
+                                                <circle cx={nodes[lineIdx][0].x} cy={nodes[lineIdx][0].y} r="6" fill="#fff" className="animate-pulse" />
+                                                <circle cx={nodes[lineIdx][1].x} cy={nodes[lineIdx][1].y} r="6" fill="#fff" className="animate-pulse" />
+                                            </g>
                                         );
                                     })}
                                 </svg>
@@ -467,7 +514,7 @@ const PlayView = ({ machine, island, user, onLeave, updateBalance }) => {
                     </div>
 
                     {/* BUTTON DECK */}
-                    <div className="absolute top-[57.5%] left-[5%] w-[90%] h-[15%] z-50 pointer-events-auto" style={{ perspective: '800px' }}>
+                    <div className="absolute top-[57.5%] left-[5%] w-[90%] h-[15%] z-50 pointer-events-auto" style={{ perspective: '800px', transform: 'translateZ(40px)' }}>
                         <div className="w-full h-full relative flex items-center justify-center" style={{ transform: 'rotateX(25deg)', transformOrigin: 'top center' }}>
                             
                             {/* Bet Controls */}
@@ -533,7 +580,7 @@ const PlayView = ({ machine, island, user, onLeave, updateBalance }) => {
                             </div>
                         </div>
                     </div>
-                </div>
+                </motion.div>
             </div>
 
             {/* COIN VFX */}
@@ -544,6 +591,42 @@ const PlayView = ({ machine, island, user, onLeave, updateBalance }) => {
             ))}
 
             {/* --- CINEMATIC OVERLAYS --- */}
+
+            {/* PAYTABLE MODAL */}
+            <AnimatePresence>
+                {showPaytable && (
+                    <motion.div 
+                        initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                        className="fixed inset-0 z-[100] bg-black/90 backdrop-blur-md flex items-center justify-center p-6 pointer-events-auto"
+                        onClick={() => setShowPaytable(false)}
+                    >
+                        <GlassCard className="w-full max-w-sm p-0 overflow-hidden border-cyan-500/50 shadow-[0_0_40px_rgba(0,243,255,0.2)]" onClick={e => e.stopPropagation()}>
+                            <div className="bg-gradient-to-r from-cyan-900 to-blue-900 p-4 flex justify-between items-center border-b border-cyan-500/30">
+                                <h3 className="text-white font-black text-lg flex items-center gap-2"><HelpCircle size={18}/> PAYTABLE</h3>
+                                <button onClick={() => setShowPaytable(false)} className="text-white/70 hover:text-white"><X size={20}/></button>
+                            </div>
+                            <div className="p-4 bg-black/80 space-y-2">
+                                {PAYTABLE_DATA.map((item) => (
+                                    <div key={item.id} className="flex items-center justify-between bg-white/5 p-2 rounded-lg border border-white/10">
+                                        <div className="flex items-center gap-3">
+                                            <div className="w-10 h-10 p-1 bg-black rounded shadow-inner">
+                                                <SymbolSVG id={item.id} islandId={parseInt(island.id)} />
+                                            </div>
+                                            <span className={`font-bold text-sm ${item.color}`}>{item.name}</span>
+                                        </div>
+                                        <div className="font-mono text-white font-black">
+                                            {typeof item.mult === 'number' ? `x${item.mult}` : item.mult}
+                                        </div>
+                                    </div>
+                                ))}
+                                <div className="text-center text-[10px] text-gray-500 mt-4 border-t border-white/10 pt-2">
+                                    Winning combinations are evaluated left to right on 5 active paylines.
+                                </div>
+                            </div>
+                        </GlassCard>
+                    </motion.div>
+                )}
+            </AnimatePresence>
 
             {/* 0. LEVEL UP CINEMATIC */}
             <AnimatePresence>
