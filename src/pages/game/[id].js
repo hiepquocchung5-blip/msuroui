@@ -50,15 +50,25 @@ export default function GameContainer({ resolvedId }) {
     }, [id, user, router]);
 
     // Handlers
-    const handleSelect = (m) => {
+    const handleSelect = async (m) => {
         if (m.status === 'occupied' && m.current_user_id !== user.id) {
             alert("This machine is occupied by another player.");
             return;
         }
         
-        // Optimistic selection. The PlayView mounts and useSlotMachine handles the API Enter.
-        // This removes the "double enter" race condition causing the seating mismatch.
-        setSelectedMachine(m);
+        try {
+            // Actively attempt to enter the machine BEFORE switching views
+            const res = await gameApi.enterMachine(m.id);
+            if (res.data.status === 'success') {
+                 // Pass the machine data AND the session token to the PlayView
+                 setSelectedMachine({ ...m, session_token: res.data.session_token });
+            } else {
+                 alert("Failed to secure machine: " + (res.data.message || 'Unknown error'));
+            }
+        } catch (e) {
+             console.error("Enter machine error:", e);
+             alert(e.response?.data?.error || "Failed to establish secure link to machine.");
+        }
     };
 
     const handleLeave = async () => {
