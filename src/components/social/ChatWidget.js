@@ -28,7 +28,7 @@ export default function ChatWidget() {
     // --- REAL-TIME SSE CONNECTION ---
     useEffect(() => {
         // Construct the full URL to the new SSE endpoint
-        const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8005/api';
+        const baseUrl = process.env.NEXT_PUBLIC_API_URL ;
         const streamUrl = `${baseUrl}/social/chat_stream.php?last_id=${lastIdRef.current}`;
 
         // Initialize EventSource (Server-Sent Events)
