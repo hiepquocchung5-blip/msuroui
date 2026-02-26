@@ -21,19 +21,16 @@ export const useSlotMachine = (machineId, islandId) => {
     const [momentumMult, setMomentumMult] = useState(1.0);
     const [inZone, setInZone] = useState(false);
     
-    // NEW v6.0 STATES
-    const [winTier, setWinTier] = useState('NONE'); // SMALL, BIG, MEGA, EPIC
+    const [winTier, setWinTier] = useState('NONE'); 
     const [sessionWinStreak, setSessionWinStreak] = useState(0);
     const [streakMult, setStreakMult] = useState(1.0);
     const [volatility, setVolatility] = useState('medium');
 
-    // --- AT SEQUENCING & SUMMARIES ---
     const [atSequence, setAtSequence] = useState([]);
     const [atCurrentStep, setAtCurrentStep] = useState(0);
     const [bonusTotalWin, setBonusTotalWin] = useState(0);
     const [showBonusSummary, setShowBonusSummary] = useState(false);
 
-    // --- RESULTS STATE ---
     const [lastWin, setLastWin] = useState(0);
     const [isJackpot, setIsJackpot] = useState(false); 
     const [levelUpData, setLevelUpData] = useState(null);
@@ -46,7 +43,6 @@ export const useSlotMachine = (machineId, islandId) => {
     const [turboMode, setTurboMode] = useState(false); 
     const [sessionToken, setSessionToken] = useState(null); 
 
-    // --- REFS FOR STABLE CALLBACKS ---
     const timers = useRef([]);
     const idleTimerRef = useRef(null); 
     const warningTimerRef = useRef(null);
@@ -68,20 +64,18 @@ export const useSlotMachine = (machineId, islandId) => {
     
     useEffect(() => () => clearTimers(), [clearTimers]);
 
-    // --- SERVER HEARTBEAT (Anti-Ghost Session) ---
+    // --- SERVER HEARTBEAT ---
     useEffect(() => {
         let pingInterval;
         if (sessionToken && machineId && !isIdleKicked) {
-            // Ping the server every 60 seconds to keep the seat locked
             pingInterval = setInterval(() => {
                 api.post('/game/machine_actions.php', { action: 'ping', machine_id: machineId })
-                   .catch(() => {}); // Silent fail on heartbeat drop
+                   .catch(() => {}); 
             }, 60000); 
         }
         return () => clearInterval(pingInterval);
     }, [sessionToken, machineId, isIdleKicked]);
 
-    // --- SMART AFK TIMEOUT SYSTEM ---
     const leave = useCallback(async () => {
         clearTimers();
         setSessionToken(null);
@@ -111,7 +105,6 @@ export const useSlotMachine = (machineId, islandId) => {
         if (idleTimerRef.current) clearTimeout(idleTimerRef.current);
         if (warningTimerRef.current) clearTimeout(warningTimerRef.current);
         
-        // 4 Minutes = Warning | 5 Minutes = Kick
         warningTimerRef.current = setTimeout(handleIdleWarning, 240000);
         idleTimerRef.current = setTimeout(handleIdleTimeout, 300000);
     }, [handleIdleTimeout, handleIdleWarning, isIdleKicked]);
@@ -126,7 +119,6 @@ export const useSlotMachine = (machineId, islandId) => {
                 setError(null);
                 resetIdleTimer();
 
-                // Advanced Session Recovery (If returning to a live game)
                 if (res.data.recovered_state) {
                     const state = res.data.recovered_state;
                     setBonusMode(state.bonus_mode);
@@ -136,7 +128,10 @@ export const useSlotMachine = (machineId, islandId) => {
                     setSessionWinStreak(state.session_win_streak || 0);
                 }
             }
-        } catch (e) { setError(e.response?.data?.error || "Failed to connect to machine."); }
+        } catch (e) { 
+            // Better error surfacing
+            setError(e.response?.data?.error || "Failed to establish secure link to machine."); 
+        }
     }, [machineId, resetIdleTimer]);
 
     useEffect(() => { if(machineId) enter(); }, [machineId, enter]);
@@ -173,13 +168,10 @@ export const useSlotMachine = (machineId, islandId) => {
             setLastWin(0);
         }
 
-        // --- SMART AUTO-PLAY INTERRUPTION ---
-        // Interrupt AutoPlay on major cinematic events so the player can enjoy them
         let shouldInterruptAutoPlay = false;
         if (data.is_freeze || data.is_jackpot || data.level_up) {
             shouldInterruptAutoPlay = true;
         } else if (data.bonus_mode && !bonusMode) {
-            // Just entered bonus mode
             shouldInterruptAutoPlay = true;
         } else if (showBonusSummary) {
             shouldInterruptAutoPlay = true;
@@ -244,7 +236,7 @@ export const useSlotMachine = (machineId, islandId) => {
 
     // 4. Core Spin API Trigger
     const spin = useCallback(async (betAmount) => {
-        if (!user) return;
+        if (!user || !sessionToken) return; // Prevent spinning before fully connected
         
         resetIdleTimer();
 
@@ -333,6 +325,7 @@ export const useSlotMachine = (machineId, islandId) => {
         lapsSinceBonus, momentumMult, inZone, winTier, sessionWinStreak, streakMult, volatility,
         showBonusSummary, bonusTotalWin, clearBonusTotal, levelUpData, setLevelUpData,
         autoPlay, setAutoPlay, turboMode, setTurboMode,
-        spin, stopReel, setLastWin
+        spin, stopReel, setLastWin,
+        isReady: !!sessionToken // NEW: Exposes connection status to UI
     };
 };

@@ -7,8 +7,6 @@ import HallView from '../../components/game/HallView';
 import PlayView from '../../components/game/PlayView';
 
 // Opt-out of Static Generation (SSG) for this dynamic route.
-// This prevents "Collecting page data" build errors (like the Analytics crash) 
-// by explicitly telling Next.js to render this page on the server/client on-demand.
 export async function getServerSideProps(context) {
     return {
         props: {
@@ -19,9 +17,8 @@ export async function getServerSideProps(context) {
 
 export default function GameContainer({ resolvedId }) {
     const router = useRouter();
-    // Use resolvedId from SSR to prevent hydration issues if router.query is not ready
     const id = router.query.id || resolvedId;
-    const { user, updateBalance, loading } = useAuth();
+    const { user, loading } = useAuth();
     
     const [island, setIsland] = useState(null);
     const [machines, setMachines] = useState([]);
@@ -53,19 +50,15 @@ export default function GameContainer({ resolvedId }) {
     }, [id, user, router]);
 
     // Handlers
-    const handleSelect = async (m) => {
+    const handleSelect = (m) => {
         if (m.status === 'occupied' && m.current_user_id !== user.id) {
             alert("This machine is occupied by another player.");
             return;
         }
-        try {
-            // Optimistic selection
-            setSelectedMachine(m);
-            // Server lock
-            await gameApi.enterMachine(m.id);
-        } catch (e) { 
-            console.error("Enter Machine Error", e); 
-        }
+        
+        // Optimistic selection. The PlayView mounts and useSlotMachine handles the API Enter.
+        // This removes the "double enter" race condition causing the seating mismatch.
+        setSelectedMachine(m);
     };
 
     const handleLeave = async () => {
@@ -77,8 +70,9 @@ export default function GameContainer({ resolvedId }) {
 
     if (loading || !island) {
         return (
-            <div className="bg-black min-h-screen text-cyan-500 flex items-center justify-center">
-                <Loader2 className="animate-spin mr-2" /> Loading World...
+            <div className="bg-black min-h-screen text-cyan-500 flex flex-col gap-4 items-center justify-center">
+                <Loader2 className="animate-spin w-12 h-12" /> 
+                <span className="font-mono tracking-widest text-xs animate-pulse">LOADING WORLD DATA...</span>
             </div>
         );
     }
@@ -88,9 +82,7 @@ export default function GameContainer({ resolvedId }) {
             <PlayView 
                 machine={selectedMachine} 
                 island={island} 
-                user={user} 
                 onLeave={handleLeave} 
-                updateBalance={updateBalance} 
             />
         );
     }
