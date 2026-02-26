@@ -3,133 +3,24 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { 
     ChevronLeft, Minus, Plus, Zap, StopCircle, Gamepad2, LogOut, 
     Trophy, Flame, MessageCircle, Square, Circle, Timer, TrendingUp, 
-    ArrowUpCircle, ShieldAlert, Info, HelpCircle, X, Coins
+    ArrowUpCircle, ShieldAlert, Info, HelpCircle, X, Coins , Repeat
 } from 'lucide-react';
 import { useRouter } from 'next/router';
 
-// ============================================================================
-// INTERNAL IMPORTS & MOCKS
-// In a real build, these would be your standard imports.
-// ============================================================================
-const useAuth = () => ({ user: { balance: 50000, active_pet_id: 'luna' }, updateBalance: () => {} });
-const useToast = () => ({ addToast: console.log });
-const useGameSound = () => ({ playSound: () => {} });
-const gameApi = { gamble: async () => ({ data: { status: 'success', won: true, new_win_amount: 2000, new_balance: 52000 } }) };
+// --- REAL PRODUCTION IMPORTS ---
+import { useAuth } from '../../context/AuthContext';
+import { useToast } from '../../context/ToastContext';
+import { useGameSound } from '../../hooks/useGameSound';
+import { useSlotMachine } from '../../hooks/useSlotMachine';
+import { game as gameApi } from '../../services/api';
 
-// --- STANDALONE HOOK FOR CANVAS PREVIEW ---
-const useSlotMachine = (machineId, islandId) => {
-    const [reels, setReels] = useState([7,7,7, 7,7,7, 7,7,7]);
-    const [isSpinning, setIsSpinning] = useState([false, false, false]);
-    const [winningLines, setWinningLines] = useState([]);
-    const [lastWin, setLastWin] = useState(0);
-    const [winTier, setWinTier] = useState('NONE');
-    const [sessionWinStreak, setSessionWinStreak] = useState(0);
-    const [streakMult, setStreakMult] = useState(1.0);
-    const [volatility, setVolatility] = useState('medium');
-    const [freeSpins, setFreeSpins] = useState(0);
-    const [bonusMode, setBonusMode] = useState(null);
-    const [bonusSpinsLeft, setBonusSpinsLeft] = useState(0);
-    const [lapsSinceBonus, setLapsSinceBonus] = useState(120);
-    const [momentumMult, setMomentumMult] = useState(1.0);
-    const [inZone, setInZone] = useState(false);
-    const [isTeaser, setIsTeaser] = useState(false);
-    const [isReachEye, setIsReachEye] = useState(false);
-    const [isFreeze, setIsFreeze] = useState(false);
-    const [isJackpot, setIsJackpot] = useState(false);
-    const [levelUpData, setLevelUpData] = useState(null);
-    const [error, setError] = useState(null);
-    const [showIdleWarning, setShowIdleWarning] = useState(false);
-    const [isIdleKicked, setIsIdleKicked] = useState(false);
-    const [autoPlay, setAutoPlay] = useState(false);
-    const [turboMode, setTurboMode] = useState(false);
-    const [atSequence, setAtSequence] = useState([]);
-    const [atCurrentStep, setAtCurrentStep] = useState(0);
-    const [showBonusSummary, setShowBonusSummary] = useState(false);
-    const [bonusTotalWin, setBonusTotalWin] = useState(0);
-
-    const resetIdleTimer = () => {};
-    const leave = () => {};
-
-    const spin = (betAmount) => {
-        setIsSpinning([true, true, true]);
-        setWinningLines([]);
-        setLastWin(0);
-        setWinTier('NONE');
-        setTimeout(() => {
-            const sym = Math.floor(Math.random() * 7) + 1;
-            setReels([sym,sym,sym, 7,7,7, 4,7,4]);
-            setIsSpinning([false, false, false]);
-            
-            // Randomly trigger a win for testing UI
-            if (Math.random() > 0.5) {
-                setWinningLines([0]);
-                setLastWin(betAmount * 10);
-                setWinTier(Math.random() > 0.5 ? 'BIG' : 'EPIC');
-                setSessionWinStreak(prev => prev + 1);
-                if (sessionWinStreak >= 3) setStreakMult(1.5);
-                setMomentumMult(Math.min(2.0, momentumMult + 0.1));
-            } else {
-                setSessionWinStreak(0);
-                setStreakMult(1.0);
-            }
-        }, 800);
-    };
-    
-    const stopReel = (idx) => { setIsSpinning(p => { const n = [...p]; n[idx] = false; return n; }); };
-    
-    return {
-        reels, winningLines, lastWin, winTier, sessionWinStreak, streakMult, volatility,
-        isSpinning, isTeaser, isReachEye, isFreeze, isJackpot, setIsJackpot, error,
-        showIdleWarning, isIdleKicked, resetIdleTimer, leave,
-        freeSpins, bonusMode, bonusSpinsLeft, atSequence, atCurrentStep,
-        lapsSinceBonus, momentumMult, inZone,
-        showBonusSummary, bonusTotalWin, clearBonusTotal: () => setShowBonusSummary(false),
-        levelUpData, setLevelUpData,
-        autoPlay, setAutoPlay, turboMode, setTurboMode,
-        spin, stopReel, setLastWin
-    };
-};
-
-const GlassCard = ({ children, className, onClick }) => (
-    <div className={`bg-white/10 backdrop-blur-md border border-white/20 rounded-2xl ${className}`} onClick={onClick}>
-        {children}
-    </div>
-);
-const GlobalTicker = () => null;
-const ActiveEvents = () => null;
-
-const CabinetSVG = ({ visualState }) => (
-    <div className={`w-full h-full rounded-[2rem] border-[8px] ${visualState === 'BROKEN' ? 'border-red-500 shadow-[0_0_50px_red]' : 'border-gray-800'} bg-[#111] shadow-[inset_0_0_50px_rgba(0,0,0,0.8)] relative overflow-hidden transition-colors duration-500`}>
-        <div className="absolute top-2 left-1/2 -translate-x-1/2 bg-black px-6 py-1 rounded-full border border-white/10 text-[9px] font-black tracking-widest text-cyan-500 shadow-lg">
-            LEVIATHAN ENGINE V6
-        </div>
-        <div className="absolute inset-0 bg-gradient-to-b from-white/5 to-transparent pointer-events-none"></div>
-    </div>
-);
-
-const CharacterSVG = ({ type, mood }) => (
-    <div className={`w-full h-full transition-transform duration-500 ${mood === 'win' ? 'scale-110 drop-shadow-[0_0_30px_rgba(168,85,247,0.6)]' : 'drop-shadow-xl'}`}>
-        <div className="w-full aspect-square bg-gradient-to-br from-purple-600 to-indigo-600 rounded-full border-4 border-white flex items-center justify-center relative overflow-hidden">
-            <Trophy className="text-white w-1/2 h-1/2 absolute z-10" />
-            <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/stardust.png')] opacity-30 animate-[spin_30s_linear_infinite]"></div>
-            <div className="absolute bottom-4 bg-black/80 px-2 py-0.5 rounded text-[8px] font-bold tracking-widest uppercase border border-white/20">{type}</div>
-        </div>
-    </div>
-);
-
-const SymbolSVG = ({ id, isWinning }) => {
-    const colors = ["text-yellow-400", "text-purple-400", "text-red-500", "text-yellow-200", "text-green-400", "text-pink-400", "text-cyan-400"];
-    const color = colors[id - 1] || "text-white";
-    return <div className={`font-black text-5xl ${color} ${isWinning ? 'animate-pulse drop-shadow-[0_0_15px_currentColor]' : ''}`}>{id}</div>;
-};
-
-const IslandLandscapeSVG = () => (
-    <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_bottom,_var(--tw-gradient-stops))] from-blue-900 via-gray-900 to-black" />
-);
-
-// ============================================================================
-// MAIN COMPONENT CODE
-// ============================================================================
+import CabinetSVG from '../visuals/CabinetSVG';
+import CharacterSVG from '../visuals/CharacterSVG';
+import SymbolSVG from '../visuals/SymbolSVG';
+import IslandLandscapeSVG from '../visuals/IslandLandscapeSVG';
+import GlassCard from '../ui/GlassCard';
+import GlobalTicker from '../ui/GlobalTicker';
+import ActiveEvents from '../ui/ActiveEvents';
 
 // --- CONFIGURATION ---
 const PAYTABLE_DATA = [
@@ -223,13 +114,13 @@ const ReelColumn = ({ isSpinning, finalSymbols, locked, islandId, isWinning, isT
     );
 };
 
-const PlayView = ({ machine = { id: 1 }, island = { id: 8 }, onLeave }) => {
+const PlayView = ({ machine, island, onLeave }) => {
     const router = useRouter();
     const { user, updateBalance } = useAuth();
-    
-    // Bind to the slot machine hook
-    const slotLogic = useSlotMachine(machine.id, island.id);
     const { addToast } = useToast();
+    
+    // Bind to the real API-driven slot machine hook
+    const slotLogic = useSlotMachine(machine?.id, island?.id);
     
     const { 
         reels, winningLines, isSpinning, isTeaser, lastWin, winTier, sessionWinStreak, streakMult, volatility,
@@ -258,7 +149,7 @@ const PlayView = ({ machine = { id: 1 }, island = { id: 8 }, onLeave }) => {
     const isProcessing = useRef(false);
     const [reelThud, setReelThud] = useState([false, false, false]); 
 
-    const gambleTheme = GAMBLE_THEMES[island.id] || GAMBLE_THEMES[1];
+    const gambleTheme = GAMBLE_THEMES[island?.id] || GAMBLE_THEMES[1];
 
     const handlePointerMove = useCallback((e) => {
         resetIdleTimer();
@@ -401,7 +292,7 @@ const PlayView = ({ machine = { id: 1 }, island = { id: 8 }, onLeave }) => {
         return PAYTABLE_DATA.find(p => p.id === symId);
     }, [winningLines, reels]);
 
-    const lineStyle = getIslandPaylineStyle(island.id);
+    const lineStyle = getIslandPaylineStyle(island?.id);
     const strokeWidths = { 'NONE': 4, 'SMALL': 5, 'BIG': 8, 'MEGA': 12, 'EPIC': 18 };
 
     return (
@@ -421,7 +312,7 @@ const PlayView = ({ machine = { id: 1 }, island = { id: 8 }, onLeave }) => {
 
             {/* BACKGROUND LAYER */}
             <div className={`absolute inset-0 z-0 pointer-events-none transition-opacity duration-500 ${isSpinning.some(s=>s) ? 'opacity-40' : 'opacity-100'}`}>
-                <IslandLandscapeSVG islandId={island.id} />
+                <IslandLandscapeSVG islandId={island?.id} />
                 <div className="absolute inset-0 bg-gradient-to-b from-black/80 via-black/20 to-black"></div>
                 {inZone && <div className="absolute inset-0 bg-yellow-500/10 mix-blend-overlay animate-pulse"></div>}
                 {bonusMode === 'HEAVEN' && <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/circuit-board.png')] opacity-40 mix-blend-color-dodge animate-pulse hue-rotate-180"></div>}
@@ -503,7 +394,7 @@ const PlayView = ({ machine = { id: 1 }, island = { id: 8 }, onLeave }) => {
                     style={{ transformStyle: 'preserve-3d' }}
                 >
                     <div className="absolute inset-0 z-10 w-full h-full pointer-events-none" style={{ transform: 'translateZ(-10px)' }}>
-                        <CabinetSVG islandId={parseInt(island.id)} mode="game" charId={island.hostess_char_id} visualState={getCabinetState()} />
+                        <CabinetSVG islandId={parseInt(island?.id || 1)} mode="game" charId={island?.hostess_char_id} visualState={getCabinetState()} />
                     </div>
 
                     <div className="absolute bottom-[5%] right-[-20%] w-[60%] h-[65%] z-20 pointer-events-auto cursor-pointer group" style={{ transform: 'translateZ(30px)' }} onClick={() => {playSound('click'); setCharInteraction("Target acquired.");}}>
@@ -527,7 +418,7 @@ const PlayView = ({ machine = { id: 1 }, island = { id: 8 }, onLeave }) => {
 
                         <div className={`flex-1 flex gap-[1%] p-[1%] bg-[#050505] rounded-b-sm border-x-2 border-b-2 relative ${inZone && !bonusMode ? 'border-yellow-500/50 shadow-[inset_0_0_30px_rgba(234,179,8,0.2)]' : 'border-gray-900'}`}>
                             {[0, 1, 2].map(colIdx => (
-                                <ReelColumn key={colIdx} isSpinning={isSpinning[colIdx]} finalSymbols={reels.slice(colIdx * 3, colIdx * 3 + 3)} islandId={island.id} isWinning={winningLines.length > 0 && winningLines.some(lId => [0,1,2,3,4].includes(lId) || (lId === 99 && colIdx === 0))} isTeaser={isTeaser} isFreeze={isFreeze} />
+                                <ReelColumn key={colIdx} isSpinning={isSpinning[colIdx]} finalSymbols={reels.slice(colIdx * 3, colIdx * 3 + 3)} islandId={island?.id} isWinning={winningLines.length > 0 && winningLines.some(lId => [0,1,2,3,4].includes(lId) || (lId === 99 && colIdx === 0))} isTeaser={isTeaser} isFreeze={isFreeze} />
                             ))}
 
                             {winningLines.length > 0 && winStage !== 'gambling' && (
@@ -610,7 +501,7 @@ const PlayView = ({ machine = { id: 1 }, island = { id: 8 }, onLeave }) => {
                                 {PAYTABLE_DATA.map((item) => (
                                     <div key={item.id} className="flex items-center justify-between bg-white/5 p-2 rounded-lg border border-white/10">
                                         <div className="flex items-center gap-3">
-                                            <div className="w-10 h-10 p-1 bg-black rounded shadow-inner"><SymbolSVG id={item.id} islandId={parseInt(island.id || 1)} /></div>
+                                            <div className="w-10 h-10 p-1 bg-black rounded shadow-inner"><SymbolSVG id={item.id} islandId={parseInt(island?.id || 1)} /></div>
                                             <span className={`font-bold text-sm ${item.color}`}>{item.name}</span>
                                         </div>
                                         <div className="font-mono text-white font-black">{typeof item.mult === 'number' ? `x${item.mult}` : item.mult}</div>
@@ -657,7 +548,7 @@ const PlayView = ({ machine = { id: 1 }, island = { id: 8 }, onLeave }) => {
                             <GlassCard className={`p-10 text-center flex flex-col items-center border-t-8 border-b-8 ${winDetails.color.replace('text-', 'border-')} ${winDetails.glow} ${winTier === 'EPIC' ? 'shadow-[0_0_100px_rgba(255,215,0,0.8)]' : ''}`}>
                                 {winTier === 'EPIC' ? <h1 className="text-6xl font-black italic text-transparent bg-clip-text bg-gradient-to-b from-yellow-200 via-orange-500 to-red-600 drop-shadow-2xl mb-4 animate-pulse">EPIC WIN</h1> : winTier === 'MEGA' ? <h1 className="text-5xl font-black italic text-transparent bg-clip-text bg-gradient-to-b from-cyan-200 to-blue-600 drop-shadow-lg mb-4">MEGA WIN</h1> : null}
                                 <motion.div animate={{ rotate: [0, -10, 10, -10, 0], scale: [1, 1.2, 1] }} transition={{ duration: 0.5, repeat: Infinity }} className="w-32 h-32 mb-6">
-                                    <SymbolSVG id={winDetails.id} islandId={parseInt(island.id || 1)} isWinning={true} />
+                                    <SymbolSVG id={winDetails.id} islandId={parseInt(island?.id || 1)} isWinning={true} />
                                 </motion.div>
                                 <h2 className={`text-4xl font-black italic tracking-tighter uppercase drop-shadow-2xl ${winDetails.color}`}>{winDetails.name}</h2>
                                 <div className="text-6xl font-mono font-black text-white drop-shadow-[0_0_30px_rgba(255,255,255,0.8)] mt-6 bg-black/50 px-6 py-2 rounded-2xl border border-white/20">
