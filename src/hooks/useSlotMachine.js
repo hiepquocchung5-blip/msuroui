@@ -5,40 +5,46 @@ import { useAuth } from '../context/AuthContext';
 export const useSlotMachine = (machineId, islandId) => {
     const { user, updateBalance } = useAuth();
     
-    // --- GAME STATE (3x3 Grid) ---
+    // --- GAME STATE ---
     const [reels, setReels] = useState([7, 7, 7, 7, 7, 7, 7, 7, 7]); 
     const [winningLines, setWinningLines] = useState([]); 
     const [isSpinning, setIsSpinning] = useState([false, false, false]); 
     const [isTeaser, setIsTeaser] = useState(false); 
     
-    // --- RESULTS & PROGRESSION STATE ---
+    // --- PACHISLOT MECHANICS ---
+    const [freeSpins, setFreeSpins] = useState(0); 
+    const [bonusMode, setBonusMode] = useState(null); 
+    const [bonusSpinsLeft, setBonusSpinsLeft] = useState(0);
+
+    // --- RESULTS STATE ---
     const [lastWin, setLastWin] = useState(0);
     const [winStreak, setWinStreak] = useState(0); 
     const [isJackpot, setIsJackpot] = useState(false); 
-    const [mysteryItem, setMysteryItem] = useState(null); 
-    const [levelUpData, setLevelUpData] = useState(null); // Captured from API
     
-    // --- SPECIAL MECHANICS STATE ---
-    const [lockedReels, setLockedReels] = useState([false, false, false]); 
-    const [expandedReels, setExpandedReels] = useState([false, false, false]); 
-    const [avalancheTriggered, setAvalancheTriggered] = useState(false); 
-
     // --- CONTROL STATE ---
     const [sessionToken, setSessionToken] = useState(null); 
     const [autoPlay, setAutoPlay] = useState(false);
     const [turboMode, setTurboMode] = useState(false); 
     const [error, setError] = useState(null);
 
+    // --- REFS FOR STABLE CALLBACKS (Meoshi Implementation) ---
     const timers = useRef([]);
+    const spinDataRef = useRef(null); // Stores the backend payload until the user stops the reels
+    const currentBetRef = useRef(0);
+    const autoPlayRef = useRef(autoPlay);
+    const turboModeRef = useRef(turboMode);
+    const spinRef = useRef(null); // Prevents circular dependency in useEffect looping
 
-    const clearTimers = () => {
-        timers.current.forEach(clearTimeout);
-        timers.current = [];
+    // Sync state to refs for use inside callbacks without causing re-renders
+    useEffect(() => { autoPlayRef.current = autoPlay; }, [autoPlay]);
+    useEffect(() => { turboModeRef.current = turboMode; }, [turboMode]);
+    
+    const clearTimers = () => { 
+        timers.current.forEach(clearTimeout); 
+        timers.current = []; 
     };
-
-    useEffect(() => {
-        return () => clearTimers();
-    }, []);
+    
+    useEffect(() => () => clearTimers(), []);
 
     const enter = useCallback(async () => {
         if(!machineId) return;
@@ -48,35 +54,84 @@ export const useSlotMachine = (machineId, islandId) => {
                 setSessionToken(res.data.session_token);
                 setError(null);
             }
-        } catch (e) { 
-            setError("Failed to connect to machine."); 
-        }
+        } catch (e) { setError("Failed to connect to machine."); }
     }, [machineId]);
 
     useEffect(() => { if(machineId) enter(); }, [machineId, enter]);
 
-    // 2. SPIN LOGIC
-    const spin = useCallback(async (betAmount) => {
-        if (!user) return;
-        if (parseFloat(user.balance) < betAmount) {
-            setError("Insufficient Funds");
-            setAutoPlay(false);
-            return;
+    // 1. Post-Spin Processor
+    const handlePostSpinEffects = useCallback((data, currentBetAmount) => {
+        setWinningLines(data.winning_lines || []);
+        updateBalance(data.new_balance);
+        
+        // Update Pachislot AT states
+        setFreeSpins(data.free_spins);
+        setBonusMode(data.bonus_mode);
+        setBonusSpinsLeft(data.bonus_spins_left);
+
+        if (data.win_amount > 0) {
+            setLastWin(data.win_amount);
+            setWinStreak(prev => prev + 1);
+        } else {
+            setWinStreak(0);
         }
 
-        // Reset Visuals
-        if (islandId !== 4 || winStreak === 0) {
-             setLockedReels([false, false, false]);
+        // Loop Autoplay if active
+        if (autoPlayRef.current) {
+            timers.current.push(setTimeout(() => {
+                if (spinRef.current) spinRef.current(currentBetAmount);
+            }, turboModeRef.current ? 500 : 1500));
         }
+    }, [updateBalance]);
+
+    // 2. Meoshi (Skill Stop) Logic
+    const stopReel = useCallback((index) => {
+        setIsSpinning(prevSpinning => {
+            // Prevent stopping a reel that is already stopped, or if no spin data exists
+            if (!prevSpinning[index] || !spinDataRef.current) return prevSpinning;
+
+            const data = spinDataRef.current;
+            
+            // Map the specific column's data from the 1D array payload
+            setReels(prevReels => {
+                const nextReels = [...prevReels];
+                if (index === 0) { nextReels[0]=data.stops[0]; nextReels[3]=data.stops[3]; nextReels[6]=data.stops[6]; }
+                if (index === 1) { nextReels[1]=data.stops[1]; nextReels[4]=data.stops[4]; nextReels[7]=data.stops[7]; }
+                if (index === 2) { nextReels[2]=data.stops[2]; nextReels[5]=data.stops[5]; nextReels[8]=data.stops[8]; }
+                return nextReels;
+            });
+
+            // Mark this specific reel as stopped
+            const nextSpinning = [...prevSpinning];
+            nextSpinning[index] = false;
+            
+            // If all 3 reels are now stopped (none are true), evaluate the board
+            if (!nextSpinning.some(s => s)) {
+                setIsTeaser(false);
+                handlePostSpinEffects(data, currentBetRef.current);
+                spinDataRef.current = null; // Clear payload cache
+            }
+            
+            return nextSpinning;
+        });
+    }, [handlePostSpinEffects]);
+
+    // 3. Core Spin Trigger
+    const spin = useCallback(async (betAmount) => {
+        if (!user) return;
         
-        setIsSpinning(prev => prev.map((val, i) => lockedReels[i] ? false : true));
+        // Prevent deduction if player has a free spin (Replay) or is in AT Bonus Mode
+        const actualBet = (freeSpins > 0 || bonusMode) ? 0 : betAmount;
+        if (parseFloat(user.balance) < actualBet) {
+            setError("Insufficient Funds"); setAutoPlay(false); return;
+        }
+
+        // Lock UI into spinning state
+        setIsSpinning([true, true, true]);
         setWinningLines([]);
-        setExpandedReels([false, false, false]);
-        setAvalancheTriggered(false);
-        setIsTeaser(false);
         setLastWin(0);
         setIsJackpot(false);
-        setMysteryItem(null);
+        setIsTeaser(false);
         setError(null);
         clearTimers();
 
@@ -87,92 +142,51 @@ export const useSlotMachine = (machineId, islandId) => {
             if (data.status !== 'success') throw new Error(data.error || "Spin Failed");
             if (data.session_token) setSessionToken(data.session_token);
 
-            const baseTime = turboMode ? 150 : 400;
-            
-            // --- REEL 1 STOP ---
-            if (!lockedReels[0]) {
-                timers.current.push(setTimeout(() => {
-                    setReels(prev => {
-                        const next = [...prev];
-                        next[0] = data.stops[0]; next[3] = data.stops[3]; next[6] = data.stops[6];
-                        return next;
-                    });
-                    setIsSpinning(prev => [false, prev[1], prev[2]]);
-                }, baseTime));
-            }
+            // Cache the backend result so stopReel() can access it when the user clicks
+            spinDataRef.current = data;
+            currentBetRef.current = betAmount;
 
-            // --- REEL 2 STOP ---
-            if (!lockedReels[1]) {
-                timers.current.push(setTimeout(() => {
-                    setReels(prev => {
-                        const next = [...prev];
-                        next[1] = data.stops[1]; next[4] = data.stops[4]; next[7] = data.stops[7];
-                        return next;
-                    });
-                    setIsSpinning(prev => [prev[0], false, prev[2]]);
-                    if (data.is_teaser && !turboMode) setIsTeaser(true); 
-                }, baseTime * 2));
-            }
+            // Capture Teaser State immediately to trigger screen flash / audio
+            if (data.is_teaser) setIsTeaser(true);
 
-            // --- REEL 3 STOP ---
-            let reel3Delay = baseTime * 3;
-            if (data.is_teaser && !turboMode) reel3Delay = 2500;
-
-            if (!lockedReels[2]) {
-                timers.current.push(setTimeout(() => {
-                    setReels(data.stops);
-                    setIsSpinning([false, false, false]);
-                    setIsTeaser(false);
-                    handlePostSpinEffects(data, betAmount);
-                }, reel3Delay));
+            if (autoPlayRef.current) {
+                // AUTO PLAY SEQUENCE (Automated stops)
+                const baseTime = turboModeRef.current ? 150 : 400;
+                
+                timers.current.push(setTimeout(() => stopReel(0), baseTime));
+                timers.current.push(setTimeout(() => stopReel(1), baseTime * 2));
+                
+                // Suspense Engine: Delay 3rd reel automatically if huge win or near-miss
+                let finalReelDelay = baseTime * 3;
+                if ((data.is_teaser || data.win_amount > betAmount * 20) && !turboModeRef.current) {
+                    finalReelDelay = 2500; 
+                }
+                timers.current.push(setTimeout(() => stopReel(2), finalReelDelay));
+                
             } else {
-                 timers.current.push(setTimeout(() => handlePostSpinEffects(data, betAmount), baseTime * 2 + 100));
+                // MANUAL PLAY SEQUENCE (Authentic Meoshi)
+                // We do NOTHING here. The reels spin infinitely until the player clicks the buttons in PlayView.js.
+                
+                // Server Failsafe: Auto-stop after 15 seconds if the user walks away from their screen
+                timers.current.push(setTimeout(() => stopReel(0), 15000));
+                timers.current.push(setTimeout(() => stopReel(1), 15500));
+                timers.current.push(setTimeout(() => stopReel(2), 16000));
             }
 
         } catch (err) {
-            if (err.response?.status === 429) setError("Cooling down...");
-            else if (err.message?.includes("Session")) { setError("Session refreshed."); enter(); }
+            if (err.message?.includes("Session")) { setError("Session refreshed."); enter(); }
             else setError(err.message || "Connection Error");
-            setAutoPlay(false);
-            setIsSpinning([false, false, false]);
+            setAutoPlay(false); setIsSpinning([false, false, false]);
         }
-    }, [user, machineId, sessionToken, autoPlay, turboMode, updateBalance, enter, islandId, lockedReels]);
+    }, [user, machineId, sessionToken, freeSpins, bonusMode, enter, stopReel]);
 
-    const handlePostSpinEffects = (data, currentBetAmount) => {
-        if (data.winning_lines) {
-            setWinningLines(data.winning_lines);
-        }
-
-        updateBalance(data.new_balance);
-        
-        if (data.win_amount > 0) {
-            setLastWin(data.win_amount);
-            setWinStreak(prev => prev + 1);
-            if (data.is_jackpot) setIsJackpot(true);
-        } else {
-            setWinStreak(0);
-        }
-        
-        if (data.mystery_item) setMysteryItem(data.mystery_item);
-        
-        // Handle Level Up Progression
-        if (data.level_up) {
-            setLevelUpData(data.level_up);
-            setAutoPlay(false); // Pause autoplay so they see the level up screen
-        }
-
-        // Loop Autoplay (if active, and no massive interruptions occurred)
-        if (autoPlay && !data.is_jackpot && !data.level_up) {
-            timers.current.push(setTimeout(() => spin(currentBetAmount), turboMode ? 500 : 1500));
-        }
-    };
-
-    const stopReel = (index) => {}; // Skill stop placeholder
+    // Keep spin stable for the interval loop
+    useEffect(() => { spinRef.current = spin; }, [spin]);
 
     return {
-        reels, winningLines, lastWin, winStreak, mysteryItem, levelUpData, setLevelUpData,
+        reels, winningLines, lastWin, winStreak,
         isSpinning, isTeaser, isJackpot, setIsJackpot, error, sessionToken,
-        expandedReels, lockedReels, avalancheTriggered,
+        freeSpins, bonusMode, bonusSpinsLeft, 
         autoPlay, setAutoPlay, turboMode, setTurboMode,
         spin, stopReel, setLastWin
     };
