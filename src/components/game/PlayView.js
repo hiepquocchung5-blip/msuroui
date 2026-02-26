@@ -42,6 +42,43 @@ const getGambleTheme = (islandId) => {
     return themes[islandId] || themes[1]; 
 };
 
+// --- ROLLUP COUNTER COMPONENT ---
+// Simulates the fast "counting up" of numbers for big wins
+const RollupNumber = ({ value, duration = 1500 }) => {
+    const [count, setCount] = useState(0);
+
+    useEffect(() => {
+        let startTime;
+        let animationFrame;
+        const endValue = parseInt(value, 10) || 0;
+
+        if (endValue === 0) {
+            setCount(0);
+            return;
+        }
+
+        const step = (timestamp) => {
+            if (!startTime) startTime = timestamp;
+            const progress = Math.min((timestamp - startTime) / duration, 1);
+            // easeOutExpo for that fast-start, slow-end feel
+            const easeOut = progress === 1 ? 1 : 1 - Math.pow(2, -10 * progress);
+            
+            setCount(Math.floor(easeOut * endValue));
+
+            if (progress < 1) {
+                animationFrame = requestAnimationFrame(step);
+            } else {
+                setCount(endValue); // Ensure it perfectly hits the end value
+            }
+        };
+
+        animationFrame = requestAnimationFrame(step);
+        return () => cancelAnimationFrame(animationFrame);
+    }, [value, duration]);
+
+    return <>{count.toLocaleString()}</>;
+};
+
 // --- 3D REEL COMPONENT WITH SNAP PHYSICS ---
 const ReelColumn = ({ isSpinning, finalSymbols, locked, expanded, avalanche, islandId, isWinning, isTeaser }) => {
     const spinStrip = useMemo(() => {
@@ -151,7 +188,8 @@ const PlayView = ({ machine, island, user, onLeave, updateBalance }) => {
 
             if (!bonusMode && !autoPlay) {
                 setWinStage('celebrating');
-                setTimeout(() => setWinStage('gambling'), isBigWin ? 3000 : 1500);
+                // Give enough time for the Rollup animation to complete
+                setTimeout(() => setWinStage('gambling'), isBigWin ? 3000 : 2000);
             }
         } else if (lastWin === 0 && winStage !== 'gambling' && winStage !== 'celebrating') {
              setWinStage('idle');
@@ -328,7 +366,7 @@ const PlayView = ({ machine, island, user, onLeave, updateBalance }) => {
                 <button onClick={onLeave} className="pointer-events-auto w-10 h-10 bg-white/10 rounded-full text-white backdrop-blur flex items-center justify-center border border-white/20 hover:bg-white/20 active:scale-95 transition-transform"><ChevronLeft/></button>
                 <div className={`pointer-events-auto px-4 sm:px-5 py-2 rounded-full border flex items-center gap-2 sm:gap-3 backdrop-blur-md transition-all ${bonusMode ? 'bg-red-900/80 border-yellow-400 shadow-[0_0_20px_red]' : 'bg-black/60 border-yellow-500/50 shadow-[0_0_20px_rgba(234,179,8,0.3)]'}`}>
                     <div className="text-[10px] text-yellow-500 font-bold tracking-widest hidden md:block">CREDIT</div>
-                    <span className="text-white font-mono font-black text-base sm:text-lg">{parseFloat(user.balance).toLocaleString()}</span>
+                    <span className="text-white font-mono font-black text-base sm:text-lg"><RollupNumber value={user.balance} duration={1000} /></span>
                 </div>
                 <div className="flex gap-2 pointer-events-auto">
                      <button onClick={() => setShowPaytable(true)} className="w-10 h-10 bg-white/10 rounded-full text-white backdrop-blur flex items-center justify-center border border-white/20"><Info size={20}/></button>
@@ -446,7 +484,9 @@ const PlayView = ({ machine, island, user, onLeave, updateBalance }) => {
 
                             <div className="absolute right-[22%] sm:right-[30%] top-[15%] flex flex-col gap-2 scale-90 sm:scale-100 origin-right">
                                 <button onClick={toggleTurbo} className={`w-8 h-8 sm:w-9 sm:h-9 rounded-lg border-b-4 border-black flex items-center justify-center active:translate-y-1 shadow-md touch-manipulation ${turboMode ? 'bg-yellow-500 text-black shadow-[0_0_10px_gold]' : 'bg-gray-700 text-gray-400'}`}><Zap size={14} fill={turboMode ? "currentColor" : "none"}/></button>
-                                <button onClick={toggleAuto} className={`w-8 h-8 sm:w-9 sm:h-9 rounded-lg border-b-4 border-black flex items-center justify-center active:translate-y-1 shadow-md touch-manipulation ${autoPlay ? 'bg-green-600 text-white shadow-[0_0_10px_green]' : 'bg-gray-700 text-gray-400'}`}>{autoPlay ? <StopCircle size={14}/> : <Repeat size={14}/>}</button>
+                                <button onClick={toggleAuto} className={`w-8 h-8 sm:w-9 sm:h-9 rounded-lg border-b-4 border-black flex items-center justify-center active:translate-y-1 shadow-md touch-manipulation ${autoPlay ? 'bg-green-600 text-white shadow-[0_0_10px_green]' : 'bg-gray-700 text-gray-400'}`}>
+                                    {autoPlay ? <Repeat size={14} className="animate-spin-slow" /> : <Repeat size={14}/>}
+                                </button>
                             </div>
                         </div>
                     </div>
@@ -496,7 +536,7 @@ const PlayView = ({ machine, island, user, onLeave, updateBalance }) => {
                           <h3 className="text-xl font-bold text-yellow-500 tracking-[0.5em] mb-2 uppercase">BONUS COMPLETE</h3>
                           <h2 className="text-4xl font-black italic text-white mb-6">TOTAL GET</h2>
                           <div className="text-5xl font-mono font-black text-transparent bg-clip-text bg-gradient-to-b from-yellow-200 to-yellow-600 drop-shadow-xl mb-8">
-                              {bonusTotalWin.toLocaleString()}
+                              +<RollupNumber value={bonusTotalWin} duration={2500} />
                           </div>
                           <button onClick={clearBonusTotal} className="w-full py-4 rounded-full bg-white text-black font-black hover:scale-105 active:scale-95 transition-all shadow-[0_0_20px_rgba(255,255,255,0.4)]">
                               CONTINUE
@@ -517,7 +557,7 @@ const PlayView = ({ machine, island, user, onLeave, updateBalance }) => {
                             </div>
                             <div className="text-center">
                                 <span className="text-[9px] uppercase block">Current Win</span>
-                                <b className="text-white text-sm">{lastWin.toLocaleString()}</b>
+                                <b className="text-white text-sm"><RollupNumber value={lastWin} duration={1500} /></b>
                             </div>
                             <div className="flex flex-col text-right">
                                 <span className="text-[9px] uppercase">Potential Win</span>
@@ -555,6 +595,22 @@ const PlayView = ({ machine, island, user, onLeave, updateBalance }) => {
                          ))}
                      </div>
                      <div className="mt-8 text-gray-500 text-xs animate-pulse">TAP TO CLOSE</div>
+                </div>
+            )}
+
+            {/* CELEBRATION OVERLAY (STANDARD WIN) */}
+            {winStage === 'celebrating' && winDetails && !bonusMode && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center pointer-events-none">
+                    <div className="absolute inset-0 bg-black/60 backdrop-blur-sm animate-in fade-in"></div>
+                    <div className="relative z-10 flex flex-col items-center animate-in zoom-in-50 duration-500 ease-out">
+                        <GlassCard className={`p-8 text-center flex flex-col items-center border-t-4 border-b-4 ${winDetails.color.replace('text-', 'border-')} ${winDetails.glow}`}>
+                            <div className="w-24 h-24 mb-4 animate-bounce"><SymbolSVG id={winDetails.symbolId} islandId={parseInt(island.id)} isWinning={true} /></div>
+                            <h2 className={`text-4xl font-black italic tracking-tighter uppercase drop-shadow-lg ${winDetails.color}`}>{winDetails.name}</h2>
+                            <div className="text-5xl font-mono font-black text-white drop-shadow-[0_0_20px_rgba(255,255,255,0.8)] mt-4">
+                                +<RollupNumber value={lastWin} duration={1500} />
+                            </div>
+                        </GlassCard>
+                    </div>
                 </div>
             )}
         </div>
