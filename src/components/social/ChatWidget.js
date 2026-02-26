@@ -1,13 +1,12 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { MessageSquare, X, Send, User, Trophy, Zap, Pin, AlertCircle } from 'lucide-react';
+import { MessageSquare, X, Send, User, Trophy, Zap, Pin, AlertCircle, Info, Loader2 } from 'lucide-react';
 import api from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
 import CharacterSVG from '../visuals/CharacterSVG';
 
-// Simple sound helper if context not available here
 const playPop = () => {
     try {
-        const audio = new Audio('/assets/sounds/pop.mp3'); // Assuming you have this or similar
+        const audio = new Audio('/assets/sounds/pop.mp3'); 
         audio.volume = 0.3;
         audio.play().catch(() => {});
     } catch(e) {}
@@ -24,41 +23,57 @@ export default function ChatWidget() {
     const scrollRef = useRef(null);
     const lastIdRef = useRef(0);
     const isUserScrolling = useRef(false);
+    const eventSourceRef = useRef(null); // Keep track of the SSE connection
 
-    // Poll for messages
+    // --- REAL-TIME SSE CONNECTION ---
     useEffect(() => {
-        const fetchMessages = async () => {
+        // Construct the full URL to the new SSE endpoint
+        const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8005/api';
+        const streamUrl = `${baseUrl}/social/chat_stream.php?last_id=${lastIdRef.current}`;
+
+        // Initialize EventSource (Server-Sent Events)
+        const sse = new EventSource(streamUrl);
+        eventSourceRef.current = sse;
+
+        sse.onmessage = (event) => {
             try {
-                const res = await api.get(`/social/chat.php?last_id=${lastIdRef.current}`);
-                if (res.data.status === 'success' && res.data.data.length > 0) {
-                    const newMsgs = res.data.data;
+                const res = JSON.parse(event.data);
+                if (res.status === 'success' && res.data.length > 0) {
+                    const newMsgs = res.data;
                     
-                    // Filter duplicates
                     setMessages(prev => {
                         const existingIds = new Set(prev.map(m => m.id));
                         const uniqueNew = newMsgs.filter(m => !existingIds.has(m.id));
                         
                         if (uniqueNew.length > 0) {
                             lastIdRef.current = Math.max(...uniqueNew.map(m => m.id));
+                            
                             if (!isOpen) {
                                 setUnreadCount(prevCount => prevCount + uniqueNew.length);
                                 playPop();
                             }
-                            return [...prev, ...uniqueNew].sort((a, b) => a.id - b.id).slice(-100); // Keep last 100
+                            return [...prev, ...uniqueNew].sort((a, b) => a.id - b.id).slice(-100); 
                         }
                         return prev;
                     });
                 }
             } catch (e) {
-                // Silent fail
+                console.error("SSE Parse Error", e);
             }
         };
 
-        const interval = setInterval(fetchMessages, 3000); // Poll every 3s
-        fetchMessages(); // Initial load
-        
-        return () => clearInterval(interval);
-    }, [isOpen]);
+        sse.onerror = (error) => {
+            console.warn("SSE Connection lost, reconnecting...", error);
+            // EventSource auto-reconnects, but you can add custom logic here if needed
+        };
+
+        // Cleanup on unmount
+        return () => {
+            if (eventSourceRef.current) {
+                eventSourceRef.current.close();
+            }
+        };
+    }, [isOpen]); // We can keep isOpen in dependency array if we want to change behavior based on it, but usually best to just run once
 
     // Auto-scroll logic
     useEffect(() => {
@@ -73,7 +88,6 @@ export default function ChatWidget() {
     const handleScroll = () => {
         if (scrollRef.current) {
             const { scrollTop, scrollHeight, clientHeight } = scrollRef.current;
-            // If user is not at bottom (with 50px buffer), assume they are reading history
             isUserScrolling.current = scrollHeight - scrollTop - clientHeight > 50;
         }
     };
@@ -83,12 +97,13 @@ export default function ChatWidget() {
         if (!inputText.trim() || !user || isSending) return;
 
         const msgToSend = inputText.trim();
-        setInputText(''); // Optimistic clear
+        setInputText(''); 
         setIsSending(true);
 
         try {
+            // We still use standard POST to send messages
             await api.post('/social/chat.php', { message: msgToSend });
-            // Let the poller fetch it to ensure sync and order
+            // The SSE stream will automatically pick up the new message and push it to us
         } catch (e) {
             console.error("Chat Error", e);
         } finally {
@@ -96,8 +111,6 @@ export default function ChatWidget() {
         }
     };
 
-    // Helper to group messages by date could go here, but for now simple list
-    // Helper to format time
     const formatTime = (isoString) => {
         const date = new Date(isoString);
         return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
@@ -154,13 +167,12 @@ export default function ChatWidget() {
                         </div>
                     )}
 
-                    {messages.map((msg, idx) => {
+                    {messages.map((msg) => {
                         const isMe = parseInt(msg.user_id) === user.id;
                         const isSystem = msg.type === 'system';
                         const isWin = msg.type === 'win' || msg.type === 'jackpot';
                         const isPinned = msg.is_pinned == 1;
 
-                        // Pinned Message Style
                         if (isPinned) {
                             return (
                                 <div key={msg.id} className="sticky top-0 z-10 bg-yellow-900/90 border-l-4 border-yellow-500 p-2 rounded-r-lg text-xs shadow-md mb-2 backdrop-blur-sm">
