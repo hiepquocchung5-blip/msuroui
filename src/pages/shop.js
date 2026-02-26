@@ -1,10 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/router';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
 import api from '../services/api';
-import { ChevronLeft, Sparkles, Zap, Coins, Star, Hexagon, Layers, ArrowRight, Loader2, Target } from 'lucide-react';
+import { ChevronLeft, Sparkles, Zap, Coins, Star, Hexagon, ArrowRight, Loader2, Target, FastForward } from 'lucide-react';
 import GlassCard from '../components/ui/GlassCard';
 import CharacterSVG from '../components/visuals/CharacterSVG';
 import BottomDock from '../components/layout/BottomDock';
@@ -28,11 +28,20 @@ export default function ShopPage() {
     const [featuredIndex, setFeaturedIndex] = useState(0);
     const featuredChars = ['cyber', 'kira', 'void', 'luna'];
 
+    // Timers for animation skipping
+    const flashTimer = useRef(null);
+    const revealTimer = useRef(null);
+    const pendingResult = useRef(null); // Store result for skip
+
     useEffect(() => {
         const interval = setInterval(() => {
             setFeaturedIndex(prev => (prev + 1) % featuredChars.length);
         }, 5000);
-        return () => clearInterval(interval);
+        return () => {
+            clearInterval(interval);
+            clearTimeout(flashTimer.current);
+            clearTimeout(revealTimer.current);
+        };
     }, []);
 
     const handleSummon = async (type) => {
@@ -47,30 +56,25 @@ export default function ShopPage() {
         playSound('spin'); // Reuse spin sound for charging
 
         try {
-            // API Call
-            const res = await api.post('/shop/purchase.php', { type: 'gacha', tier: type });
+            // CRITICAL FIX: Point to the actual gacha endpoint, not island purchase
+            const res = await api.post('/shop/gacha.php', { type: type });
             
+            if (res.data.status !== 'success') {
+                addToast(res.data.error || "Summon Failed", 'error');
+                setAnimStage('idle');
+                setIsSummoning(false);
+                return;
+            }
+
+            pendingResult.current = res.data;
+
             // Artificial Delay for Suspense
-            setTimeout(() => {
+            flashTimer.current = setTimeout(() => {
                 setAnimStage('flash');
                 playSound('bigwin'); // Flash sound
                 
-                setTimeout(() => {
-                    if (res.data.status === 'success') {
-                        setResult(res.data);
-                        updateBalance(res.data.new_balance);
-                        setPityCount(res.data.pity_count); // Sync pity from server
-                        setAnimStage('reveal');
-                        
-                        // Rarity Sound
-                        if (res.data.rarity === 'UR' || res.data.rarity === 'SSR') {
-                            playSound('bigwin');
-                        }
-                    } else {
-                        addToast(res.data.error || "Summon Failed", 'error');
-                        setAnimStage('idle');
-                        setIsSummoning(false);
-                    }
+                revealTimer.current = setTimeout(() => {
+                    executeReveal(pendingResult.current);
                 }, 800); // White flash duration
             }, 2500); // Charging duration
 
@@ -82,10 +86,37 @@ export default function ShopPage() {
         }
     };
 
+    // New: Skip Animation Feature
+    const handleSkip = () => {
+        if (animStage === 'charging' || animStage === 'flash') {
+            playSound('click');
+            clearTimeout(flashTimer.current);
+            clearTimeout(revealTimer.current);
+            if (pendingResult.current) {
+                executeReveal(pendingResult.current);
+            }
+        }
+    };
+
+    const executeReveal = (data) => {
+        setResult(data);
+        updateBalance(data.new_balance);
+        setPityCount(data.pity_count); // Sync pity from server
+        setAnimStage('reveal');
+        
+        // Rarity Sound
+        if (data.rarity === 'UR' || data.rarity === 'SSR') {
+            playSound('bigwin');
+        } else {
+            playSound('win');
+        }
+    };
+
     const closeResult = () => {
         setResult(null);
         setAnimStage('idle');
         setIsSummoning(false);
+        pendingResult.current = null;
     };
 
     if (loading || !user) return <div className="bg-black min-h-screen"/>;
@@ -107,7 +138,7 @@ export default function ShopPage() {
                         <Hexagon className="text-purple-500 fill-purple-500/20" /> STAR GATE
                     </h1>
                 </div>
-                <div className="bg-black/80 px-4 py-2 rounded-full border border-yellow-500/30 flex items-center gap-2 backdrop-blur-md shadow-[0_0_15px_rgba(234,179,8,0.15)]">
+                <div className="bg-black/80 px-4 py-2 rounded-full border border-yellow-500/30 flex items-center gap-2 backdrop-blur-md shadow-[0_0_15px_rgba(234,179,8,0.15)] cursor-pointer hover:bg-black transition-colors" onClick={() => router.push('/wallet')}>
                     <Coins size={16} className="text-yellow-400" />
                     <span className="text-white font-mono font-black text-sm">{parseFloat(user.balance).toLocaleString()}</span>
                 </div>
@@ -243,6 +274,16 @@ export default function ShopPage() {
                         className="fixed inset-0 z-[100] bg-black flex items-center justify-center overflow-hidden"
                     >
                         
+                        {/* Skip Button */}
+                        {(animStage === 'charging' || animStage === 'flash') && (
+                            <button 
+                                onClick={handleSkip}
+                                className="absolute top-10 right-6 z-[110] bg-white/10 hover:bg-white/20 text-white px-4 py-2 rounded-full text-[10px] font-bold tracking-widest uppercase flex items-center gap-2 backdrop-blur-md border border-white/20 transition-all"
+                            >
+                                SKIP SEQUENCE <FastForward size={14} />
+                            </button>
+                        )}
+
                         {/* Stage 1: Charging (Warp Gate) */}
                         {animStage === 'charging' && (
                             <motion.div 
