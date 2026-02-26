@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ChevronLeft, Minus, Plus, Zap, StopCircle, Gamepad2, Sparkles, LogOut, Trophy, Flame, MessageCircle, Square, Circle, Timer, TrendingUp, ArrowUpCircle, AlertTriangle, ShieldAlert, Info, HelpCircle ,Coins , X } from 'lucide-react';
+import { ChevronLeft, Minus, Plus, Zap, StopCircle, Gamepad2, Sparkles, LogOut, Trophy, Flame, MessageCircle, Square, Circle, Timer, TrendingUp, ArrowUpCircle, AlertTriangle, ShieldAlert, Info, HelpCircle ,X , Coins, Repeat } from 'lucide-react';
 import CabinetSVG from '../visuals/CabinetSVG';
 import CharacterSVG from '../visuals/CharacterSVG';
 import SymbolSVG from '../visuals/SymbolSVG';
