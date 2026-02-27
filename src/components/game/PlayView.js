@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { 
     ChevronLeft, Minus, Plus, Zap, StopCircle, Gamepad2, LogOut, 
     Trophy, Flame, MessageCircle, Square, Circle, Timer, TrendingUp, 
-    ArrowUpCircle, ShieldAlert, Info, HelpCircle, X, Coins , Repeat
+    ArrowUpCircle, ShieldAlert, Info, HelpCircle, X, Coins, Repeat
 } from 'lucide-react';
 import { useRouter } from 'next/router';
 
@@ -120,14 +120,14 @@ const PlayView = ({ machine, island, onLeave }) => {
     const { addToast } = useToast();
     
     // Bind to the real API-driven slot machine hook
-    const slotLogic = useSlotMachine(machine?.id, island?.id);
+    const slotLogic = useSlotMachine(machine?.id, island?.id, machine?.session_token);
     
     const { 
         reels, winningLines, isSpinning, isTeaser, lastWin, winTier, sessionWinStreak, streakMult, volatility,
         freeSpins, bonusMode, bonusSpinsLeft, atSequence, atCurrentStep,
         showBonusSummary, bonusTotalWin, clearBonusTotal, levelUpData, setLevelUpData,
         isJackpot, isReachEye, isFreeze, lapsSinceBonus, momentumMult, inZone, error, 
-        showIdleWarning, isIdleKicked, resetIdleTimer, leave,
+        showIdleWarning, isIdleKicked, resetIdleTimer, leave, isReady,
         autoPlay, spin, stopReel, setAutoPlay, setLastWin, turboMode, setTurboMode
     } = slotLogic;
     
@@ -135,18 +135,24 @@ const PlayView = ({ machine, island, onLeave }) => {
     const [winStage, setWinStage] = useState('idle');
     const [isMuted, setIsMuted] = useState(false);
     const [charInteraction, setCharInteraction] = useState(null);
+    
+    // Gamble State
     const [gamblePending, setGamblePending] = useState(false);
     const [gambleLost, setGambleLost] = useState(false);
     const [gambleFeedback, setGambleFeedback] = useState(null);
-    const [coins, setCoins] = useState([]);
+    const [gambleTimeLeft, setGambleTimeLeft] = useState(10); // Auto-collect timer
     
+    const [coins, setCoins] = useState([]);
     const [showPaytable, setShowPaytable] = useState(false);
     const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
     
     const { playSound } = useGameSound(!isMuted);
     const currentBet = BET_AMOUNTS[betIndex];
 
+    // Refs for synchronization
     const isProcessing = useRef(false);
+    const winHandled = useRef(false); // CRITICAL FIX: Locks the win loop
+    const gambleTimerRef = useRef(null);
     const [reelThud, setReelThud] = useState([false, false, false]); 
 
     const gambleTheme = GAMBLE_THEMES[island?.id] || GAMBLE_THEMES[1];
@@ -194,8 +200,12 @@ const PlayView = ({ machine, island, onLeave }) => {
         if (levelUpData) { playSound('bigwin'); triggerCoinShower(80); }
     }, [levelUpData, playSound]);
 
+    // --- FIX: SECURE WIN EVALUATION ---
     useEffect(() => {
-        if (lastWin > 0 && winStage === 'idle') {
+        if (lastWin > 0 && winStage === 'idle' && !winHandled.current && !isSpinning.some(s=>s)) {
+            // Lock this win so it doesn't infinite loop when returning to 'idle'
+            winHandled.current = true; 
+            
             const isBigWin = winTier === 'BIG' || winTier === 'MEGA' || winTier === 'EPIC';
             playSound(isBigWin ? 'bigwin' : 'win');
             if (winTier === 'MEGA' || winTier === 'EPIC') triggerCoinShower(winTier === 'EPIC' ? 100 : 50);
@@ -204,11 +214,40 @@ const PlayView = ({ machine, island, onLeave }) => {
                 setWinStage('celebrating');
                 setTimeout(() => setWinStage('gambling'), winTier === 'EPIC' ? 4000 : 2500);
             }
-        } else if (lastWin === 0 && winStage !== 'gambling' && winStage !== 'celebrating') {
-             setWinStage('idle');
+        } 
+        
+        if (!isSpinning.some(s=>s)) {
+            isProcessing.current = false;
         }
-        if (!isSpinning.some(s=>s)) isProcessing.current = false;
     }, [lastWin, autoPlay, currentBet, playSound, bonusMode, winStage, isSpinning, winTier]);
+
+    // --- NEW: AUTO-COLLECT GAMBLE TIMER ---
+    const collectWin = useCallback(() => {
+        playSound('click'); 
+        setWinStage('idle');
+        setLastWin(0); // Safely clear it visually to completely prevent loops
+        setGambleTimeLeft(10);
+        clearInterval(gambleTimerRef.current);
+    }, [playSound, setLastWin]);
+
+    useEffect(() => {
+        if (winStage === 'gambling' && !gamblePending && !gambleLost) {
+            gambleTimerRef.current = setInterval(() => {
+                setGambleTimeLeft(prev => {
+                    if (prev <= 1) {
+                        collectWin(); // Auto collect on 0
+                        return 0;
+                    }
+                    return prev - 1;
+                });
+            }, 1000);
+        } else {
+            setGambleTimeLeft(10);
+            clearInterval(gambleTimerRef.current);
+        }
+        return () => clearInterval(gambleTimerRef.current);
+    }, [winStage, gamblePending, gambleLost, collectWin]);
+
 
     const triggerCoinShower = (amount = 40) => {
         const newParticles = Array.from({length: amount}).map((_, i) => ({
@@ -220,15 +259,17 @@ const PlayView = ({ machine, island, onLeave }) => {
     };
 
     const handleSpin = useCallback(() => {
-        if (isProcessing.current || isSpinning.some(s=>s) || winStage !== 'idle' || isFreeze || levelUpData) return; 
+        if (!isReady || isProcessing.current || isSpinning.some(s=>s) || winStage !== 'idle' || isFreeze || levelUpData) return; 
         if (parseFloat(user?.balance || 0) < currentBet && freeSpins === 0 && !bonusMode) {
             addToast("Insufficient Balance", "error"); return;
         }
+        
         isProcessing.current = true;
+        winHandled.current = false; // Reset lock for the new spin
         setCharInteraction(null);
         playSound('spin');
         spin(currentBet);
-    }, [user, currentBet, winStage, playSound, spin, freeSpins, bonusMode, isSpinning, isFreeze, levelUpData, addToast]);
+    }, [user, currentBet, winStage, playSound, spin, freeSpins, bonusMode, isSpinning, isFreeze, levelUpData, addToast, isReady]);
 
     const handleStopReel = (idx) => {
         if (isSpinning[idx] && !autoPlay) {
@@ -266,30 +307,29 @@ const PlayView = ({ machine, island, onLeave }) => {
                         playSound('bigwin'); triggerCoinShower(50);
                     } else { playSound('win'); }
                     setWinStage('celebrating'); 
-                    setTimeout(() => setWinStage('idle'), 3000);
+                    setTimeout(() => setWinStage('gambling'), 3000); // Loop back to gamble
                 } else {
                     setLastWin(res.data.new_win_amount); 
                     updateBalance(res.data.new_balance);
                     if (res.data.is_pity) {
                         setGambleFeedback('pity'); addToast("LUCKY SAVE! Retained 50%!", "info");
-                        playSound('win'); setWinStage('idle');
+                        playSound('win'); 
+                        setTimeout(() => collectWin(), 2000); // End flow
                     } else {
-                        playSound('stop'); setGambleLost(true); setWinStage('idle');
-                        setTimeout(() => setGambleLost(false), 2000);
+                        playSound('stop'); setGambleLost(true);
+                        setTimeout(() => collectWin(), 2000); // End flow
                     }
                 }
-            } else { addToast(res.data.error || "Gamble Failed", "error"); setWinStage('idle'); }
-        } catch (e) { setWinStage('idle'); } finally { setGamblePending(false); }
+            } else { addToast(res.data.error || "Gamble Failed", "error"); collectWin(); }
+        } catch (e) { collectWin(); } finally { setGamblePending(false); }
     };
-
-    const collectWin = () => { playSound('click'); setWinStage('idle'); };
 
     const winDetails = useMemo(() => {
         if (!winningLines || winningLines.length === 0) return null;
         const firstLine = winningLines[0];
-        if (firstLine === 99) return PAYTABLE_DATA.find(p => p.id === reels[0]); 
+        if (firstLine === 99) return PAYTABLE_DATA.find(p => p.id === reels[0]) || PAYTABLE_DATA[6]; 
         const symId = reels[PAYLINES[firstLine][0]];
-        return PAYTABLE_DATA.find(p => p.id === symId);
+        return PAYTABLE_DATA.find(p => p.id === symId) || PAYTABLE_DATA[6];
     }, [winningLines, reels]);
 
     const lineStyle = getIslandPaylineStyle(island?.id);
@@ -395,6 +435,8 @@ const PlayView = ({ machine, island, onLeave }) => {
                 >
                     <div className="absolute inset-0 z-10 w-full h-full pointer-events-none" style={{ transform: 'translateZ(-10px)' }}>
                         <CabinetSVG islandId={parseInt(island?.id || 1)} mode="game" charId={island?.hostess_char_id} visualState={getCabinetState()} />
+                        {/* Dynamic Turbo Mode Glow */}
+                        {turboMode && <div className="absolute inset-0 rounded-[2rem] border-[4px] border-yellow-500 opacity-50 shadow-[0_0_30px_gold] animate-pulse pointer-events-none"></div>}
                     </div>
 
                     <div className="absolute bottom-[5%] right-[-20%] w-[60%] h-[65%] z-20 pointer-events-auto cursor-pointer group" style={{ transform: 'translateZ(30px)' }} onClick={() => {playSound('click'); setCharInteraction("Target acquired.");}}>
@@ -465,9 +507,10 @@ const PlayView = ({ machine, island, onLeave }) => {
                                 })}
                             </div>
 
-                            <button onClick={handleSpin} disabled={isSpinning.some(s=>s) || isFreeze || isProcessing.current || (winStage !== 'idle' && winStage !== 'celebrating') || levelUpData !== null} className={`absolute right-[2%] top-[5%] w-20 h-20 rounded-full border-b-[8px] flex flex-col items-center justify-center shadow-2xl transition-all touch-manipulation ${isSpinning.some(s=>s) || isProcessing.current || levelUpData ? 'bg-gray-800 border-gray-950 opacity-50 translate-y-1 border-b-[4px]' : bonusMode ? 'bg-gradient-to-b from-yellow-400 to-orange-600 border-orange-950 text-white shadow-[0_0_30px_gold] animate-pulse active:translate-y-2 active:border-b-0' : freeSpins > 0 ? 'bg-gradient-to-b from-cyan-400 to-blue-600 border-blue-950 text-white shadow-[0_0_20px_cyan] active:translate-y-2 active:border-b-0' : 'bg-gradient-to-b from-red-500 to-red-800 border-red-950 text-white hover:brightness-110 active:translate-y-2 active:border-b-0'}`}>
+                            <button onClick={handleSpin} disabled={!isReady || isSpinning.some(s=>s) || isFreeze || isProcessing.current || (winStage !== 'idle' && winStage !== 'celebrating') || levelUpData !== null} className={`absolute right-[2%] top-[5%] w-20 h-20 rounded-full border-b-[8px] flex flex-col items-center justify-center shadow-2xl transition-all touch-manipulation ${!isReady || isSpinning.some(s=>s) || isProcessing.current || levelUpData ? 'bg-gray-800 border-gray-950 opacity-50 translate-y-1 border-b-[4px]' : bonusMode ? 'bg-gradient-to-b from-yellow-400 to-orange-600 border-orange-950 text-white shadow-[0_0_30px_gold] animate-pulse active:translate-y-2 active:border-b-0' : freeSpins > 0 ? 'bg-gradient-to-b from-cyan-400 to-blue-600 border-blue-950 text-white shadow-[0_0_20px_cyan] active:translate-y-2 active:border-b-0' : 'bg-gradient-to-b from-red-500 to-red-800 border-red-950 text-white hover:brightness-110 active:translate-y-2 active:border-b-0'}`}>
+                                {turboMode && !isSpinning.some(s=>s) && <Zap className="absolute -top-2 -right-2 text-yellow-400 fill-yellow-400 animate-pulse drop-shadow-[0_0_10px_yellow]" size={20} />}
                                 <Gamepad2 size={28} strokeWidth={2.5} className="text-white mb-1" />
-                                <span className="text-[9px] font-black text-white tracking-widest uppercase drop-shadow-md">{bonusMode ? 'AT SPIN' : (freeSpins > 0 ? 'REPLAY' : 'SPIN')}</span>
+                                <span className="text-[9px] font-black text-white tracking-widest uppercase drop-shadow-md">{!isReady ? 'CONNECTING...' : (bonusMode ? 'AT SPIN' : (freeSpins > 0 ? 'REPLAY' : 'SPIN'))}</span>
                             </button>
 
                             <div className="absolute right-[30%] top-[15%] flex flex-col gap-2">
@@ -545,12 +588,12 @@ const PlayView = ({ machine, island, onLeave }) => {
                     <motion.div initial={{ opacity: 0, backdropFilter: 'blur(0px)' }} animate={{ opacity: 1, backdropFilter: 'blur(10px)' }} exit={{ opacity: 0 }} className="fixed inset-0 z-50 flex items-center justify-center pointer-events-none">
                         {winTier === 'EPIC' && <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/circuit-board.png')] opacity-30 mix-blend-color-dodge animate-pulse hue-rotate-90"></div>}
                         <motion.div initial={{ scale: 0.5, y: 100 }} animate={{ scale: winTier === 'EPIC' ? 1.2 : 1, y: 0, transition: { type: "spring", stiffness: 200, damping: 15 } }} className="relative z-10 flex flex-col items-center">
-                            <GlassCard className={`p-10 text-center flex flex-col items-center border-t-8 border-b-8 ${winDetails.color.replace('text-', 'border-')} ${winDetails.glow} ${winTier === 'EPIC' ? 'shadow-[0_0_100px_rgba(255,215,0,0.8)]' : ''}`}>
+                            <GlassCard className={`p-10 text-center flex flex-col items-center border-t-8 border-b-8 ${winDetails?.color?.replace('text-', 'border-') || 'border-cyan-400'} ${winDetails?.glow} ${winTier === 'EPIC' ? 'shadow-[0_0_100px_rgba(255,215,0,0.8)]' : ''}`}>
                                 {winTier === 'EPIC' ? <h1 className="text-6xl font-black italic text-transparent bg-clip-text bg-gradient-to-b from-yellow-200 via-orange-500 to-red-600 drop-shadow-2xl mb-4 animate-pulse">EPIC WIN</h1> : winTier === 'MEGA' ? <h1 className="text-5xl font-black italic text-transparent bg-clip-text bg-gradient-to-b from-cyan-200 to-blue-600 drop-shadow-lg mb-4">MEGA WIN</h1> : null}
                                 <motion.div animate={{ rotate: [0, -10, 10, -10, 0], scale: [1, 1.2, 1] }} transition={{ duration: 0.5, repeat: Infinity }} className="w-32 h-32 mb-6">
                                     <SymbolSVG id={winDetails.id} islandId={parseInt(island?.id || 1)} isWinning={true} />
                                 </motion.div>
-                                <h2 className={`text-4xl font-black italic tracking-tighter uppercase drop-shadow-2xl ${winDetails.color}`}>{winDetails.name}</h2>
+                                <h2 className={`text-4xl font-black italic tracking-tighter uppercase drop-shadow-2xl ${winDetails?.color}`}>{winDetails?.name}</h2>
                                 <div className="text-6xl font-mono font-black text-white drop-shadow-[0_0_30px_rgba(255,255,255,0.8)] mt-6 bg-black/50 px-6 py-2 rounded-2xl border border-white/20">
                                     +<RollupNumber value={lastWin} duration={winTier === 'EPIC' ? 2500 : 1500} />
                                 </div>
@@ -581,9 +624,19 @@ const PlayView = ({ machine, island, onLeave }) => {
                 <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/90 backdrop-blur-md p-4 animate-in zoom-in-95 pointer-events-auto">
                     <GlassCard className={`w-full max-w-sm p-0 text-center border-t-4 shadow-2xl overflow-hidden ${gambleFeedback === 'critical' ? 'border-yellow-400 shadow-[0_0_50px_gold]' : 'border-cyan-500/50 shadow-[0_0_30px_cyan]'}`}>
                         
+                        {/* Auto-Collect Bar */}
+                        <div className="h-1 bg-gray-800 w-full relative overflow-hidden">
+                            <motion.div 
+                                className="absolute top-0 left-0 h-full bg-cyan-400"
+                                initial={{ width: '100%' }} animate={{ width: `${(gambleTimeLeft / 10) * 100}%` }} transition={{ duration: 1, ease: 'linear' }}
+                            />
+                        </div>
+
                         <div className={`bg-gradient-to-b from-${gambleTheme.a.color.split('-')[0]}-900/40 to-transparent p-6 pb-2`}>
                             <h2 className="text-3xl font-black text-white mb-1 italic tracking-widest drop-shadow-md">{gambleTheme.title}</h2>
-                            <p className="text-xs text-cyan-400 font-bold tracking-widest uppercase mb-4 animate-pulse">{gambleTheme.sub}</p>
+                            <p className="text-[10px] text-cyan-400 font-bold tracking-widest uppercase mb-4">
+                                {gambleTimeLeft > 0 ? `Auto-collecting in ${gambleTimeLeft}s` : 'Collecting...'}
+                            </p>
                             
                             <div className="flex justify-between text-xs font-mono text-gray-400 mb-6 bg-black/80 p-4 rounded-xl border border-white/10 items-center shadow-inner relative overflow-hidden mt-4">
                                 <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')] opacity-20"></div>
@@ -621,7 +674,7 @@ const PlayView = ({ machine, island, onLeave }) => {
                                 </button>
                             </div>
                             
-                            <button onClick={collectWin} className="w-full py-4 bg-white/5 border border-white/10 hover:bg-white/10 text-gray-300 hover:text-white font-bold text-xs rounded-xl transition-all uppercase tracking-widest shadow-inner">
+                            <button onClick={collectWin} disabled={gamblePending} className="w-full py-4 bg-white/5 border border-white/10 hover:bg-white/10 text-gray-300 hover:text-white font-bold text-xs rounded-xl transition-all uppercase tracking-widest shadow-inner">
                                 <LogOut size={14} className="inline mr-2" /> Collect Win & Return
                             </button>
                         </div>
