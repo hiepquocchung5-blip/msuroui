@@ -8,6 +8,7 @@ import {
 import { useRouter } from 'next/router';
 
 // --- REAL PRODUCTION IMPORTS ---
+import api from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
 import { useToast } from '../../context/ToastContext';
 import { useGameSound } from '../../hooks/useGameSound';
@@ -41,15 +42,20 @@ const BET_AMOUNTS = [100, 500, 1000, 5000, 10000];
 const RollupNumber = ({ value, duration = 1000 }) => {
     const [count, setCount] = useState(0);
     useEffect(() => {
-        let start = 0;
+        let start = count;
         const end = parseInt(value) || 0;
         if (start === end) { setCount(end); return; }
         if (end === 0) { setCount(0); return; }
         
         let timer = setInterval(() => {
-            start += Math.ceil(end / 20) || 1;
-            if (start >= end) { setCount(end); clearInterval(timer); } 
-            else { setCount(start); }
+            const step = Math.ceil(Math.abs(end - start) / 20) || 1;
+            if (start < end) {
+                start += step;
+                if (start >= end) { setCount(end); clearInterval(timer); } else setCount(start);
+            } else {
+                start -= step;
+                if (start <= end) { setCount(end); clearInterval(timer); } else setCount(start);
+            }
         }, 30);
         return () => clearInterval(timer);
     }, [value]);
@@ -99,7 +105,7 @@ const PlayView = ({ machine, island, onLeave }) => {
     const { addToast } = useToast();
     const { playSound } = useGameSound();
     
-    // Bind to the real API-driven slot machine hook
+    // Real API-driven slot machine hook
     const slotLogic = useSlotMachine(machine?.id, island?.id, machine?.session_token);
     
     const { 
@@ -119,6 +125,9 @@ const PlayView = ({ machine, island, onLeave }) => {
     const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
     const [reelThud, setReelThud] = useState([false, false, false]);
     
+    // Live Grand Jackpot State
+    const [currentJackpot, setCurrentJackpot] = useState(3000000);
+
     const currentBet = BET_AMOUNTS[betIndex];
 
     // Refs for synchronization
@@ -126,6 +135,29 @@ const PlayView = ({ machine, island, onLeave }) => {
     const winHandled = useRef(false); 
     
     const isCurrentlySpinning = isSpinning.some(s => s);
+
+    // --- GRAND JACKPOT LIVE FETCHING ---
+    useEffect(() => {
+        const fetchJackpot = async () => {
+            try {
+                const res = await api.get('/game/ticker.php');
+                if (res.data.status === 'success' && res.data.jackpot_amount) {
+                    setCurrentJackpot(res.data.jackpot_amount);
+                }
+            } catch (e) {
+                // Silent fail to maintain immersion
+            }
+        };
+
+        fetchJackpot(); // Initial fetch
+        const jpInterval = setInterval(fetchJackpot, 15000); // Sync every 15s
+        return () => clearInterval(jpInterval);
+    }, []);
+
+    // Reset Jackpot visually if won
+    useEffect(() => {
+        if (isJackpot) setCurrentJackpot(3000000);
+    }, [isJackpot]);
 
     const handlePointerMove = useCallback((e) => {
         resetIdleTimer();
@@ -218,6 +250,12 @@ const PlayView = ({ machine, island, onLeave }) => {
         winHandled.current = false; // Reset lock for the new spin
         setCharInteraction(null);
         playSound('spin');
+        
+        // Optimistic Jackpot Increment (5% to JP as per Math Model)
+        if (freeSpins === 0 && !bonusMode) {
+            setCurrentJackpot(prev => prev + (currentBet * 0.05));
+        }
+
         spin(currentBet);
     }, [user, currentBet, winStage, playSound, spin, freeSpins, bonusMode, isCurrentlySpinning, isFreeze, levelUpData, addToast, isReady, setAutoPlay]);
 
@@ -287,6 +325,9 @@ const PlayView = ({ machine, island, onLeave }) => {
     const lineStyle = getIslandPaylineStyle();
     const strokeWidths = { 'NONE': 4, 'SMALL': 5, 'BIG': 8, 'MEGA': 12, 'EPIC': 18 };
 
+    // Calculate Jackpot Progress Bar (Min: 3M, Max: 7.2M)
+    const jpProgressPercent = Math.min(100, Math.max(0, ((currentJackpot - 3000000) / (7200000 - 3000000)) * 100));
+
     return (
         <div 
             className={`min-h-screen bg-black relative flex flex-col overflow-hidden transition-colors duration-1000 ${bonusMode === 'HEAVEN' ? 'bg-purple-950' : (bonusMode ? 'bg-red-950' : '')}`}
@@ -322,9 +363,40 @@ const PlayView = ({ machine, island, onLeave }) => {
 
             <GlobalTicker />
             <ActiveEvents />
+
+            {/* V3 INTEGRATED GRAND JACKPOT TICKER */}
+            <div className="bg-black border-b border-white/10 h-10 flex items-center overflow-hidden relative z-30 shadow-lg">
+                <div className="bg-yellow-900/80 h-full px-4 flex items-center justify-center border-r border-yellow-500/50 z-10">
+                    <Trophy className="w-4 h-4 text-yellow-500 mr-2" />
+                    <span className="text-yellow-400 font-black text-xs tracking-widest italic">GRAND JACKPOT</span>
+                </div>
+                <div className="flex-1 px-6 flex items-center justify-between bg-gradient-to-r from-yellow-900/20 to-transparent">
+                    <div className="text-yellow-400 font-mono font-black text-xl tracking-[0.2em] drop-shadow-[0_0_10px_gold]">
+                        <RollupNumber value={currentJackpot} duration={500} />
+                    </div>
+                    {currentJackpot >= 7000000 ? (
+                        <div className="text-[10px] bg-purple-600 text-white font-bold px-2 py-0.5 rounded animate-pulse shadow-[0_0_15px_purple]">
+                            CRITICAL MASS
+                        </div>
+                    ) : currentJackpot >= 3600000 ? (
+                        <div className="text-[10px] bg-red-600 text-white font-bold px-2 py-0.5 rounded animate-pulse shadow-[0_0_10px_red]">
+                            TRIGGER HOT
+                        </div>
+                    ) : (
+                        <div className="text-[10px] text-gray-500 font-bold px-2 py-0.5 uppercase tracking-widest">
+                            BUILDING...
+                        </div>
+                    )}
+                </div>
+                {/* Dynamic Progress Indicator */}
+                <div 
+                    className="absolute bottom-0 left-0 h-[2px] bg-gradient-to-r from-yellow-500 to-red-500 transition-all duration-500 shadow-[0_0_5px_yellow]" 
+                    style={{ width: `${jpProgressPercent}%` }} 
+                />
+            </div>
             
             {/* TELEMETRY HUD (Top) - RTP REMOVED FOR PRODUCTION IMMERSION */}
-            <div className="absolute top-10 left-0 w-full px-6 flex justify-between items-start z-40 pointer-events-none mt-2">
+            <div className="absolute top-16 left-0 w-full px-6 flex justify-between items-start z-40 pointer-events-none mt-2">
                 <div className="flex flex-col gap-2">
                     <button onClick={onLeave} className="pointer-events-auto w-10 h-10 bg-black/60 rounded-full text-white backdrop-blur flex items-center justify-center border border-white/10 hover:bg-white/20 active:scale-95 transition-all"><ChevronLeft/></button>
                     
@@ -470,14 +542,12 @@ const PlayView = ({ machine, island, onLeave }) => {
                                 className={`absolute right-[2%] top-[5%] w-20 h-20 rounded-full border-b-[8px] flex flex-col items-center justify-center shadow-2xl transition-all touch-manipulation 
                                 ${!isReady || (isProcessing.current && !isCurrentlySpinning) ? 'bg-gray-800 border-gray-950 opacity-50 translate-y-1 border-b-[4px]' : 
                                   isCurrentlySpinning ? 'bg-gradient-to-b from-red-600 to-red-900 border-red-950 text-white shadow-[0_0_20px_red] active:translate-y-2 active:border-b-0' :
-                                  bonusMode ? 'bg-gradient-to-b from-yellow-400 to-orange-600 border-orange-950 text-white shadow-[0_0_30px_gold] animate-pulse active:translate-y-2 active:border-b-0' : 
-                                  freeSpins > 0 ? 'bg-gradient-to-b from-cyan-400 to-blue-600 border-blue-950 text-white shadow-[0_0_20px_cyan] active:translate-y-2 active:border-b-0' : 
                                   'bg-gradient-to-b from-red-500 to-red-800 border-red-950 text-white hover:brightness-110 active:translate-y-2 active:border-b-0'}`}
                             >
                                 {turboMode && !isCurrentlySpinning && <Zap className="absolute -top-2 -right-2 text-yellow-400 fill-yellow-400 animate-pulse drop-shadow-[0_0_10px_yellow]" size={20} />}
                                 {isCurrentlySpinning ? <StopCircle size={28} strokeWidth={2.5} className="text-white mb-1" /> : <Gamepad2 size={28} strokeWidth={2.5} className="text-white mb-1" />}
                                 <span className="text-[9px] font-black text-white tracking-widest uppercase drop-shadow-md">
-                                    {!isReady ? 'WAIT...' : (isCurrentlySpinning ? 'STOP' : (bonusMode ? 'AT SPIN' : (freeSpins > 0 ? 'REPLAY' : 'SPIN')))}
+                                    {!isReady ? 'WAIT...' : (isCurrentlySpinning ? 'STOP' : 'SPIN')}
                                 </span>
                             </button>
 
