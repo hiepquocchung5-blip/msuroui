@@ -1,257 +1,66 @@
-import React, { useState, useEffect, useCallback, useMemo, useRef, createContext, useContext } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
-    ChevronLeft, Minus, Plus, Zap, StopCircle, Gamepad2, LogOut, 
-    Trophy, Flame, MessageCircle, Square, Circle, Timer, TrendingUp, 
+    ChevronLeft, Minus, Plus, Zap, StopCircle, Gamepad2, 
+    Trophy, Flame, MessageCircle, Timer, TrendingUp, 
     ArrowUpCircle, ShieldAlert, Info, HelpCircle, X, Coins, Repeat
 } from 'lucide-react';
+import { useRouter } from 'next/router';
 
-// ============================================================================
-// INTERNAL MOCKS & CONTEXTS (Self-Contained for Preview)
-// ============================================================================
+// --- REAL PRODUCTION IMPORTS ---
+import { useAuth } from '../../context/AuthContext';
+import { useToast } from '../../context/ToastContext';
+import { useGameSound } from '../../hooks/useGameSound';
+import { useSlotMachine } from '../../hooks/useSlotMachine';
 
-// --- Auth Context Mock ---
-const AuthContext = createContext({ user: { balance: 150000, active_pet_id: 'luna' }, updateBalance: () => {} });
-const useAuth = () => useContext(AuthContext);
+import CabinetSVG from '../visuals/CabinetSVG';
+import CharacterSVG from '../visuals/CharacterSVG';
+import SymbolSVG from '../visuals/SymbolSVG';
+import IslandLandscapeSVG from '../visuals/IslandLandscapeSVG';
+import GlassCard from '../ui/GlassCard';
+import GlobalTicker from '../ui/GlobalTicker';
+import ActiveEvents from '../ui/ActiveEvents';
 
-// --- Toast Context Mock ---
-const ToastContext = createContext({ addToast: console.log });
-const useToast = () => useContext(ToastContext);
+// --- CONFIGURATION ---
+const PAYTABLE_DATA = [
+    { id: 1, name: 'BIG BONUS', mult: 'SPECIAL', color: 'text-yellow-400', glow: 'shadow-[0_0_40px_gold]' },
+    { id: 2, name: 'CHARACTER', mult: 20, color: 'text-purple-400', glow: 'shadow-[0_0_30px_purple]' },
+    { id: 3, name: 'BAR', mult: 10, color: 'text-red-400', glow: 'shadow-[0_0_30px_red]' },
+    { id: 4, name: 'BELL', mult: 10, color: 'text-yellow-200', glow: 'shadow-[0_0_20px_yellow]' },
+    { id: 5, name: 'MELON', mult: 15, color: 'text-green-400', glow: 'shadow-[0_0_20px_green]' },
+    { id: 6, name: 'CHERRY', mult: 2, color: 'text-pink-400', glow: 'shadow-[0_0_15px_pink]' },
+    { id: 7, name: 'REPLAY', mult: 'FREE SPIN', color: 'text-cyan-400', glow: 'shadow-[0_0_15px_cyan]' }
+];
 
-// --- Game Sound Mock ---
-const useGameSound = () => ({ playSound: (type) => console.log(`Sound: ${type}`) });
-
-// --- Slot Machine Logic Hook (V3 MULTI-ALGORITHM ENGINE) ---
-const useSlotMachine = (machineId, islandId) => {
-    const [reels, setReels] = useState([7,7,7, 7,7,7, 7,7,7]);
-    const [isSpinning, setIsSpinning] = useState([false, false, false]);
-    const [winningLines, setWinningLines] = useState([]);
-    const [lastWin, setLastWin] = useState(0);
-    const [winTier, setWinTier] = useState('NONE');
-    const [sessionWinStreak, setSessionWinStreak] = useState(0);
-    const [streakMult, setStreakMult] = useState(1.0);
-    const [freeSpins, setFreeSpins] = useState(0);
-    const [bonusMode, setBonusMode] = useState(null);
-    const [bonusSpinsLeft, setBonusSpinsLeft] = useState(0);
-    const [lapsSinceBonus, setLapsSinceBonus] = useState(120);
-    const [momentumMult, setMomentumMult] = useState(1.0);
-    const [inZone, setInZone] = useState(false);
-    const [isTeaser, setIsTeaser] = useState(false);
-    const [isReachEye, setIsReachEye] = useState(false);
-    const [isFreeze, setIsFreeze] = useState(false);
-    const [isJackpot, setIsJackpot] = useState(false);
-    
-    // Global State for Preview
-    const [currentJackpot, setCurrentJackpot] = useState(3599800); // Start just before 3.6M to see it climb
-    const [userBal, setUserBal] = useState(150000);
-
-    const [error, setError] = useState(null);
-    const [autoPlay, setAutoPlay] = useState(false);
-    const [turboMode, setTurboMode] = useState(false);
-    const [atSequence, setAtSequence] = useState([]);
-    const [atCurrentStep, setAtCurrentStep] = useState(0);
-    const [isReady, setIsReady] = useState(true);
-    
-    // Use refs for spin execution to decouple state from intervals
-    const spinDataRef = useRef(null);
-
-    const spin = (betAmount) => {
-        if (userBal < betAmount) {
-            setError("Insufficient Balance");
-            setAutoPlay(false);
-            return;
-        }
-
-        setIsSpinning([true, true, true]);
-        setWinningLines([]);
-        setLastWin(0);
-        setWinTier('NONE');
-        setIsJackpot(false);
-        
-        // 1. Deduct Bet & Feed Jackpot (5%)
-        setUserBal(prev => prev - betAmount);
-        let newJp = currentJackpot + (betAmount * 0.05);
-        
-        // 2. V3 ALGORITHM ROUTER
-        let isJpHit = false;
-        let spinWin = 0;
-        let finalStops = [0,0,0, 0,0,0, 0,0,0];
-        let wLines = [];
-        
-        // --- JACKPOT LOGIC ---
-        const gMin = 3600000;
-        const gMax = 7200000;
-        
-        if (newJp >= gMax) {
-            isJpHit = true; // Forced Hit at cap
-        } else if (newJp >= gMin) {
-            const alpha = Math.min(1, Math.max(0, (newJp - gMin) / (gMax - gMin)));
-            const pjp = 0.00002 * (1 + 5 * alpha);
-            if (Math.random() <= pjp) isJpHit = true;
-        }
-
-        if (isJpHit) {
-            spinWin = newJp;
-            newJp = 3000000; // Reset
-            finalStops = [2,5,3, 1,1,1, 4,6,2]; // Visual 7-7-7
-            wLines = [1];
-        } else {
-            // --- ISLAND ALGORITHMS ---
-            const roll = Math.floor(Math.random() * 1000) + 1;
-            let winSym = 0, mult = 0;
-            const id = parseInt(islandId) || 1;
-
-            if (id === 1) { // Kyoto Zen (~70% Base RTP)
-                if (roll <= 4) { winSym = 7; mult = 40; }       // Diamond
-                else if (roll <= 12) { winSym = 1; mult = 15; }  // 7
-                else if (roll <= 26) { winSym = 5; mult = 7; }   // Melon
-                else if (roll <= 56) { winSym = 4; mult = 3; }   // Bell
-                else if (roll <= 109) { winSym = 6; mult = 2; }  // Cherry
-                else if (roll <= 174) { winSym = 7; mult = 0; }  // Replay
-            } 
-            else if (id === 2) { // Neon Arcade
-                if (roll <= 1) { winSym = 1; mult = 50; }       
-                else if (roll <= 11) { winSym = 3; mult = 10; }  
-                else if (roll <= 41) { winSym = 5; mult = 4; }   
-                else if (roll <= 101) { winSym = 4; mult = 2; }   
-                else if (roll <= 251) { winSym = 6; mult = 1; }  
-            }
-            else if (id === 3) { // Edo Castle (Extreme)
-                if (roll <= 2) { winSym = 1; mult = 150; }      
-                else if (roll <= 12) { winSym = 3; mult = 20; }   
-                else if (roll <= 45) { winSym = 5; mult = 3; }   
-            }
-            else if (id === 4) { // Hanami Fest
-                if (roll <= 4) { winSym = 1; mult = 30; }       
-                else if (roll <= 14) { winSym = 3; mult = 12; }  
-                else if (roll <= 34) { winSym = 5; mult = 6; }   
-                else if (roll <= 74) { winSym = 4; mult = 4; }   
-                else if (roll <= 140) { winSym = 6; mult = 1.5; } 
-            }
-            else if (id === 5) { // Spirited Yokai
-                if (roll <= 5) { winSym = 1; mult = 40; }       
-                else if (roll <= 30) { winSym = 3; mult = 16; }   
-                else if (roll <= 70) { winSym = 4; mult = 0; }    
-            }
-
-            if (winSym > 0 && mult > 0) {
-                spinWin = betAmount * mult;
-                finalStops = [2,3,4, winSym,winSym,winSym, 5,6,2];
-                wLines = [1];
-            } else {
-                finalStops = [2,3,4, 5,6,7, 1,2,3].sort(() => Math.random() - 0.5);
-                wLines = [];
-            }
-        }
-
-        // Store data for when reels stop
-        spinDataRef.current = {
-            winAmount: spinWin,
-            stops: finalStops,
-            lines: wLines,
-            isJp: isJpHit,
-            newJpPool: newJp
-        };
-
-        // Auto-stop logic mock
-        if (autoPlay) {
-            const baseTime = turboMode ? 200 : 500;
-            setTimeout(() => stopReel(0), baseTime);
-            setTimeout(() => stopReel(1), baseTime * 2);
-            setTimeout(() => stopReel(2), baseTime * 3);
-        }
-    };
-    
-    const stopReel = (idx) => { 
-        setIsSpinning(p => { 
-            const n = [...p]; 
-            n[idx] = false; 
-            
-            // Check if all stopped
-            if (!n.some(s => s)) {
-                const data = spinDataRef.current;
-                if(data) {
-                    setReels(data.stops);
-                    setWinningLines(data.lines);
-                    setLastWin(data.winAmount);
-                    setIsJackpot(data.isJp);
-                    setCurrentJackpot(data.newJpPool);
-                    
-                    if (data.winAmount > 0) {
-                        setUserBal(prev => prev + data.winAmount);
-                        const mult = data.winAmount / BET_AMOUNTS[0]; // rough calc
-                        if (mult >= 40) setWinTier('EPIC');
-                        else if (mult >= 15) setWinTier('MEGA');
-                        else if (mult >= 7) setWinTier('BIG');
-                        else setWinTier('SMALL');
-                    }
-                }
-            }
-            return n; 
-        }); 
-    };
-    
-    return {
-        reels, winningLines, lastWin, winTier, sessionWinStreak, streakMult, volatility: 'V3 Engine',
-        isSpinning, isTeaser, isReachEye, isFreeze, isJackpot, setIsJackpot, error,
-        showIdleWarning: false, isIdleKicked: false, resetIdleTimer: ()=>{}, leave: ()=>{}, isReady,
-        freeSpins, bonusMode, bonusSpinsLeft, atSequence, atCurrentStep,
-        lapsSinceBonus, momentumMult, inZone,
-        showBonusSummary: false, bonusTotalWin: 0, clearBonusTotal: () => {},
-        levelUpData: null, setLevelUpData: () => {},
-        autoPlay, setAutoPlay, turboMode, setTurboMode,
-        spin, stopReel, setLastWin, currentJackpot, userBal
-    };
-};
-
-// --- UI Components ---
-const GlassCard = ({ children, className, onClick }) => (
-    <div className={`bg-white/10 backdrop-blur-md border border-white/20 rounded-2xl ${className}`} onClick={onClick}>
-        {children}
-    </div>
-);
-
-const CabinetSVG = ({ visualState }) => (
-    <div className={`w-full h-full rounded-[2rem] border-[8px] ${visualState === 'BROKEN' ? 'border-red-500 shadow-[0_0_50px_red]' : 'border-gray-800'} bg-[#111] shadow-[inset_0_0_50px_rgba(0,0,0,0.8)] relative overflow-hidden transition-colors duration-500`}>
-        <div className="absolute top-2 left-1/2 -translate-x-1/2 bg-black px-6 py-1 rounded-full border border-white/10 text-[9px] font-black tracking-widest text-cyan-500 shadow-lg">
-            LEVIATHAN ENGINE V3
-        </div>
-        <div className="absolute inset-0 bg-gradient-to-b from-white/5 to-transparent pointer-events-none"></div>
-    </div>
-);
-
-const CharacterSVG = ({ type, mood }) => (
-    <div className={`w-full h-full transition-transform duration-500 ${mood === 'win' ? 'scale-110 drop-shadow-[0_0_30px_rgba(168,85,247,0.6)]' : 'drop-shadow-xl'}`}>
-        <div className="w-full aspect-square bg-gradient-to-br from-purple-600 to-indigo-600 rounded-full border-4 border-white flex items-center justify-center relative overflow-hidden">
-            <Trophy className="text-white w-1/2 h-1/2 absolute z-10" />
-            <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/stardust.png')] opacity-30 animate-[spin_30s_linear_infinite]"></div>
-            <div className="absolute bottom-4 bg-black/80 px-2 py-0.5 rounded text-[8px] font-bold tracking-widest uppercase border border-white/20">{type || 'PET'}</div>
-        </div>
-    </div>
-);
-
-const SymbolSVG = ({ id, isWinning }) => {
-    const colors = ["text-yellow-400", "text-purple-400", "text-red-500", "text-yellow-200", "text-green-400", "text-pink-400", "text-cyan-400"];
-    const color = colors[id - 1] || "text-white";
-    return <div className={`font-black text-5xl ${color} ${isWinning ? 'animate-pulse drop-shadow-[0_0_15px_currentColor]' : ''}`}>{id}</div>;
-};
-
-const IslandLandscapeSVG = () => (
-    <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_bottom,_var(--tw-gradient-stops))] from-blue-900 via-gray-900 to-black" />
-);
-
-// ============================================================================
-// MAIN COMPONENT CODE
-// ============================================================================
+const PAYLINES = [[0, 1, 2], [3, 4, 5], [6, 7, 8], [0, 4, 8], [6, 4, 2]];
 
 // V3 RESTRICTED BETS
 const BET_AMOUNTS = [100, 500, 1000, 5000, 10000];
+
+// --- ROLLUP COUNTER ---
+const RollupNumber = ({ value, duration = 1000 }) => {
+    const [count, setCount] = useState(0);
+    useEffect(() => {
+        let start = 0;
+        const end = parseInt(value) || 0;
+        if (start === end) { setCount(end); return; }
+        if (end === 0) { setCount(0); return; }
+        
+        let timer = setInterval(() => {
+            start += Math.ceil(end / 20) || 1;
+            if (start >= end) { setCount(end); clearInterval(timer); } 
+            else { setCount(start); }
+        }, 30);
+        return () => clearInterval(timer);
+    }, [value]);
+    return <>{count.toLocaleString()}</>;
+};
 
 const getIslandPaylineStyle = () => {
     return { color: '#00f3ff', shadow: 'rgba(0, 243, 255, 0.8)' };
 };
 
-const ReelColumn = ({ isSpinning, finalSymbols, locked, isWinning, isTeaser, isFreeze }) => {
+const ReelColumn = ({ isSpinning, finalSymbols, locked, isWinning, isTeaser, isFreeze, islandId }) => {
     const spinStrip = useMemo(() => {
         const randomFill = Array.from({length: 12}, () => Math.floor(Math.random() * 7) + 1);
         return [...finalSymbols, ...randomFill];
@@ -273,7 +82,7 @@ const ReelColumn = ({ isSpinning, finalSymbols, locked, isWinning, isTeaser, isF
                                 ${isTeaser && !isSpinning && idx === 1 ? 'ring-2 ring-red-500/50 animate-pulse' : ''}
                                 ${isWinning && !isSpinning && idx < 3 ? 'z-10 shadow-[0_0_30px_rgba(255,215,0,0.6)] bg-yellow-900/30 ring-1 ring-yellow-400 scale-105' : ''}
                             `}>
-                                <SymbolSVG id={symId} isWinning={isWinning && !isSpinning && idx < 3} />
+                                <SymbolSVG id={symId} isWinning={isWinning && !isSpinning && idx < 3} islandId={islandId} />
                             </div>
                         </div>
                     ))}
@@ -284,18 +93,22 @@ const ReelColumn = ({ isSpinning, finalSymbols, locked, isWinning, isTeaser, isF
     );
 };
 
-const PlayView = ({ machine = { id: 1 }, island = { id: 1, name: 'Kyoto Zen' }, onLeave = () => {} }) => {
+const PlayView = ({ machine, island, onLeave }) => {
+    const router = useRouter();
+    const { user } = useAuth();
     const { addToast } = useToast();
+    const { playSound } = useGameSound();
     
     // Bind to the real API-driven slot machine hook
-    const slotLogic = useSlotMachine(machine?.id, island?.id);
+    const slotLogic = useSlotMachine(machine?.id, island?.id, machine?.session_token);
     
     const { 
-        reels, winningLines, isSpinning, isTeaser, lastWin, winTier, sessionWinStreak, streakMult, volatility,
+        reels, winningLines, isSpinning, isTeaser, lastWin, winTier, sessionWinStreak, streakMult,
         freeSpins, bonusMode, bonusSpinsLeft, atSequence, atCurrentStep,
+        showBonusSummary, bonusTotalWin, clearBonusTotal, levelUpData, setLevelUpData,
         isJackpot, isReachEye, isFreeze, lapsSinceBonus, momentumMult, inZone, error, 
-        isReady, autoPlay, spin, stopReel, setAutoPlay, setLastWin, turboMode, setTurboMode,
-        currentJackpot, userBal // Brought out for V3 UI
+        showIdleWarning, isIdleKicked, resetIdleTimer, isReady,
+        autoPlay, spin, stopReel, setAutoPlay, setLastWin, turboMode, setTurboMode
     } = slotLogic;
     
     const [betIndex, setBetIndex] = useState(0);
@@ -304,16 +117,18 @@ const PlayView = ({ machine = { id: 1 }, island = { id: 1, name: 'Kyoto Zen' }, 
     const [coins, setCoins] = useState([]);
     const [showPaytable, setShowPaytable] = useState(false);
     const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
+    const [reelThud, setReelThud] = useState([false, false, false]);
     
-    const { playSound } = useGameSound();
     const currentBet = BET_AMOUNTS[betIndex];
 
+    // Refs for synchronization
     const isProcessing = useRef(false);
     const winHandled = useRef(false); 
     
     const isCurrentlySpinning = isSpinning.some(s => s);
 
     const handlePointerMove = useCallback((e) => {
+        resetIdleTimer();
         if (typeof window !== 'undefined') {
             const { clientX, clientY } = e;
             const { innerWidth, innerHeight } = window;
@@ -321,7 +136,17 @@ const PlayView = ({ machine = { id: 1 }, island = { id: 1, name: 'Kyoto Zen' }, 
             const y = ((clientY / innerHeight) - 0.5) * -10;
             setMousePos({ x, y });
         }
-    }, []);
+    }, [resetIdleTimer]);
+
+    // Handle Backend Errors & AFK Kick
+    useEffect(() => {
+        if (error) {
+            addToast(`SYSTEM: ${error}`, 'error');
+            setAutoPlay(false);
+            isProcessing.current = false;
+            if (isIdleKicked && onLeave) setTimeout(() => onLeave(), 2500);
+        }
+    }, [error, addToast, setAutoPlay, isIdleKicked, onLeave]);
 
     const getCabinetState = () => {
         if (isFreeze) return 'BROKEN';
@@ -330,14 +155,20 @@ const PlayView = ({ machine = { id: 1 }, island = { id: 1, name: 'Kyoto Zen' }, 
         return 'FREE';
     };
 
-    const triggerCoinShower = (amount = 40) => {
-        const newParticles = Array.from({length: amount}).map((_, i) => ({
-            id: Date.now() + i, left: Math.random() * 100, delay: Math.random() * 1.5,
-            scale: 0.5 + Math.random(), rotation: Math.random() * 360
-        }));
-        setCoins(newParticles);
-        setTimeout(() => setCoins([]), 4000);
-    };
+    useEffect(() => {
+        if (isFreeze) { playSound('bigwin'); addToast("CRITICAL ANOMALY: LONG FREEZE DETECTED!", "error"); }
+    }, [isFreeze, playSound, addToast]);
+
+    useEffect(() => {
+        if (inZone && isCurrentlySpinning) setCharInteraction("⚠️ ZONE ACTIVE: RTP SURGE!");
+        else if (isReachEye && isCurrentlySpinning) setCharInteraction("Gekiatsu... REACH!");
+        else if (sessionWinStreak >= 3 && !isCurrentlySpinning) setCharInteraction(`🔥 COMBO x${sessionWinStreak}! MULT: ${streakMult}x`);
+        else if (momentumMult > 1.2 && !isCurrentlySpinning) setCharInteraction(`Momentum x${momentumMult.toFixed(1)}!`);
+    }, [inZone, isReachEye, momentumMult, sessionWinStreak, streakMult, isCurrentlySpinning]);
+
+    useEffect(() => {
+        if (levelUpData) { playSound('bigwin'); triggerCoinShower(80); }
+    }, [levelUpData, playSound]);
 
     // --- SECURE WIN EVALUATION (Gamble Removed) ---
     useEffect(() => {
@@ -348,12 +179,14 @@ const PlayView = ({ machine = { id: 1 }, island = { id: 1, name: 'Kyoto Zen' }, 
             playSound(isBigWin ? 'bigwin' : 'win');
             if (isBigWin) triggerCoinShower(isJackpot ? 150 : (winTier === 'EPIC' ? 100 : 50));
 
-            if (!bonusMode && !autoPlay) {
+            // Show celebration overlay based on tier or if not autoplaying
+            if (!bonusMode && (!autoPlay || isBigWin)) {
                 setWinStage('celebrating');
+                
                 // Automatically return to idle after celebration
                 setTimeout(() => {
                     setWinStage('idle');
-                    setLastWin(0);
+                    setLastWin(0); // Clear win visual safely
                 }, isJackpot ? 6000 : (winTier === 'EPIC' ? 4000 : 2500));
             }
         } 
@@ -361,22 +194,51 @@ const PlayView = ({ machine = { id: 1 }, island = { id: 1, name: 'Kyoto Zen' }, 
         if (!isCurrentlySpinning) {
             isProcessing.current = false;
         }
-    }, [lastWin, autoPlay, playSound, bonusMode, winStage, isCurrentlySpinning, winTier, isJackpot]);
+    }, [lastWin, autoPlay, playSound, bonusMode, winStage, isCurrentlySpinning, winTier, isJackpot, setLastWin]);
+
+    const triggerCoinShower = (amount = 40) => {
+        const newParticles = Array.from({length: amount}).map((_, i) => ({
+            id: Date.now() + i, left: Math.random() * 100, delay: Math.random() * 1.5,
+            scale: 0.5 + Math.random(), rotation: Math.random() * 360
+        }));
+        setCoins(newParticles);
+        setTimeout(() => setCoins([]), 4000);
+    };
 
     // --- CORE GAME ACTIONS ---
     const handleSpin = useCallback(() => {
-        if (!isReady || isProcessing.current || isCurrentlySpinning || winStage !== 'idle' || isFreeze) return; 
+        if (!isReady || isProcessing.current || isCurrentlySpinning || winStage !== 'idle' || isFreeze || levelUpData) return; 
+        if (parseFloat(user?.balance || 0) < currentBet && freeSpins === 0 && !bonusMode) {
+            addToast("Insufficient Balance", "error"); 
+            setAutoPlay(false);
+            return;
+        }
         
         isProcessing.current = true;
-        winHandled.current = false; 
+        winHandled.current = false; // Reset lock for the new spin
         setCharInteraction(null);
         playSound('spin');
         spin(currentBet);
-    }, [currentBet, winStage, playSound, spin, isCurrentlySpinning, isFreeze, isReady]);
+    }, [user, currentBet, winStage, playSound, spin, freeSpins, bonusMode, isCurrentlySpinning, isFreeze, levelUpData, addToast, isReady, setAutoPlay]);
+
+    const handleManualStop = (idx) => {
+        if (isSpinning[idx] && !autoPlay) {
+            if (atSequence && atSequence.length > 0 && atSequence[atCurrentStep] !== idx) return; 
+            playSound('stop');
+            if (navigator.vibrate) navigator.vibrate(20);
+            
+            // Visual thud feedback
+            setReelThud(prev => { const n = [...prev]; n[idx] = true; return n; });
+            setTimeout(() => { setReelThud(prev => { const n = [...prev]; n[idx] = false; return n; }); }, 150);
+            
+            stopReel(idx);
+        }
+    };
 
     const handleQuickStop = useCallback(() => {
         if (!isCurrentlySpinning) return;
         playSound('stop');
+        if (navigator.vibrate) navigator.vibrate(20);
         
         if (autoPlay) setAutoPlay(false);
 
@@ -385,7 +247,7 @@ const PlayView = ({ machine = { id: 1 }, island = { id: 1, name: 'Kyoto Zen' }, 
         order.forEach((reelIdx) => {
             if (isSpinning[reelIdx]) {
                 setTimeout(() => stopReel(reelIdx), delay);
-                delay += 120; 
+                delay += 120; // Fast sequential stop
             }
         });
     }, [isCurrentlySpinning, playSound, autoPlay, setAutoPlay, atSequence, isSpinning, stopReel]);
@@ -399,15 +261,28 @@ const PlayView = ({ machine = { id: 1 }, island = { id: 1, name: 'Kyoto Zen' }, 
 
     useEffect(() => {
         const handleKeyDown = (e) => {
+            resetIdleTimer();
             if (e.code === 'Space') { 
                 e.preventDefault(); 
                 if (isCurrentlySpinning) handleQuickStop();
                 else handleSpin(); 
             }
+            // Add keyboard support for manual stops
+            if (e.key === '1') handleManualStop(0); 
+            if (e.key === '2') handleManualStop(1); 
+            if (e.key === '3') handleManualStop(2);
         };
         window.addEventListener('keydown', handleKeyDown);
         return () => window.removeEventListener('keydown', handleKeyDown);
-    }, [handleSpin, handleQuickStop, isCurrentlySpinning]);
+    }, [handleSpin, handleQuickStop, handleManualStop, isCurrentlySpinning, resetIdleTimer]);
+
+    const winDetails = useMemo(() => {
+        if (!winningLines || winningLines.length === 0) return null;
+        const firstLine = winningLines[0];
+        if (firstLine === 99) return PAYTABLE_DATA.find(p => p.id === reels[0]) || PAYTABLE_DATA[6]; 
+        const symId = reels[PAYLINES[firstLine][0]];
+        return PAYTABLE_DATA.find(p => p.id === symId) || PAYTABLE_DATA[6];
+    }, [winningLines, reels]);
 
     const lineStyle = getIslandPaylineStyle();
     const strokeWidths = { 'NONE': 4, 'SMALL': 5, 'BIG': 8, 'MEGA': 12, 'EPIC': 18 };
@@ -416,6 +291,7 @@ const PlayView = ({ machine = { id: 1 }, island = { id: 1, name: 'Kyoto Zen' }, 
         <div 
             className={`min-h-screen bg-black relative flex flex-col overflow-hidden transition-colors duration-1000 ${bonusMode === 'HEAVEN' ? 'bg-purple-950' : (bonusMode ? 'bg-red-950' : '')}`}
             onPointerMove={handlePointerMove} 
+            onPointerDown={resetIdleTimer}
         >
             <style dangerouslySetInnerHTML={{__html: `
                 @keyframes reel-spin-anim { 0% { transform: translateY(-80%); filter: blur(0px); } 5% { filter: blur(4px); } 100% { transform: translateY(0%); filter: blur(4px); } }
@@ -431,28 +307,24 @@ const PlayView = ({ machine = { id: 1 }, island = { id: 1, name: 'Kyoto Zen' }, 
                 <IslandLandscapeSVG islandId={island?.id} />
                 <div className="absolute inset-0 bg-gradient-to-b from-black/80 via-black/20 to-black"></div>
                 {inZone && <div className="absolute inset-0 bg-yellow-500/10 mix-blend-overlay animate-pulse"></div>}
+                {bonusMode === 'HEAVEN' && <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/circuit-board.png')] opacity-40 mix-blend-color-dodge animate-pulse hue-rotate-180"></div>}
             </div>
 
-            {/* V3 INTEGRATED GRAND JACKPOT TICKER */}
-            <div className="bg-black border-b border-white/10 h-10 flex items-center overflow-hidden relative z-30 shadow-lg">
-                <div className="bg-yellow-900/80 h-full px-4 flex items-center justify-center border-r border-yellow-500/50 z-10">
-                    <Trophy className="w-4 h-4 text-yellow-500 mr-2" />
-                    <span className="text-yellow-400 font-black text-xs tracking-widest italic">GRAND JACKPOT</span>
-                </div>
-                <div className="flex-1 px-6 flex items-center justify-between bg-gradient-to-r from-yellow-900/20 to-transparent">
-                    <div className="text-yellow-400 font-mono font-black text-xl tracking-[0.2em] drop-shadow-[0_0_10px_gold]">
-                        {currentJackpot.toLocaleString()}
-                    </div>
-                    {currentJackpot >= 3600000 && (
-                        <div className="text-[10px] bg-red-600 text-white font-bold px-2 py-0.5 rounded animate-pulse">
-                            TRIGGER HOT
-                        </div>
-                    )}
-                </div>
-            </div>
+            {/* AFK WARNING BANNER */}
+            <AnimatePresence>
+                {showIdleWarning && (
+                    <motion.div initial={{ y: -50, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: -50, opacity: 0 }} className="fixed top-24 left-1/2 transform -translate-x-1/2 z-[100] w-[90%] max-w-sm bg-red-600 border-2 border-white shadow-[0_0_30px_red] rounded-full p-2 flex items-center justify-center gap-2 animate-pulse">
+                        <ShieldAlert className="text-white" size={16}/>
+                        <span className="text-white font-black text-[10px] tracking-widest uppercase">Idle Warning: Kick in 60s. Tap to stay.</span>
+                    </motion.div>
+                )}
+            </AnimatePresence>
+
+            <GlobalTicker />
+            <ActiveEvents />
             
-            {/* TELEMETRY HUD (Top) */}
-            <div className="absolute top-16 left-0 w-full px-6 flex justify-between items-start z-40 pointer-events-none">
+            {/* TELEMETRY HUD (Top) - RTP REMOVED FOR PRODUCTION IMMERSION */}
+            <div className="absolute top-10 left-0 w-full px-6 flex justify-between items-start z-40 pointer-events-none mt-2">
                 <div className="flex flex-col gap-2">
                     <button onClick={onLeave} className="pointer-events-auto w-10 h-10 bg-black/60 rounded-full text-white backdrop-blur flex items-center justify-center border border-white/10 hover:bg-white/20 active:scale-95 transition-all"><ChevronLeft/></button>
                     
@@ -463,24 +335,38 @@ const PlayView = ({ machine = { id: 1 }, island = { id: 1, name: 'Kyoto Zen' }, 
                             <div className="text-sm font-mono font-black text-white">x{momentumMult.toFixed(1)}</div>
                         </div>
                     </div>
+
+                    <AnimatePresence>
+                        {sessionWinStreak >= 3 && (
+                            <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0 }} className="pointer-events-auto bg-orange-900/80 border border-orange-500 rounded-xl p-2 px-3 flex items-center gap-2 backdrop-blur-md shadow-[0_0_15px_orange] animate-pulse">
+                                <Flame size={16} className="text-orange-400 fill-current" />
+                                <div>
+                                    <div className="text-[8px] text-orange-200 font-bold uppercase">WIN STREAK</div>
+                                    <div className="text-sm font-mono font-black text-white">x{sessionWinStreak} <span className="text-xs text-orange-400 ml-1">(+{streakMult}x)</span></div>
+                                </div>
+                            </motion.div>
+                        )}
+                    </AnimatePresence>
                 </div>
 
                 <div className="flex flex-col items-end gap-2">
-                    <div className="pointer-events-auto bg-black/80 border border-yellow-500/30 rounded-full px-4 py-2 flex items-center gap-3 backdrop-blur-md shadow-lg cursor-pointer hover:bg-black transition-colors">
+                    <div className="pointer-events-auto bg-black/80 border border-yellow-500/30 rounded-full px-4 py-2 flex items-center gap-3 backdrop-blur-md shadow-lg cursor-pointer hover:bg-black transition-colors" onClick={() => router.push('/wallet')}>
                         <Coins size={18} className="text-yellow-400" />
-                        <span className="text-white font-mono font-black text-lg">{userBal.toLocaleString()}</span>
+                        <span className="text-white font-mono font-black text-lg"><RollupNumber value={user?.balance || 0} /></span>
                     </div>
 
-                    <div className="flex items-center gap-2 pointer-events-auto">
-                        <button onClick={() => { playSound('click'); setShowPaytable(true); }} className="w-8 h-8 rounded-full bg-black/60 border border-white/10 flex items-center justify-center text-gray-400 hover:text-white backdrop-blur-sm transition-colors">
+                    <div className={`pointer-events-auto bg-black/80 border rounded-xl p-2 px-3 flex items-center gap-3 backdrop-blur-md shadow-lg transition-colors duration-500 ${lapsSinceBonus > 700 ? 'border-red-500 shadow-[0_0_15px_red] animate-pulse' : 'border-red-500/30'}`}>
+                        <div>
+                            <div className="text-[8px] text-red-500 font-bold uppercase text-right">Tenjo Limit</div>
+                            <div className="text-sm font-mono font-black text-white">{lapsSinceBonus} / 777</div>
+                        </div>
+                        <Timer size={16} className={lapsSinceBonus > 700 ? 'text-white' : 'text-red-400'} />
+                    </div>
+
+                    <div className="pointer-events-auto">
+                        <button onClick={() => { playSound('click'); setShowPaytable(true); }} className="w-8 h-8 rounded-full bg-black/60 border border-white/10 flex items-center justify-center text-gray-400 hover:text-white backdrop-blur-sm transition-colors shadow-lg">
                             <Info size={14} />
                         </button>
-                        <div className="bg-black/60 border border-white/10 rounded-full px-3 py-1 flex items-center gap-1 backdrop-blur-sm">
-                            <span className="text-[8px] text-gray-400 uppercase font-bold">ALGO:</span>
-                            <span className={`text-[10px] font-black uppercase tracking-widest text-cyan-400`}>
-                                V3 {island.name}
-                            </span>
-                        </div>
                     </div>
                 </div>
             </div>
@@ -494,12 +380,12 @@ const PlayView = ({ machine = { id: 1 }, island = { id: 1, name: 'Kyoto Zen' }, 
                     style={{ transformStyle: 'preserve-3d' }}
                 >
                     <div className="absolute inset-0 z-10 w-full h-full pointer-events-none" style={{ transform: 'translateZ(-10px)' }}>
-                        <CabinetSVG visualState={getCabinetState()} />
+                        <CabinetSVG islandId={parseInt(island?.id || 1)} mode="game" charId={island?.hostess_char_id} visualState={getCabinetState()} />
                         {turboMode && <div className="absolute inset-0 rounded-[2rem] border-[4px] border-yellow-500 opacity-50 shadow-[0_0_30px_gold] animate-pulse pointer-events-none"></div>}
                     </div>
 
                     <div className="absolute bottom-[5%] right-[-20%] w-[60%] h-[65%] z-20 pointer-events-auto cursor-pointer group" style={{ transform: 'translateZ(30px)' }} onClick={() => {playSound('click'); setCharInteraction("Target acquired.");}}>
-                        <CharacterSVG type={'luna'} mood={bonusMode || winTier !== 'NONE' ? 'win' : 'idle'} />
+                        <CharacterSVG type={user?.active_pet_id || island?.hostess_char_id} mood={bonusMode || winTier !== 'NONE' ? 'win' : 'idle'} />
                         <AnimatePresence>
                             {charInteraction && (
                                 <motion.div initial={{ opacity: 0, scale: 0.5, y: 20 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.5, y: 20 }} className={`absolute -top-10 left-0 bg-white text-black p-3 rounded-2xl rounded-bl-none shadow-2xl border-2 z-50 font-black text-xs uppercase italic tracking-wider whitespace-nowrap ${inZone ? 'border-yellow-500 shadow-[0_0_15px_gold]' : 'border-cyan-500'}`}>
@@ -522,7 +408,7 @@ const PlayView = ({ machine = { id: 1 }, island = { id: 1, name: 'Kyoto Zen' }, 
                                 <ReelColumn key={colIdx} isSpinning={isSpinning[colIdx]} finalSymbols={reels.slice(colIdx * 3, colIdx * 3 + 3)} islandId={island?.id} isWinning={winningLines.length > 0 && winningLines.some(lId => [0,1,2,3,4].includes(lId) || (lId === 99 && colIdx === 0))} isTeaser={isTeaser} isFreeze={isFreeze} />
                             ))}
 
-                            {winningLines.length > 0 && (
+                            {winningLines.length > 0 && winStage !== 'gambling' && (
                                 <svg className="absolute inset-0 w-full h-full pointer-events-none z-40" preserveAspectRatio="none">
                                     <defs><filter id="winlineGlow"><feGaussianBlur stdDeviation={winTier === 'EPIC' ? "8" : "4"} result="blur"/><feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge></filter></defs>
                                     {winningLines.map(lineIdx => {
@@ -564,9 +450,14 @@ const PlayView = ({ machine = { id: 1 }, island = { id: 1, name: 'Kyoto Zen' }, 
                             {/* Center Controls: Hide manual stop buttons when NOT spinning */}
                             <div className={`absolute left-[31%] top-[25%] flex gap-[10%] w-[38%] justify-between z-50 transition-opacity duration-300 ${isCurrentlySpinning ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
                                 {[0, 1, 2].map((idx) => {
+                                    const naviOrder = atSequence ? atSequence.indexOf(idx) : -1;
+                                    const isCurrentNavi = atSequence && atSequence[atCurrentStep] === idx;
+                                    const showNavi = atSequence && atSequence.length > 0 && naviOrder >= atCurrentStep && isSpinning[idx];
+
                                     return (
-                                        <button key={idx} onClick={() => handleStopReel(idx)} disabled={!isSpinning[idx] || autoPlay} className={`relative w-12 h-12 rounded-full border-4 flex items-center justify-center transition-all shadow-xl touch-manipulation ${isSpinning[idx] && !autoPlay ? 'bg-red-600 border-red-400 text-white cursor-pointer shadow-[0_0_20px_red] hover:bg-red-500' : 'bg-black/50 border-gray-800 text-gray-700 cursor-default opacity-40'} scale-100`}>
+                                        <button key={idx} onClick={() => handleManualStop(idx)} disabled={!isSpinning[idx] || autoPlay} className={`relative w-12 h-12 rounded-full border-4 flex items-center justify-center transition-all shadow-xl touch-manipulation ${isSpinning[idx] && !autoPlay ? 'bg-red-600 border-red-400 text-white cursor-pointer shadow-[0_0_20px_red] hover:bg-red-500' : 'bg-black/50 border-gray-800 text-gray-700 cursor-default opacity-40'} ${isCurrentNavi && !autoPlay ? 'animate-pulse ring-4 ring-yellow-400 border-white' : ''} ${reelThud[idx] ? 'scale-75 border-0 bg-red-800' : 'scale-100'}`}>
                                             <StopCircle size={20} fill={isSpinning[idx] ? "currentColor" : "none"}/>
+                                            {showNavi && <div className={`absolute -top-10 w-10 h-10 rounded-full border-2 font-black text-lg flex items-center justify-center z-50 pointer-events-none transition-all ${isCurrentNavi ? 'bg-yellow-400 text-black border-white animate-bounce shadow-[0_0_20px_gold] scale-125' : 'bg-black/90 text-yellow-500 border-yellow-500 opacity-80'}`}>{naviOrder + 1}</div>}
                                         </button>
                                     );
                                 })}
@@ -579,12 +470,14 @@ const PlayView = ({ machine = { id: 1 }, island = { id: 1, name: 'Kyoto Zen' }, 
                                 className={`absolute right-[2%] top-[5%] w-20 h-20 rounded-full border-b-[8px] flex flex-col items-center justify-center shadow-2xl transition-all touch-manipulation 
                                 ${!isReady || (isProcessing.current && !isCurrentlySpinning) ? 'bg-gray-800 border-gray-950 opacity-50 translate-y-1 border-b-[4px]' : 
                                   isCurrentlySpinning ? 'bg-gradient-to-b from-red-600 to-red-900 border-red-950 text-white shadow-[0_0_20px_red] active:translate-y-2 active:border-b-0' :
+                                  bonusMode ? 'bg-gradient-to-b from-yellow-400 to-orange-600 border-orange-950 text-white shadow-[0_0_30px_gold] animate-pulse active:translate-y-2 active:border-b-0' : 
+                                  freeSpins > 0 ? 'bg-gradient-to-b from-cyan-400 to-blue-600 border-blue-950 text-white shadow-[0_0_20px_cyan] active:translate-y-2 active:border-b-0' : 
                                   'bg-gradient-to-b from-red-500 to-red-800 border-red-950 text-white hover:brightness-110 active:translate-y-2 active:border-b-0'}`}
                             >
                                 {turboMode && !isCurrentlySpinning && <Zap className="absolute -top-2 -right-2 text-yellow-400 fill-yellow-400 animate-pulse drop-shadow-[0_0_10px_yellow]" size={20} />}
                                 {isCurrentlySpinning ? <StopCircle size={28} strokeWidth={2.5} className="text-white mb-1" /> : <Gamepad2 size={28} strokeWidth={2.5} className="text-white mb-1" />}
                                 <span className="text-[9px] font-black text-white tracking-widest uppercase drop-shadow-md">
-                                    {!isReady ? 'WAIT...' : (isCurrentlySpinning ? 'STOP' : 'SPIN')}
+                                    {!isReady ? 'WAIT...' : (isCurrentlySpinning ? 'STOP' : (bonusMode ? 'AT SPIN' : (freeSpins > 0 ? 'REPLAY' : 'SPIN')))}
                                 </span>
                             </button>
 
@@ -620,7 +513,7 @@ const PlayView = ({ machine = { id: 1 }, island = { id: 1, name: 'Kyoto Zen' }, 
                                 {PAYTABLE_DATA.map((item) => (
                                     <div key={item.id} className="flex items-center justify-between bg-white/5 p-2 rounded-lg border border-white/10">
                                         <div className="flex items-center gap-3">
-                                            <div className="w-10 h-10 p-1 bg-black rounded shadow-inner"><SymbolSVG id={item.id} /></div>
+                                            <div className="w-10 h-10 p-1 bg-black rounded shadow-inner"><SymbolSVG id={item.id} islandId={parseInt(island?.id || 1)} /></div>
                                             <span className={`font-bold text-sm ${item.color}`}>{item.name}</span>
                                         </div>
                                         <div className="font-mono text-white font-black">{typeof item.mult === 'number' ? `x${item.mult}` : item.mult}</div>
@@ -633,19 +526,39 @@ const PlayView = ({ machine = { id: 1 }, island = { id: 1, name: 'Kyoto Zen' }, 
             </AnimatePresence>
 
             <AnimatePresence>
-                {winStage === 'celebrating' && (
+                {winStage === 'celebrating' && winDetails && !bonusMode && (
                     <motion.div initial={{ opacity: 0, backdropFilter: 'blur(0px)' }} animate={{ opacity: 1, backdropFilter: 'blur(10px)' }} exit={{ opacity: 0 }} className="fixed inset-0 z-50 flex items-center justify-center pointer-events-none">
                         {(winTier === 'EPIC' || isJackpot) && <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/circuit-board.png')] opacity-30 mix-blend-color-dodge animate-pulse hue-rotate-90"></div>}
                         <motion.div initial={{ scale: 0.5, y: 100 }} animate={{ scale: (winTier === 'EPIC' || isJackpot) ? 1.2 : 1, y: 0, transition: { type: "spring", stiffness: 200, damping: 15 } }} className="relative z-10 flex flex-col items-center">
-                            <GlassCard className={`p-10 text-center flex flex-col items-center border-t-8 border-b-8 ${isJackpot ? 'border-yellow-400 shadow-[0_0_150px_gold]' : 'border-cyan-400'}`}>
+                            <GlassCard className={`p-10 text-center flex flex-col items-center border-t-8 border-b-8 ${isJackpot ? 'border-yellow-400 shadow-[0_0_150px_gold]' : (winDetails?.color?.replace('text-', 'border-') || 'border-cyan-400')} ${winDetails?.glow} ${winTier === 'EPIC' ? 'shadow-[0_0_100px_rgba(255,215,0,0.8)]' : ''}`}>
                                 {isJackpot ? <h1 className="text-6xl font-black italic text-transparent bg-clip-text bg-gradient-to-b from-yellow-200 via-orange-500 to-red-600 drop-shadow-2xl mb-4 animate-pulse">GRAND JACKPOT</h1> : 
                                  winTier === 'EPIC' ? <h1 className="text-6xl font-black italic text-transparent bg-clip-text bg-gradient-to-b from-purple-200 to-pink-600 drop-shadow-2xl mb-4 animate-pulse">EPIC WIN</h1> : 
                                  winTier === 'MEGA' ? <h1 className="text-5xl font-black italic text-transparent bg-clip-text bg-gradient-to-b from-cyan-200 to-blue-600 drop-shadow-lg mb-4">MEGA WIN</h1> : null}
+                                <motion.div animate={{ rotate: [0, -10, 10, -10, 0], scale: [1, 1.2, 1] }} transition={{ duration: 0.5, repeat: Infinity }} className="w-32 h-32 mb-6">
+                                    <SymbolSVG id={winDetails.id} islandId={parseInt(island?.id || 1)} isWinning={true} />
+                                </motion.div>
+                                <h2 className={`text-4xl font-black italic tracking-tighter uppercase drop-shadow-2xl ${winDetails?.color}`}>{winDetails?.name}</h2>
                                 <div className="text-6xl font-mono font-black text-white drop-shadow-[0_0_30px_rgba(255,255,255,0.8)] mt-6 bg-black/50 px-6 py-2 rounded-2xl border border-white/20">
-                                    +{(lastWin).toLocaleString()}
+                                    +<RollupNumber value={lastWin} duration={winTier === 'EPIC' ? 2500 : 1500} />
                                 </div>
                             </GlassCard>
                         </motion.div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
+
+            <AnimatePresence>
+                {showBonusSummary && (
+                    <motion.div initial={{ opacity: 0, backdropFilter: 'blur(0px)' }} animate={{ opacity: 1, backdropFilter: 'blur(10px)' }} className="fixed inset-0 z-[100] bg-black/80 flex items-center justify-center p-6 pointer-events-auto">
+                        <GlassCard className="w-full max-w-sm p-8 text-center border-yellow-500/50 shadow-[0_0_80px_gold]">
+                            <Trophy size={80} className="text-yellow-500 mx-auto mb-6 animate-bounce drop-shadow-[0_0_20px_rgba(234,179,8,0.8)]" />
+                            <h3 className="text-gray-400 font-bold text-sm mb-1 uppercase tracking-widest">Bonus Complete</h3>
+                            <h2 className="text-4xl font-black text-white italic mb-6">TOTAL GET</h2>
+                            <div className="text-6xl font-mono font-black text-transparent bg-clip-text bg-gradient-to-b from-yellow-200 to-yellow-600 mb-8 border-y border-white/10 py-6 drop-shadow-xl">
+                                +<RollupNumber value={bonusTotalWin} duration={2000} />
+                            </div>
+                            <button onClick={() => { playSound('click'); clearBonusTotal(); }} className="w-full py-4 bg-white text-black font-black text-lg rounded-xl shadow-[0_0_20px_rgba(255,255,255,0.5)] hover:scale-105 active:scale-95 transition-all">CONTINUE</button>
+                        </GlassCard>
                     </motion.div>
                 )}
             </AnimatePresence>
