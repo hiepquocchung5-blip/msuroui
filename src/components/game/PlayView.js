@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { 
     ChevronLeft, Minus, Plus, Zap, StopCircle, Gamepad2, 
     Trophy, Flame, MessageCircle, TrendingUp, 
-    ShieldAlert, X, Coins, Repeat, Target, Activity, Cpu, MapPin
+    ShieldAlert, X, Coins, Repeat, Target, Activity, Cpu, MapPin, HelpCircle
 } from 'lucide-react';
 import { useRouter } from 'next/router';
 
@@ -120,7 +120,10 @@ const PlayView = ({ machine, island, onLeave }) => {
     const [betIndex, setBetIndex] = useState(0);
     const [winStage, setWinStage] = useState('idle');
     const [charInteraction, setCharInteraction] = useState(null);
-    const [coins, setCoins] = useState([]);
+    
+    // RENAMED from `coins` to `coinParticles` to fix the component shadowing collision
+    const [coinParticles, setCoinParticles] = useState([]); 
+    
     const [showPaytable, setShowPaytable] = useState(false);
     const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
     const [reelThud, setReelThud] = useState([false, false, false]);
@@ -239,8 +242,8 @@ const PlayView = ({ machine, island, onLeave }) => {
             id: Date.now() + i, left: Math.random() * 100, delay: Math.random() * 1.5,
             scale: 0.5 + Math.random(), rotation: Math.random() * 360
         }));
-        setCoins(newParticles);
-        setTimeout(() => setCoins([]), 4000);
+        setCoinParticles(newParticles);
+        setTimeout(() => setCoinParticles([]), 4000);
     };
 
     // --- CORE GAME ACTIONS ---
@@ -592,7 +595,7 @@ const PlayView = ({ machine, island, onLeave }) => {
             </div>
 
             {/* COIN VFX */}
-            {coins.map(c => (
+            {coinParticles.map(c => (
                 <div key={c.id} className="absolute top-[-20px] animate-fall z-50 pointer-events-none" style={{ left: `${c.left}%`, animationDuration: '2.5s', animationDelay: `${c.delay}s`, transform: `scale(${c.scale}) rotate(${c.rotation}deg)` }}>
                     <div className="w-6 h-6 bg-yellow-400 rounded-full border-2 border-yellow-200 shadow-lg flex items-center justify-center font-black text-yellow-700 text-xs"><Coins size={10} strokeWidth={3}/></div>
                 </div>
