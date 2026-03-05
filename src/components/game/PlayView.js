@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { 
     ChevronLeft, Minus, Plus, Zap, StopCircle, Gamepad2, 
     Trophy, Flame, MessageCircle, TrendingUp, 
-    ShieldAlert, X, Coins, Repeat, Target, Activity, Cpu
+    ShieldAlert, X, Coins, Repeat, Target, Activity, Cpu, MapPin
 } from 'lucide-react';
 import { useRouter } from 'next/router';
 
@@ -136,6 +136,11 @@ const PlayView = ({ machine, island, onLeave }) => {
     
     const isCurrentlySpinning = isSpinning.some(s => s);
 
+    // --- MACHINE FLOOR & ID CALCULATION ---
+    const currentFloor = Math.ceil((machine?.machine_number || 1) / 90);
+    const relativeNum = (((machine?.machine_number || 1) - 1) % 90) + 1;
+    const displayId = `${currentFloor}-${relativeNum.toString().padStart(2, '0')}`;
+
     // --- GRAND JACKPOT LIVE FETCHING ---
     useEffect(() => {
         const fetchJackpot = async () => {
@@ -187,7 +192,7 @@ const PlayView = ({ machine, island, onLeave }) => {
         return 'FREE';
     };
 
-    // AI Status Logic (Replaces RTP)
+    // AI Status Logic
     const isOverheating = sessionWinStreak >= 3 || momentumMult > 1.2 || inZone || bonusMode;
 
     useEffect(() => {
@@ -396,16 +401,29 @@ const PlayView = ({ machine, island, onLeave }) => {
                 />
             </div>
             
-            {/* --- CYBER HUD (Replaces old RTP display) --- */}
-            <div className="absolute top-20 sm:top-24 left-0 w-full px-4 sm:px-6 flex justify-between items-start z-40 pointer-events-none mt-1">
+            {/* --- CYBER HUD --- */}
+            <div className="absolute top-16 sm:top-20 left-0 w-full px-4 sm:px-6 flex justify-between items-start z-40 pointer-events-none mt-1">
                 
                 {/* Left Side: Navigation & Momentum */}
                 <div className="flex flex-col gap-2">
-                    <button onClick={onLeave} className="pointer-events-auto w-10 h-10 bg-white/5 border border-white/10 flex items-center justify-center text-white hover:bg-cyan-500/20 hover:text-cyan-400 hover:border-cyan-500/50 transition-all active:scale-95 shadow-lg rounded-full backdrop-blur-md">
-                        <ChevronLeft size={24} />
-                    </button>
+                    <div className="flex items-start gap-3 pointer-events-auto">
+                        <button onClick={onLeave} className="w-10 h-10 flex-shrink-0 bg-white/5 border border-white/10 flex items-center justify-center text-white hover:bg-cyan-500/20 hover:text-cyan-400 hover:border-cyan-500/50 transition-all active:scale-95 shadow-lg rounded-full backdrop-blur-md">
+                            <ChevronLeft size={24} />
+                        </button>
+                        <div className="flex flex-col">
+                            <div className="flex items-center gap-2 text-cyan-400 mb-0.5 drop-shadow-[0_0_5px_rgba(34,211,238,0.5)]">
+                                <MapPin size={12} />
+                                <span className="text-[10px] font-black uppercase tracking-widest bg-cyan-950/50 border border-cyan-500/30 px-2 py-0.5 rounded shadow-inner">
+                                    {island?.name || 'Unknown'} • FLR {currentFloor}
+                                </span>
+                            </div>
+                            <h2 className="text-white font-black text-xl sm:text-2xl italic uppercase tracking-wider leading-none drop-shadow-md truncate flex items-center gap-2">
+                                <Cpu size={20} className="text-cyan-500"/> UNIT #{displayId}
+                            </h2>
+                        </div>
+                    </div>
                     
-                    <div className={`pointer-events-auto bg-black/80 border rounded-xl p-1.5 sm:p-2 px-2 sm:px-3 flex items-center gap-2 sm:gap-3 backdrop-blur-md shadow-lg transition-colors duration-500 ${momentumMult > 1.5 ? 'border-purple-500 shadow-[0_0_15px_purple]' : 'border-cyan-500/30'}`}>
+                    <div className={`pointer-events-auto w-fit bg-black/80 border rounded-xl p-1.5 sm:p-2 px-2 sm:px-3 flex items-center gap-2 sm:gap-3 backdrop-blur-md shadow-lg transition-colors duration-500 mt-1 ${momentumMult > 1.5 ? 'border-purple-500 shadow-[0_0_15px_purple]' : 'border-cyan-500/30'}`}>
                         <TrendingUp size={14} className={momentumMult > 1.5 ? 'text-purple-400 animate-pulse' : 'text-cyan-400'} />
                         <div>
                             <div className={`text-[7px] sm:text-[8px] font-bold uppercase tracking-wider ${momentumMult > 1.5 ? 'text-purple-500' : 'text-cyan-500'}`}>Momentum</div>
@@ -454,7 +472,14 @@ const PlayView = ({ machine, island, onLeave }) => {
                     style={{ transformStyle: 'preserve-3d' }}
                 >
                     <div className="absolute inset-0 z-10 w-full h-full pointer-events-none drop-shadow-[0_20px_25px_rgba(0,0,0,0.9)]" style={{ transform: 'translateZ(-10px)' }}>
-                        <CabinetSVG islandId={parseInt(island?.id || 1)} mode="game" charId={island?.hostess_char_id} visualState={getCabinetState()} />
+                        <CabinetSVG 
+                            islandId={parseInt(island?.id || 1)} 
+                            mode="game" 
+                            charId={island?.hostess_char_id} 
+                            visualState={getCabinetState()} 
+                            machineNumber={displayId}
+                            serialNumber={machine?.serial_number}
+                        />
                         {turboMode && <div className="absolute inset-0 rounded-[2rem] border-[4px] border-yellow-500 opacity-50 shadow-[0_0_30px_gold] animate-pulse pointer-events-none"></div>}
                     </div>
 
