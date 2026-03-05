@@ -58,7 +58,7 @@ const RollupNumber = ({ value, duration = 1000 }) => {
             }
         }, 30);
         return () => clearInterval(timer);
-    }, [value]);
+    }, [value, count]);
     return <>{count.toLocaleString()}</>;
 };
 
@@ -137,8 +137,9 @@ const PlayView = ({ machine, island, onLeave }) => {
     const isCurrentlySpinning = isSpinning.some(s => s);
 
     // --- MACHINE FLOOR & ID CALCULATION ---
-    const currentFloor = Math.ceil((machine?.machine_number || 1) / 90);
-    const relativeNum = (((machine?.machine_number || 1) - 1) % 90) + 1;
+    const MACHINES_PER_FLOOR = 90;
+    const currentFloor = Math.ceil((machine?.machine_number || 1) / MACHINES_PER_FLOOR);
+    const relativeNum = (((machine?.machine_number || 1) - 1) % MACHINES_PER_FLOOR) + 1;
     const displayId = `${currentFloor}-${relativeNum.toString().padStart(2, '0')}`;
 
     // --- GRAND JACKPOT LIVE FETCHING ---
@@ -165,7 +166,7 @@ const PlayView = ({ machine, island, onLeave }) => {
     }, [isJackpot]);
 
     const handlePointerMove = useCallback((e) => {
-        resetIdleTimer();
+        if(resetIdleTimer) resetIdleTimer();
         if (typeof window !== 'undefined') {
             const { clientX, clientY } = e;
             const { innerWidth, innerHeight } = window;
@@ -192,7 +193,7 @@ const PlayView = ({ machine, island, onLeave }) => {
         return 'FREE';
     };
 
-    // AI Status Logic
+    // AI Status Logic 
     const isOverheating = sessionWinStreak >= 3 || momentumMult > 1.2 || inZone || bonusMode;
 
     useEffect(() => {
@@ -303,7 +304,7 @@ const PlayView = ({ machine, island, onLeave }) => {
 
     useEffect(() => {
         const handleKeyDown = (e) => {
-            resetIdleTimer();
+            if(resetIdleTimer) resetIdleTimer();
             if (e.code === 'Space') { 
                 e.preventDefault(); 
                 if (isCurrentlySpinning) handleQuickStop();
@@ -533,13 +534,13 @@ const PlayView = ({ machine, island, onLeave }) => {
                             
                             {/* Left Controls: V3 Restricted Bets */}
                             <div className={`absolute left-[2%] top-[10%] flex items-center gap-1 bg-black/40 p-1 rounded-lg border border-white/10 shadow-inner transition-opacity ${isCurrentlySpinning ? 'opacity-50 pointer-events-none' : 'opacity-100'}`}>
-                                <button onClick={() => { if(!isMuted) playSound('click'); setBetIndex(Math.max(0, betIndex - 1))}} className="w-8 h-8 bg-gray-800 rounded flex items-center justify-center text-white active:bg-cyan-600 active:scale-95 transition-all"><Minus size={14}/></button>
+                                <button onClick={() => { if(playSound) playSound('click'); setBetIndex(Math.max(0, betIndex - 1))}} className="w-8 h-8 bg-gray-800 rounded flex items-center justify-center text-white active:bg-cyan-600 active:scale-95 transition-all"><Minus size={14}/></button>
                                 <div className="w-16 text-center font-mono font-bold text-yellow-400 text-xs">{currentBet.toLocaleString()}</div>
-                                <button onClick={() => { if(!isMuted) playSound('click'); setBetIndex(Math.min(BET_AMOUNTS.length - 1, betIndex + 1))}} className="w-8 h-8 bg-gray-800 rounded flex items-center justify-center text-white active:bg-cyan-600 active:scale-95 transition-all"><Plus size={14}/></button>
+                                <button onClick={() => { if(playSound) playSound('click'); setBetIndex(Math.min(BET_AMOUNTS.length - 1, betIndex + 1))}} className="w-8 h-8 bg-gray-800 rounded flex items-center justify-center text-white active:bg-cyan-600 active:scale-95 transition-all"><Plus size={14}/></button>
                             </div>
                             
                             <button 
-                                onClick={() => { if(!isMuted) playSound('click'); setBetIndex(BET_AMOUNTS.length - 1)}} 
+                                onClick={() => { if(playSound) playSound('click'); setBetIndex(BET_AMOUNTS.length - 1)}} 
                                 disabled={isCurrentlySpinning}
                                 className={`absolute left-[2%] top-[60%] w-[100px] h-8 bg-orange-700 rounded-lg border-b-4 border-black text-[10px] font-black text-white flex items-center justify-center transition-all shadow-md ${isCurrentlySpinning ? 'opacity-50 cursor-not-allowed border-b-0 translate-y-1' : 'active:translate-y-1 active:border-b-0'}`}
                             >
@@ -580,7 +581,7 @@ const PlayView = ({ machine, island, onLeave }) => {
 
                             {/* Secondary Controls: Auto / Turbo */}
                             <div className="absolute right-[30%] top-[15%] flex flex-col gap-2">
-                                <button onClick={() => { if(!isMuted) playSound('click'); setTurboMode(!turboMode)}} className={`w-10 h-10 rounded-lg border-b-4 flex items-center justify-center transition-all active:translate-y-1 active:border-b-0 ${turboMode ? 'bg-yellow-500 text-black border-yellow-800 shadow-[0_0_15px_gold]' : 'bg-gray-800 text-gray-400 border-gray-950 shadow-md'}`}><Zap size={18} fill={turboMode ? "currentColor" : "none"}/></button>
+                                <button onClick={() => { if(playSound) playSound('click'); setTurboMode(!turboMode)}} className={`w-10 h-10 rounded-lg border-b-4 flex items-center justify-center transition-all active:translate-y-1 active:border-b-0 ${turboMode ? 'bg-yellow-500 text-black border-yellow-800 shadow-[0_0_15px_gold]' : 'bg-gray-800 text-gray-400 border-gray-950 shadow-md'}`}><Zap size={18} fill={turboMode ? "currentColor" : "none"}/></button>
                                 <button onClick={toggleAutoPlay} className={`w-10 h-10 rounded-lg border-b-4 flex items-center justify-center transition-all active:translate-y-1 active:border-b-0 ${autoPlay ? 'bg-green-600 text-white border-green-900 shadow-[0_0_15px_lime]' : 'bg-gray-800 text-gray-400 border-gray-950 shadow-md'}`}>
                                     {autoPlay ? <Repeat size={18} className="animate-spin-slow" /> : <Repeat size={18}/>}
                                 </button>
@@ -654,7 +655,7 @@ const PlayView = ({ machine, island, onLeave }) => {
                             <div className="text-6xl font-mono font-black text-transparent bg-clip-text bg-gradient-to-b from-yellow-200 to-yellow-600 mb-8 border-y border-white/10 py-6 drop-shadow-xl">
                                 +<RollupNumber value={bonusTotalWin} duration={2000} />
                             </div>
-                            <button onClick={() => { if(!isMuted) playSound('click'); clearBonusTotal(); }} className="w-full py-4 bg-white text-black font-black text-lg rounded-xl shadow-[0_0_20px_rgba(255,255,255,0.5)] hover:scale-105 active:scale-95 transition-all">CONTINUE</button>
+                            <button onClick={() => { if(playSound) playSound('click'); clearBonusTotal(); }} className="w-full py-4 bg-white text-black font-black text-lg rounded-xl shadow-[0_0_20px_rgba(255,255,255,0.5)] hover:scale-105 active:scale-95 transition-all">CONTINUE</button>
                         </GlassCard>
                     </motion.div>
                 )}
