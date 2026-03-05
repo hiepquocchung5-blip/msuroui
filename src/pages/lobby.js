@@ -7,7 +7,7 @@ import api, { game, user as userApi } from '../services/api';
 import { 
     ChevronLeft, ChevronRight, Lock, Coins, MapPin, Loader2, 
     Bell, Trophy, Calendar, ClipboardList, CheckCircle, AlertTriangle, 
-    Users, Activity, Flame 
+    Users, Activity, Flame, Layers 
 } from 'lucide-react';
 
 import CharacterSVG from '../components/visuals/CharacterSVG';
@@ -85,9 +85,21 @@ export default function Lobby() {
 
                 if (resIslands.data.status === 'success') {
                     // V3 Progression System: Read req_deposit from DB, fallback to hardcoded tiers if missing
+                    // Add total machines count based on floors
                     const progressionIslands = resIslands.data.data.map(island => {
                         let reqDeposit = parseFloat(island.req_deposit) || 0;
-                        return { ...island, reqDeposit };
+                        let totalMachines = 0;
+                        
+                        switch(parseInt(island.id)) {
+                            case 1: totalMachines = 900; break; // Kyoto (10 floors x 90)
+                            case 2: totalMachines = 720; break; // Okinawa (8 floors x 90)
+                            case 3: totalMachines = 540; break; // Osaka (6 floors x 90)
+                            case 4: totalMachines = 360; break; // Tokyo (4 floors x 90)
+                            case 5: totalMachines = 180; break; // Ginza (2 floors x 90)
+                            default: totalMachines = 200;
+                        }
+                        
+                        return { ...island, reqDeposit, totalMachines };
                     });
                     setIslands(progressionIslands);
                 }
@@ -323,8 +335,13 @@ export default function Lobby() {
 
                             {/* Info Banner */}
                             <div className="absolute bottom-6 left-5 sm:left-8 z-30 pr-4">
-                                <div className={`text-[9px] sm:text-[10px] font-black tracking-widest mb-1 sm:mb-2 flex items-center gap-1.5 px-2.5 py-1 rounded w-fit backdrop-blur-md border shadow-lg uppercase ${isOwned ? 'bg-black/70 text-cyan-400 border-cyan-500/50' : 'bg-red-950/80 text-red-400 border-red-500/50'}`}>
-                                    {isOwned ? <><MapPin size={12}/> ACCESS GRANTED</> : <><Lock size={12}/> HIGH ROLLER REGION</>}
+                                <div className="flex gap-2 mb-1 sm:mb-2">
+                                    <div className={`text-[9px] sm:text-[10px] font-black tracking-widest flex items-center gap-1.5 px-2.5 py-1 rounded backdrop-blur-md border shadow-lg uppercase ${isOwned ? 'bg-black/70 text-cyan-400 border-cyan-500/50' : 'bg-red-950/80 text-red-400 border-red-500/50'}`}>
+                                        {isOwned ? <><MapPin size={12}/> ACCESS GRANTED</> : <><Lock size={12}/> HIGH ROLLER REGION</>}
+                                    </div>
+                                    <div className="bg-black/70 text-yellow-400 border border-yellow-500/50 text-[9px] sm:text-[10px] font-black tracking-widest flex items-center gap-1 px-2.5 py-1 rounded backdrop-blur-md shadow-lg">
+                                        <Layers size={12}/> {selectedIsland.totalMachines} MACHINES
+                                    </div>
                                 </div>
                                 <h1 className="text-3xl sm:text-4xl md:text-5xl font-black italic uppercase text-white drop-shadow-[0_0_15px_rgba(0,0,0,1)] leading-[0.9] mb-1.5 sm:mb-2">
                                     {selectedIsland.name}
