@@ -3,7 +3,7 @@ import { useRouter } from 'next/router';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext'; 
 import api, { game, finance, user as userApi } from '../services/api';
-import { ChevronLeft, ChevronRight, Lock, Coins, MapPin, Loader2, Bell, Trophy, Calendar, ClipboardList, CheckCircle } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Lock, Coins, MapPin, Loader2, Bell, Trophy, Calendar, ClipboardList, CheckCircle, Unlock, AlertTriangle } from 'lucide-react';
 import CharacterSVG from '../components/visuals/CharacterSVG';
 import CabinetSVG from '../components/visuals/CabinetSVG';
 import IslandLandscapeSVG from '../components/visuals/IslandLandscapeSVG';
@@ -26,10 +26,17 @@ export default function Lobby() {
     const [isPurchasing, setIsPurchasing] = useState(false);
     const [unreadCount, setUnreadCount] = useState(0);
     
+    // User Progression Data
+    const [userStats, setUserStats] = useState({
+        totalSpins: 0,
+        totalDeposited: 0
+    });
+    
     // Modals
     const [isMuted, setIsMuted] = useState(false);
     const [showDailyBonus, setShowDailyBonus] = useState(false);
     const [showMissions, setShowMissions] = useState(false); 
+    const [showUnlockModal, setShowUnlockModal] = useState(false);
     const [missions, setMissions] = useState([]);
 
     const { playSound } = useGameSound(!isMuted);
@@ -38,14 +45,33 @@ export default function Lobby() {
     useEffect(() => {
         const initLobby = async () => {
             try {
-                const [resIslands, resNotifs, resMissions] = await Promise.all([
+                // Fetch Islands, Notifications, Missions, AND User Stats
+                const [resIslands, resNotifs, resMissions, resProfile] = await Promise.all([
                     game.getIslands(),
                     userApi.getNotifications(),
-                    api.get('/game/missions.php') 
+                    api.get('/game/missions.php'),
+                    userApi.getProfile() 
                 ]);
 
                 if (resIslands.data.status === 'success') {
-                    setIslands(resIslands.data.data);
+                    // Inject hardcoded unlock requirements for V3 progression
+                    const progressionIslands = resIslands.data.data.map(island => {
+                        let reqSpins = 0;
+                        let reqDeposit = 0;
+                        
+                        switch(parseInt(island.id)) {
+                            case 1: reqSpins = 0; break;      // Starter
+                            case 2: reqSpins = 100; break;    // Easy unlock
+                            case 3: reqSpins = 500; reqDeposit = 10000; break;  // Mid-tier
+                            case 4: reqSpins = 2000; reqDeposit = 50000; break; // High-tier
+                            case 5: reqSpins = 5000; reqDeposit = 100000; break;// Endgame
+                            default: reqSpins = 0;
+                        }
+                        
+                        return { ...island, reqSpins, reqDeposit };
+                    });
+                    
+                    setIslands(progressionIslands);
                 }
                 
                 if (resNotifs.data.status === 'success') {
@@ -54,6 +80,14 @@ export default function Lobby() {
                 
                 if (resMissions.data.status === 'success') {
                     setMissions(resMissions.data.data);
+                }
+
+                if (resProfile.data.status === 'success') {
+                    // Assuming API was updated to return total_spins, otherwise default to 0
+                    setUserStats({
+                        totalSpins: resProfile.data.user.total_spins || Math.floor(resProfile.data.user.xp * 10), // Rough estimate if total_spins not returned
+                        totalDeposited: resProfile.data.user.total_deposited || 0
+                    });
                 }
 
                 // Check Daily Bonus Eligibility
@@ -89,7 +123,15 @@ export default function Lobby() {
 
     const selectedIsland = islands.length > 0 ? islands[currentIndex] : null;
     
-    // Safely parse JSON array of owned islands from DB
+    // Check if the user has met the RPG progression requirements
+    const checkProgressionUnlock = (island) => {
+        if (!island) return false;
+        if (island.id === 1) return true; // Starter island always unlocked
+        
+        return userStats.totalSpins >= island.reqSpins && userStats.totalDeposited >= island.reqDeposit;
+    };
+
+    // Safely parse JSON array of owned islands from DB (Legacy direct purchase)
     const checkOwnership = (islandId) => {
         if (!user?.owned_islands) return false;
         let owned = [];
@@ -103,37 +145,46 @@ export default function Lobby() {
                 owned = []; 
             }
         }
-        // Force unlock Island 1 & 2 for everyone as base content if DB doesn't have it
-        if (islandId === 1 || islandId === 2) return true;
+        
+        if (islandId === 1) return true; // Island 1 always free
         return owned.includes(islandId);
     };
 
-    const isOwned = selectedIsland ? checkOwnership(selectedIsland.id) : false;
+    const isOwned = selectedIsland ? (checkOwnership(selectedIsland.id) || checkProgressionUnlock(selectedIsland)) : false;
 
     const handleEnter = async (island) => {
         playSound('click');
+        
         if (!isOwned) {
-            if (parseFloat(user.balance) < parseFloat(island.unlock_price)) {
-                addToast(`Insufficient Funds. Need ${parseFloat(island.unlock_price).toLocaleString()} MMK`, 'error');
-                return;
-            }
-            if(confirm(`Unlock ${island.name} for ${parseFloat(island.unlock_price).toLocaleString()} MMK?`)) {
-               setIsPurchasing(true);
-               try {
-                   const res = await finance.purchaseIsland(island.id); 
-                   if (res.data.status === 'success') {
-                       updateBalance(res.data.new_balance);
-                       router.reload(); 
-                   }
-               } catch(e) { 
-                   addToast(e.response?.data?.error || "Purchase Failed", 'error'); 
-               } finally {
-                   setIsPurchasing(false);
-               }
-            }
+            setShowUnlockModal(true);
             return;
         }
+        
         router.push(`/game/${island.id}`);
+    };
+
+    // Legacy direct purchase (Keep for whales who want to skip the grind)
+    const handleDirectPurchase = async (island) => {
+        if (parseFloat(user.balance) < parseFloat(island.unlock_price)) {
+            addToast(`Insufficient Funds. Need ${parseFloat(island.unlock_price).toLocaleString()} MMK`, 'error');
+            return;
+        }
+        
+        setIsPurchasing(true);
+        try {
+            const res = await finance.purchaseIsland(island.id); 
+            if (res.data.status === 'success') {
+                updateBalance(res.data.new_balance);
+                playSound('win');
+                addToast(`${island.name} unlocked successfully!`, 'success');
+                setShowUnlockModal(false);
+                router.reload(); 
+            }
+        } catch(e) { 
+            addToast(e.response?.data?.error || "Purchase Failed", 'error'); 
+        } finally {
+            setIsPurchasing(false);
+        }
     };
 
     const claimMission = async (id, reward) => {
@@ -226,7 +277,7 @@ export default function Lobby() {
 
                             <div className="absolute bottom-6 left-6 z-30">
                                 <div className="text-xs text-cyan-400 font-black tracking-widest mb-1 flex items-center gap-2 bg-black/60 px-2 py-1 rounded w-fit backdrop-blur-sm border border-cyan-500/30">
-                                    <MapPin size={12}/> {isOwned ? 'OPEN WORLD' : 'LOCKED REGION'}
+                                    <MapPin size={12}/> {isOwned ? 'ACCESS GRANTED' : 'LOCKED REGION'}
                                 </div>
                                 <h1 className="text-4xl font-black italic uppercase text-white drop-shadow-xl leading-none mb-2" style={{textShadow: '0 0 20px rgba(0,0,0,0.8)'}}>
                                     {selectedIsland.name}
@@ -234,10 +285,12 @@ export default function Lobby() {
                                 <p className="text-[10px] text-gray-300 max-w-[150px] leading-tight mb-3 drop-shadow-md">
                                     {selectedIsland.desc || "Explore the unknown..."}
                                 </p>
+                                
                                 {!isOwned && (
-                                    <div className="mt-2 bg-yellow-500 text-black font-bold px-4 py-3 rounded-xl inline-flex items-center gap-2 animate-bounce shadow-lg shadow-yellow-500/20">
-                                        {isPurchasing ? <Loader2 className="animate-spin" size={16}/> : <Lock size={16}/>} 
-                                        UNLOCK {parseFloat(selectedIsland.unlock_price).toLocaleString()}
+                                    <div className="mt-2 flex flex-col gap-1">
+                                        <div className="bg-black/80 border border-red-500/50 text-red-400 text-[9px] font-bold px-3 py-1.5 rounded-lg flex items-center gap-1 w-fit">
+                                            <Lock size={10}/> REQUIRES LEVELING
+                                        </div>
                                     </div>
                                 )}
                             </div>
@@ -252,7 +305,80 @@ export default function Lobby() {
                 ))}
             </div>
 
-            {/* MODALS */}
+            {/* --- MODALS --- */}
+            
+            {/* 1. Unlock Island Modal (RPG Progression) */}
+            <AnimatePresence>
+                {showUnlockModal && selectedIsland && (
+                    <div className="fixed inset-0 z-50 bg-black/90 flex items-center justify-center p-6 backdrop-blur-md animate-in zoom-in-95" onClick={() => setShowUnlockModal(false)}>
+                        <GlassCard className="w-full max-w-sm p-0 overflow-hidden border-cyan-500/50 shadow-[0_0_40px_rgba(0,243,255,0.2)]" onClick={e => e.stopPropagation()}>
+                            
+                            <div className="bg-gradient-to-r from-red-900 to-black p-4 flex justify-between items-center border-b border-red-500/30">
+                                <h3 className="text-white font-black text-lg flex items-center gap-2">
+                                    <AlertTriangle size={18} className="text-red-500"/> ACCESS DENIED
+                                </h3>
+                                <button onClick={() => setShowUnlockModal(false)} className="text-white/70 hover:text-white"><X size={20}/></button>
+                            </div>
+                            
+                            <div className="p-6 bg-black/90">
+                                <p className="text-sm text-gray-300 mb-4 leading-relaxed">
+                                    To enter <strong className="text-white">{selectedIsland.name}</strong>, you must meet the sector requirements or purchase an override pass.
+                                </p>
+
+                                {/* Requirement 1: Spins */}
+                                <div className="mb-4">
+                                    <div className="flex justify-between text-xs font-bold text-gray-400 mb-1">
+                                        <span>TOTAL SPINS</span>
+                                        <span className={userStats.totalSpins >= selectedIsland.reqSpins ? "text-green-400" : "text-white"}>
+                                            {userStats.totalSpins.toLocaleString()} / {selectedIsland.reqSpins.toLocaleString()}
+                                        </span>
+                                    </div>
+                                    <div className="w-full h-2 bg-gray-800 rounded-full overflow-hidden border border-white/10">
+                                        <div className={`h-full transition-all duration-1000 ${userStats.totalSpins >= selectedIsland.reqSpins ? 'bg-green-500' : 'bg-cyan-500'}`} 
+                                             style={{ width: `${Math.min(100, (userStats.totalSpins / selectedIsland.reqSpins) * 100 || 0)}%` }}></div>
+                                    </div>
+                                </div>
+
+                                {/* Requirement 2: Deposits */}
+                                <div className="mb-6">
+                                    <div className="flex justify-between text-xs font-bold text-gray-400 mb-1">
+                                        <span>TOTAL DEPOSITED</span>
+                                        <span className={userStats.totalDeposited >= selectedIsland.reqDeposit ? "text-green-400" : "text-white"}>
+                                            {userStats.totalDeposited.toLocaleString()} / {selectedIsland.reqDeposit.toLocaleString()} MMK
+                                        </span>
+                                    </div>
+                                    <div className="w-full h-2 bg-gray-800 rounded-full overflow-hidden border border-white/10">
+                                        <div className={`h-full transition-all duration-1000 ${userStats.totalDeposited >= selectedIsland.reqDeposit ? 'bg-green-500' : 'bg-cyan-500'}`} 
+                                             style={{ width: `${Math.min(100, (userStats.totalDeposited / selectedIsland.reqDeposit) * 100 || 0)}%` }}></div>
+                                    </div>
+                                </div>
+
+                                {/* OR Purchase Override */}
+                                {selectedIsland.unlock_price > 0 && (
+                                    <>
+                                        <div className="relative flex py-2 items-center mb-4">
+                                            <div className="flex-grow border-t border-gray-700"></div>
+                                            <span className="flex-shrink-0 mx-4 text-gray-500 text-xs font-bold uppercase tracking-widest">OR OVERRIDE</span>
+                                            <div className="flex-grow border-t border-gray-700"></div>
+                                        </div>
+
+                                        <button 
+                                            onClick={() => handleDirectPurchase(selectedIsland)}
+                                            disabled={isPurchasing}
+                                            className="w-full py-3 rounded-xl bg-gradient-to-r from-yellow-600 to-orange-600 text-white font-black text-sm shadow-[0_0_20px_rgba(234,179,8,0.3)] flex items-center justify-center gap-2 hover:scale-[1.02] active:scale-95 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                                        >
+                                            {isPurchasing ? <Loader2 className="animate-spin" size={18} /> : <Unlock size={18}/>}
+                                            PAY {parseFloat(selectedIsland.unlock_price).toLocaleString()} MMK
+                                        </button>
+                                    </>
+                                )}
+                            </div>
+                        </GlassCard>
+                    </div>
+                )}
+            </AnimatePresence>
+
+            {/* 2. Missions Modal */}
             {showMissions && (
                 <div className="fixed inset-0 z-50 bg-black/90 flex items-center justify-center p-6 backdrop-blur-sm animate-in zoom-in-95" onClick={() => setShowMissions(false)}>
                     <GlassCard className="w-full max-w-sm p-0 overflow-hidden border-blue-500/50" onClick={e => e.stopPropagation()}>
