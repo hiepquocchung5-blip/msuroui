@@ -2,7 +2,7 @@ import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
     ChevronLeft, Flame, Users, Zap, Search, Trophy, 
-    X, BarChart3, History, Lock, MapPin, Activity, ShieldAlert, Cpu, Target
+    X, BarChart3, History, Lock, MapPin, Activity, ShieldAlert, Cpu, Target , Coins
 } from 'lucide-react';
 import CabinetSVG from '../visuals/CabinetSVG';
 import CharacterSVG from '../visuals/CharacterSVG';
