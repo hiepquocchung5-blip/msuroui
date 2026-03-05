@@ -2,8 +2,8 @@ import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
     ChevronLeft, Minus, Plus, Zap, StopCircle, Gamepad2, 
-    Trophy, Flame, MessageCircle, Timer, TrendingUp, 
-    ArrowUpCircle, ShieldAlert, Info, HelpCircle, X, Coins, Repeat
+    Trophy, Flame, MessageCircle, TrendingUp, 
+    ShieldAlert, X, Coins, Repeat, Target, Activity, Cpu
 } from 'lucide-react';
 import { useRouter } from 'next/router';
 
@@ -141,16 +141,16 @@ const PlayView = ({ machine, island, onLeave }) => {
         const fetchJackpot = async () => {
             try {
                 const res = await api.get('/game/ticker.php');
-                if (res.data.status === 'success' && res.data.jackpot_amount) {
+                if (res.data && res.data.jackpot_amount) {
                     setCurrentJackpot(res.data.jackpot_amount);
                 }
             } catch (e) {
-                // Silent fail to maintain immersion
+                console.warn("Live ticker sync failed.");
             }
         };
 
-        fetchJackpot(); // Initial fetch
-        const jpInterval = setInterval(fetchJackpot, 15000); // Sync every 15s
+        fetchJackpot(); 
+        const jpInterval = setInterval(fetchJackpot, 10000); // Sync every 10s
         return () => clearInterval(jpInterval);
     }, []);
 
@@ -187,12 +187,15 @@ const PlayView = ({ machine, island, onLeave }) => {
         return 'FREE';
     };
 
+    // AI Status Logic (Replaces RTP)
+    const isOverheating = sessionWinStreak >= 3 || momentumMult > 1.2 || inZone || bonusMode;
+
     useEffect(() => {
         if (isFreeze) { playSound('bigwin'); addToast("CRITICAL ANOMALY: LONG FREEZE DETECTED!", "error"); }
     }, [isFreeze, playSound, addToast]);
 
     useEffect(() => {
-        if (inZone && isCurrentlySpinning) setCharInteraction("⚠️ ZONE ACTIVE: RTP SURGE!");
+        if (inZone && isCurrentlySpinning) setCharInteraction("⚠️ ZONE ACTIVE: YIELD SURGE!");
         else if (isReachEye && isCurrentlySpinning) setCharInteraction("Gekiatsu... REACH!");
         else if (sessionWinStreak >= 3 && !isCurrentlySpinning) setCharInteraction(`🔥 COMBO x${sessionWinStreak}! MULT: ${streakMult}x`);
         else if (momentumMult > 1.2 && !isCurrentlySpinning) setCharInteraction(`Momentum x${momentumMult.toFixed(1)}!`);
@@ -202,7 +205,7 @@ const PlayView = ({ machine, island, onLeave }) => {
         if (levelUpData) { playSound('bigwin'); triggerCoinShower(80); }
     }, [levelUpData, playSound]);
 
-    // --- SECURE WIN EVALUATION (Gamble Removed) ---
+    // --- SECURE WIN EVALUATION ---
     useEffect(() => {
         if (lastWin > 0 && winStage === 'idle' && !winHandled.current && !isCurrentlySpinning) {
             winHandled.current = true; 
@@ -211,14 +214,11 @@ const PlayView = ({ machine, island, onLeave }) => {
             playSound(isBigWin ? 'bigwin' : 'win');
             if (isBigWin) triggerCoinShower(isJackpot ? 150 : (winTier === 'EPIC' ? 100 : 50));
 
-            // Show celebration overlay based on tier or if not autoplaying
             if (!bonusMode && (!autoPlay || isBigWin)) {
                 setWinStage('celebrating');
-                
-                // Automatically return to idle after celebration
                 setTimeout(() => {
                     setWinStage('idle');
-                    setLastWin(0); // Clear win visual safely
+                    setLastWin(0); 
                 }, isJackpot ? 6000 : (winTier === 'EPIC' ? 4000 : 2500));
             }
         } 
@@ -247,11 +247,11 @@ const PlayView = ({ machine, island, onLeave }) => {
         }
         
         isProcessing.current = true;
-        winHandled.current = false; // Reset lock for the new spin
+        winHandled.current = false; 
         setCharInteraction(null);
         playSound('spin');
         
-        // Optimistic Jackpot Increment (5% to JP as per Math Model)
+        // Optimistic Jackpot Increment
         if (freeSpins === 0 && !bonusMode) {
             setCurrentJackpot(prev => prev + (currentBet * 0.05));
         }
@@ -265,7 +265,6 @@ const PlayView = ({ machine, island, onLeave }) => {
             playSound('stop');
             if (navigator.vibrate) navigator.vibrate(20);
             
-            // Visual thud feedback
             setReelThud(prev => { const n = [...prev]; n[idx] = true; return n; });
             setTimeout(() => { setReelThud(prev => { const n = [...prev]; n[idx] = false; return n; }); }, 150);
             
@@ -285,7 +284,7 @@ const PlayView = ({ machine, island, onLeave }) => {
         order.forEach((reelIdx) => {
             if (isSpinning[reelIdx]) {
                 setTimeout(() => stopReel(reelIdx), delay);
-                delay += 120; // Fast sequential stop
+                delay += 120; 
             }
         });
     }, [isCurrentlySpinning, playSound, autoPlay, setAutoPlay, atSequence, isSpinning, stopReel]);
@@ -305,7 +304,6 @@ const PlayView = ({ machine, island, onLeave }) => {
                 if (isCurrentlySpinning) handleQuickStop();
                 else handleSpin(); 
             }
-            // Add keyboard support for manual stops
             if (e.key === '1') handleManualStop(0); 
             if (e.key === '2') handleManualStop(1); 
             if (e.key === '3') handleManualStop(2);
@@ -325,12 +323,11 @@ const PlayView = ({ machine, island, onLeave }) => {
     const lineStyle = getIslandPaylineStyle();
     const strokeWidths = { 'NONE': 4, 'SMALL': 5, 'BIG': 8, 'MEGA': 12, 'EPIC': 18 };
 
-    // Calculate Jackpot Progress Bar (Min: 3M, Max: 7.2M)
     const jpProgressPercent = Math.min(100, Math.max(0, ((currentJackpot - 3000000) / (7200000 - 3000000)) * 100));
 
     return (
         <div 
-            className={`min-h-screen bg-black relative flex flex-col overflow-hidden transition-colors duration-1000 ${bonusMode === 'HEAVEN' ? 'bg-purple-950' : (bonusMode ? 'bg-red-950' : '')}`}
+            className={`min-h-[100dvh] bg-black relative flex flex-col overflow-hidden transition-colors duration-1000 ${bonusMode === 'HEAVEN' ? 'bg-purple-950' : (bonusMode ? 'bg-red-950' : '')}`}
             onPointerMove={handlePointerMove} 
             onPointerDown={resetIdleTimer}
         >
@@ -343,10 +340,15 @@ const PlayView = ({ machine, island, onLeave }) => {
                 .animate-shake-epic { animation: shake-epic 0.4s infinite; }
             `}} />
 
-            {/* BACKGROUND LAYER */}
+            {/* --- IMMERSIVE BACKGROUND --- */}
             <div className={`absolute inset-0 z-0 pointer-events-none transition-opacity duration-500 ${isCurrentlySpinning ? 'opacity-40' : 'opacity-100'}`}>
-                <IslandLandscapeSVG islandId={island?.id} />
-                <div className="absolute inset-0 bg-gradient-to-b from-black/80 via-black/20 to-black"></div>
+                <div className="absolute inset-0 scale-110 blur-[1px] opacity-60">
+                    <IslandLandscapeSVG islandId={island?.id} />
+                </div>
+                <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_bottom,_var(--tw-gradient-stops))] from-cyan-900/10 via-black to-black opacity-90"></div>
+                {/* Tech Grid Overlay */}
+                <div className="absolute inset-0 bg-[linear-gradient(rgba(0,243,255,0.03)_1px,transparent_1px),linear-gradient(90deg,rgba(0,243,255,0.03)_1px,transparent_1px)] bg-[size:40px_40px]"></div>
+                
                 {inZone && <div className="absolute inset-0 bg-yellow-500/10 mix-blend-overlay animate-pulse"></div>}
                 {bonusMode === 'HEAVEN' && <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/circuit-board.png')] opacity-40 mix-blend-color-dodge animate-pulse hue-rotate-180"></div>}
             </div>
@@ -366,11 +368,11 @@ const PlayView = ({ machine, island, onLeave }) => {
 
             {/* V3 INTEGRATED GRAND JACKPOT TICKER */}
             <div className="bg-black border-b border-white/10 h-10 flex items-center overflow-hidden relative z-30 shadow-lg">
-                <div className="bg-yellow-900/80 h-full px-4 flex items-center justify-center border-r border-yellow-500/50 z-10">
-                    <Trophy className="w-4 h-4 text-yellow-500 mr-2" />
-                    <span className="text-yellow-400 font-black text-xs tracking-widest italic">GRAND JACKPOT</span>
+                <div className="bg-yellow-900/80 h-full px-3 sm:px-4 flex items-center justify-center border-r border-yellow-500/50 z-10">
+                    <Trophy className="w-4 h-4 text-yellow-500 sm:mr-2" />
+                    <span className="hidden sm:inline text-yellow-400 font-black text-xs tracking-widest italic">GRAND JACKPOT</span>
                 </div>
-                <div className="flex-1 px-6 flex items-center justify-between bg-gradient-to-r from-yellow-900/20 to-transparent">
+                <div className="flex-1 px-4 sm:px-6 flex items-center justify-between bg-gradient-to-r from-yellow-900/20 to-transparent">
                     <div className="text-yellow-400 font-mono font-black text-xl tracking-[0.2em] drop-shadow-[0_0_10px_gold]">
                         <RollupNumber value={currentJackpot} duration={500} />
                     </div>
@@ -388,75 +390,75 @@ const PlayView = ({ machine, island, onLeave }) => {
                         </div>
                     )}
                 </div>
-                {/* Dynamic Progress Indicator */}
                 <div 
-                    className="absolute bottom-0 left-0 h-[2px] bg-gradient-to-r from-yellow-500 to-red-500 transition-all duration-500 shadow-[0_0_5px_yellow]" 
+                    className={`absolute bottom-0 left-0 h-[2px] transition-all duration-500 shadow-[0_0_5px_currentColor] ${currentJackpot >= 7000000 ? 'bg-purple-500 text-purple-500' : currentJackpot >= 3600000 ? 'bg-red-500 text-red-500' : 'bg-yellow-500 text-yellow-500'}`} 
                     style={{ width: `${jpProgressPercent}%` }} 
                 />
             </div>
             
-            {/* TELEMETRY HUD (Top) - RTP REMOVED FOR PRODUCTION IMMERSION */}
-            <div className="absolute top-16 left-0 w-full px-6 flex justify-between items-start z-40 pointer-events-none mt-2">
+            {/* --- CYBER HUD (Replaces old RTP display) --- */}
+            <div className="absolute top-20 sm:top-24 left-0 w-full px-4 sm:px-6 flex justify-between items-start z-40 pointer-events-none mt-1">
+                
+                {/* Left Side: Navigation & Momentum */}
                 <div className="flex flex-col gap-2">
-                    <button onClick={onLeave} className="pointer-events-auto w-10 h-10 bg-black/60 rounded-full text-white backdrop-blur flex items-center justify-center border border-white/10 hover:bg-white/20 active:scale-95 transition-all"><ChevronLeft/></button>
+                    <button onClick={onLeave} className="pointer-events-auto w-10 h-10 bg-white/5 border border-white/10 flex items-center justify-center text-white hover:bg-cyan-500/20 hover:text-cyan-400 hover:border-cyan-500/50 transition-all active:scale-95 shadow-lg rounded-full backdrop-blur-md">
+                        <ChevronLeft size={24} />
+                    </button>
                     
-                    <div className={`pointer-events-auto bg-black/80 border rounded-xl p-2 px-3 flex items-center gap-3 backdrop-blur-md shadow-lg transition-colors duration-500 ${momentumMult > 1.5 ? 'border-purple-500 shadow-[0_0_15px_purple]' : 'border-cyan-500/30'}`}>
-                        <TrendingUp size={16} className={momentumMult > 1.5 ? 'text-purple-400 animate-pulse' : 'text-cyan-400'} />
+                    <div className={`pointer-events-auto bg-black/80 border rounded-xl p-1.5 sm:p-2 px-2 sm:px-3 flex items-center gap-2 sm:gap-3 backdrop-blur-md shadow-lg transition-colors duration-500 ${momentumMult > 1.5 ? 'border-purple-500 shadow-[0_0_15px_purple]' : 'border-cyan-500/30'}`}>
+                        <TrendingUp size={14} className={momentumMult > 1.5 ? 'text-purple-400 animate-pulse' : 'text-cyan-400'} />
                         <div>
-                            <div className={`text-[8px] font-bold uppercase ${momentumMult > 1.5 ? 'text-purple-500' : 'text-cyan-500'}`}>Momentum</div>
-                            <div className="text-sm font-mono font-black text-white">x{momentumMult.toFixed(1)}</div>
+                            <div className={`text-[7px] sm:text-[8px] font-bold uppercase tracking-wider ${momentumMult > 1.5 ? 'text-purple-500' : 'text-cyan-500'}`}>Momentum</div>
+                            <div className="text-xs sm:text-sm font-mono font-black text-white leading-none mt-0.5">x{momentumMult.toFixed(1)}</div>
                         </div>
                     </div>
-
-                    <AnimatePresence>
-                        {sessionWinStreak >= 3 && (
-                            <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0 }} className="pointer-events-auto bg-orange-900/80 border border-orange-500 rounded-xl p-2 px-3 flex items-center gap-2 backdrop-blur-md shadow-[0_0_15px_orange] animate-pulse">
-                                <Flame size={16} className="text-orange-400 fill-current" />
-                                <div>
-                                    <div className="text-[8px] text-orange-200 font-bold uppercase">WIN STREAK</div>
-                                    <div className="text-sm font-mono font-black text-white">x{sessionWinStreak} <span className="text-xs text-orange-400 ml-1">(+{streakMult}x)</span></div>
-                                </div>
-                            </motion.div>
-                        )}
-                    </AnimatePresence>
                 </div>
 
+                {/* Right Side: Wallet, Tenjo, AI Predictor */}
                 <div className="flex flex-col items-end gap-2">
-                    <div className="pointer-events-auto bg-black/80 border border-yellow-500/30 rounded-full px-4 py-2 flex items-center gap-3 backdrop-blur-md shadow-lg cursor-pointer hover:bg-black transition-colors" onClick={() => router.push('/wallet')}>
-                        <Coins size={18} className="text-yellow-400" />
-                        <span className="text-white font-mono font-black text-lg"><RollupNumber value={user?.balance || 0} /></span>
+                    <div className="pointer-events-auto bg-black/80 border border-yellow-500/40 rounded-full px-3 sm:px-4 py-1.5 sm:py-2 flex items-center gap-2 backdrop-blur-md shadow-[0_0_20px_rgba(234,179,8,0.2)] cursor-pointer hover:bg-black/90 transition-all group" onClick={() => router.push('/wallet')}>
+                        <Coins size={14} className="text-yellow-400 sm:w-4 sm:h-4 group-hover:animate-spin-slow" />
+                        <span className="text-white font-mono font-black text-sm sm:text-base tracking-tight"><RollupNumber value={user?.balance || 0} /></span>
                     </div>
 
-                    <div className={`pointer-events-auto bg-black/80 border rounded-xl p-2 px-3 flex items-center gap-3 backdrop-blur-md shadow-lg transition-colors duration-500 ${lapsSinceBonus > 700 ? 'border-red-500 shadow-[0_0_15px_red] animate-pulse' : 'border-red-500/30'}`}>
-                        <div>
-                            <div className="text-[8px] text-red-500 font-bold uppercase text-right">Tenjo Limit</div>
-                            <div className="text-sm font-mono font-black text-white">{lapsSinceBonus} / 777</div>
+                    <div className="flex items-center gap-2 pointer-events-auto">
+                        <div className="bg-black/80 border border-red-500/30 rounded-xl p-1.5 sm:p-2 px-2 sm:px-3 flex items-center gap-2 sm:gap-3 backdrop-blur-md shadow-[0_0_15px_rgba(239,68,68,0.2)]">
+                            <div className="text-right">
+                                <div className="text-[7px] sm:text-[8px] text-red-500 font-bold uppercase tracking-wider">Tenjo Target</div>
+                                <div className="text-xs sm:text-sm font-mono font-black text-white leading-none mt-0.5">{lapsSinceBonus} <span className="text-gray-500">/ 777</span></div>
+                            </div>
+                            <Target size={14} className="text-red-400 sm:w-4 sm:h-4 animate-pulse" />
                         </div>
-                        <Timer size={16} className={lapsSinceBonus > 700 ? 'text-white' : 'text-red-400'} />
                     </div>
 
-                    <div className="pointer-events-auto">
-                        <button onClick={() => { playSound('click'); setShowPaytable(true); }} className="w-8 h-8 rounded-full bg-black/60 border border-white/10 flex items-center justify-center text-gray-400 hover:text-white backdrop-blur-sm transition-colors shadow-lg">
-                            <Info size={14} />
-                        </button>
+                    <div className="flex items-center gap-2 pointer-events-auto">
+                        <div className="bg-black/80 border border-white/10 rounded-xl p-1.5 sm:p-2 px-2 sm:px-3 flex items-center gap-2 sm:gap-3 backdrop-blur-md shadow-inner">
+                            <div className="text-right">
+                                <div className="text-[7px] sm:text-[8px] text-gray-500 font-bold uppercase tracking-wider">AI Status</div>
+                                <div className={`text-xs sm:text-sm font-mono font-black leading-none mt-0.5 ${isOverheating ? 'text-orange-400 animate-pulse' : 'text-cyan-400'}`}>
+                                    {isOverheating ? 'OVERHEATING' : 'GATHERING'}
+                                </div>
+                            </div>
+                            <Activity size={14} className={isOverheating ? 'text-orange-400' : 'text-cyan-400'} />
+                        </div>
                     </div>
                 </div>
             </div>
 
             {/* MAIN GAME STAGE */}
-            <div className={`flex-1 flex items-center justify-center relative z-10 px-2 pt-16 pb-6 ${isFreeze || winTier === 'EPIC' || isJackpot ? 'animate-shake-epic' : ''}`} style={{ perspective: '1200px' }}>
+            <div className={`flex-1 flex items-center justify-center relative z-10 px-2 pt-28 pb-6 ${isFreeze || winTier === 'EPIC' || isJackpot ? 'animate-shake-epic' : ''}`} style={{ perspective: '1200px' }}>
                 <motion.div 
                     className="relative w-full max-w-[400px] aspect-[0.6] flex items-center justify-center"
                     animate={{ rotateX: mousePos.y, rotateY: mousePos.x }}
                     transition={{ type: 'spring', stiffness: 75, damping: 15 }}
                     style={{ transformStyle: 'preserve-3d' }}
                 >
-                    <div className="absolute inset-0 z-10 w-full h-full pointer-events-none" style={{ transform: 'translateZ(-10px)' }}>
+                    <div className="absolute inset-0 z-10 w-full h-full pointer-events-none drop-shadow-[0_20px_25px_rgba(0,0,0,0.9)]" style={{ transform: 'translateZ(-10px)' }}>
                         <CabinetSVG islandId={parseInt(island?.id || 1)} mode="game" charId={island?.hostess_char_id} visualState={getCabinetState()} />
                         {turboMode && <div className="absolute inset-0 rounded-[2rem] border-[4px] border-yellow-500 opacity-50 shadow-[0_0_30px_gold] animate-pulse pointer-events-none"></div>}
                     </div>
 
-                    <div className="absolute bottom-[5%] right-[-20%] w-[60%] h-[65%] z-20 pointer-events-auto cursor-pointer group" style={{ transform: 'translateZ(30px)' }} onClick={() => {playSound('click'); setCharInteraction("Target acquired.");}}>
+                    <div className="absolute bottom-[5%] right-[-20%] sm:right-[-25%] w-[60%] sm:w-[65%] h-[65%] sm:h-[70%] z-20 pointer-events-none drop-shadow-2xl transition-transform duration-700 hover:scale-[1.05] hover:-translate-x-2" style={{ transform: 'translateZ(30px)' }}>
                         <CharacterSVG type={user?.active_pet_id || island?.hostess_char_id} mood={bonusMode || winTier !== 'NONE' ? 'win' : 'idle'} />
                         <AnimatePresence>
                             {charInteraction && (
@@ -506,13 +508,13 @@ const PlayView = ({ machine, island, onLeave }) => {
                             
                             {/* Left Controls: V3 Restricted Bets */}
                             <div className={`absolute left-[2%] top-[10%] flex items-center gap-1 bg-black/40 p-1 rounded-lg border border-white/10 shadow-inner transition-opacity ${isCurrentlySpinning ? 'opacity-50 pointer-events-none' : 'opacity-100'}`}>
-                                <button onClick={() => {playSound('click'); setBetIndex(Math.max(0, betIndex - 1))}} className="w-8 h-8 bg-gray-800 rounded flex items-center justify-center text-white active:bg-cyan-600 active:scale-95 transition-all"><Minus size={14}/></button>
+                                <button onClick={() => { if(!isMuted) playSound('click'); setBetIndex(Math.max(0, betIndex - 1))}} className="w-8 h-8 bg-gray-800 rounded flex items-center justify-center text-white active:bg-cyan-600 active:scale-95 transition-all"><Minus size={14}/></button>
                                 <div className="w-16 text-center font-mono font-bold text-yellow-400 text-xs">{currentBet.toLocaleString()}</div>
-                                <button onClick={() => {playSound('click'); setBetIndex(Math.min(BET_AMOUNTS.length - 1, betIndex + 1))}} className="w-8 h-8 bg-gray-800 rounded flex items-center justify-center text-white active:bg-cyan-600 active:scale-95 transition-all"><Plus size={14}/></button>
+                                <button onClick={() => { if(!isMuted) playSound('click'); setBetIndex(Math.min(BET_AMOUNTS.length - 1, betIndex + 1))}} className="w-8 h-8 bg-gray-800 rounded flex items-center justify-center text-white active:bg-cyan-600 active:scale-95 transition-all"><Plus size={14}/></button>
                             </div>
                             
                             <button 
-                                onClick={() => {playSound('click'); setBetIndex(BET_AMOUNTS.length - 1)}} 
+                                onClick={() => { if(!isMuted) playSound('click'); setBetIndex(BET_AMOUNTS.length - 1)}} 
                                 disabled={isCurrentlySpinning}
                                 className={`absolute left-[2%] top-[60%] w-[100px] h-8 bg-orange-700 rounded-lg border-b-4 border-black text-[10px] font-black text-white flex items-center justify-center transition-all shadow-md ${isCurrentlySpinning ? 'opacity-50 cursor-not-allowed border-b-0 translate-y-1' : 'active:translate-y-1 active:border-b-0'}`}
                             >
@@ -553,7 +555,7 @@ const PlayView = ({ machine, island, onLeave }) => {
 
                             {/* Secondary Controls: Auto / Turbo */}
                             <div className="absolute right-[30%] top-[15%] flex flex-col gap-2">
-                                <button onClick={() => {playSound('click'); setTurboMode(!turboMode)}} className={`w-10 h-10 rounded-lg border-b-4 flex items-center justify-center transition-all active:translate-y-1 active:border-b-0 ${turboMode ? 'bg-yellow-500 text-black border-yellow-800 shadow-[0_0_15px_gold]' : 'bg-gray-800 text-gray-400 border-gray-950 shadow-md'}`}><Zap size={18} fill={turboMode ? "currentColor" : "none"}/></button>
+                                <button onClick={() => { if(!isMuted) playSound('click'); setTurboMode(!turboMode)}} className={`w-10 h-10 rounded-lg border-b-4 flex items-center justify-center transition-all active:translate-y-1 active:border-b-0 ${turboMode ? 'bg-yellow-500 text-black border-yellow-800 shadow-[0_0_15px_gold]' : 'bg-gray-800 text-gray-400 border-gray-950 shadow-md'}`}><Zap size={18} fill={turboMode ? "currentColor" : "none"}/></button>
                                 <button onClick={toggleAutoPlay} className={`w-10 h-10 rounded-lg border-b-4 flex items-center justify-center transition-all active:translate-y-1 active:border-b-0 ${autoPlay ? 'bg-green-600 text-white border-green-900 shadow-[0_0_15px_lime]' : 'bg-gray-800 text-gray-400 border-gray-950 shadow-md'}`}>
                                     {autoPlay ? <Repeat size={18} className="animate-spin-slow" /> : <Repeat size={18}/>}
                                 </button>
@@ -627,7 +629,7 @@ const PlayView = ({ machine, island, onLeave }) => {
                             <div className="text-6xl font-mono font-black text-transparent bg-clip-text bg-gradient-to-b from-yellow-200 to-yellow-600 mb-8 border-y border-white/10 py-6 drop-shadow-xl">
                                 +<RollupNumber value={bonusTotalWin} duration={2000} />
                             </div>
-                            <button onClick={() => { playSound('click'); clearBonusTotal(); }} className="w-full py-4 bg-white text-black font-black text-lg rounded-xl shadow-[0_0_20px_rgba(255,255,255,0.5)] hover:scale-105 active:scale-95 transition-all">CONTINUE</button>
+                            <button onClick={() => { if(!isMuted) playSound('click'); clearBonusTotal(); }} className="w-full py-4 bg-white text-black font-black text-lg rounded-xl shadow-[0_0_20px_rgba(255,255,255,0.5)] hover:scale-105 active:scale-95 transition-all">CONTINUE</button>
                         </GlassCard>
                     </motion.div>
                 )}
