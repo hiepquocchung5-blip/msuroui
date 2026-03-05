@@ -19,16 +19,14 @@ export default function Lobby() {
     const { addToast } = useToast();
     const router = useRouter();
     
-    // Core State (Strictly API Driven)
+    // Core State
     const [islands, setIslands] = useState([]);
     const [currentIndex, setCurrentIndex] = useState(0);
     const [isTransitioning, setIsTransitioning] = useState(false);
-    const [isPurchasing, setIsPurchasing] = useState(false);
     const [unreadCount, setUnreadCount] = useState(0);
     
-    // User Progression Data
+    // V3 User Progression Data (Based on Total Deposited)
     const [userStats, setUserStats] = useState({
-        totalSpins: 0,
         totalDeposited: 0
     });
     
@@ -54,21 +52,22 @@ export default function Lobby() {
                 ]);
 
                 if (resIslands.data.status === 'success') {
-                    // Inject hardcoded unlock requirements for V3 progression
+                    // V3 Progression System: Islands unlock based on lifetime deposit tiers
                     const progressionIslands = resIslands.data.data.map(island => {
-                        let reqSpins = 0;
                         let reqDeposit = 0;
+                        let displayName = island.name;
                         
+                        // Map V3 Specific Data based on Island ID
                         switch(parseInt(island.id)) {
-                            case 1: reqSpins = 0; break;      // Starter
-                            case 2: reqSpins = 100; break;    // Easy unlock
-                            case 3: reqSpins = 500; reqDeposit = 10000; break;  // Mid-tier
-                            case 4: reqSpins = 2000; reqDeposit = 50000; break; // High-tier
-                            case 5: reqSpins = 5000; reqDeposit = 100000; break;// Endgame
-                            default: reqSpins = 0;
+                            case 1: reqDeposit = 0; displayName = 'Kyoto Zen'; break;       // Starter
+                            case 2: reqDeposit = 50000; displayName = 'Okinawa Tropic'; break;  
+                            case 3: reqDeposit = 100000; displayName = 'Osaka Neon'; break; 
+                            case 4: reqDeposit = 500000; displayName = 'Tokyo Cyber'; break; 
+                            case 5: reqDeposit = 1000000; displayName = 'Ginza Gold'; break; // High Roller
+                            default: reqDeposit = 0;
                         }
                         
-                        return { ...island, reqSpins, reqDeposit };
+                        return { ...island, reqDeposit, name: displayName };
                     });
                     
                     setIslands(progressionIslands);
@@ -83,9 +82,7 @@ export default function Lobby() {
                 }
 
                 if (resProfile.data.status === 'success') {
-                    // Assuming API was updated to return total_spins, otherwise default to 0
                     setUserStats({
-                        totalSpins: resProfile.data.user.total_spins || Math.floor(resProfile.data.user.xp * 10), // Rough estimate if total_spins not returned
                         totalDeposited: resProfile.data.user.total_deposited || 0
                     });
                 }
@@ -123,34 +120,14 @@ export default function Lobby() {
 
     const selectedIsland = islands.length > 0 ? islands[currentIndex] : null;
     
-    // Check if the user has met the RPG progression requirements
+    // V3 Check: Is Island Unlocked based on Deposit History?
     const checkProgressionUnlock = (island) => {
         if (!island) return false;
         if (island.id === 1) return true; // Starter island always unlocked
-        
-        return userStats.totalSpins >= island.reqSpins && userStats.totalDeposited >= island.reqDeposit;
+        return userStats.totalDeposited >= island.reqDeposit;
     };
 
-    // Safely parse JSON array of owned islands from DB (Legacy direct purchase)
-    const checkOwnership = (islandId) => {
-        if (!user?.owned_islands) return false;
-        let owned = [];
-        if (Array.isArray(user.owned_islands)) {
-            owned = user.owned_islands;
-        } else if (typeof user.owned_islands === 'string') {
-            try { 
-                owned = JSON.parse(user.owned_islands); 
-                if (!Array.isArray(owned)) owned = []; 
-            } catch (e) { 
-                owned = []; 
-            }
-        }
-        
-        if (islandId === 1) return true; // Island 1 always free
-        return owned.includes(islandId);
-    };
-
-    const isOwned = selectedIsland ? (checkOwnership(selectedIsland.id) || checkProgressionUnlock(selectedIsland)) : false;
+    const isOwned = selectedIsland ? checkProgressionUnlock(selectedIsland) : false;
 
     const handleEnter = async (island) => {
         playSound('click');
@@ -161,30 +138,6 @@ export default function Lobby() {
         }
         
         router.push(`/game/${island.id}`);
-    };
-
-    // Legacy direct purchase (Keep for whales who want to skip the grind)
-    const handleDirectPurchase = async (island) => {
-        if (parseFloat(user.balance) < parseFloat(island.unlock_price)) {
-            addToast(`Insufficient Funds. Need ${parseFloat(island.unlock_price).toLocaleString()} MMK`, 'error');
-            return;
-        }
-        
-        setIsPurchasing(true);
-        try {
-            const res = await finance.purchaseIsland(island.id); 
-            if (res.data.status === 'success') {
-                updateBalance(res.data.new_balance);
-                playSound('win');
-                addToast(`${island.name} unlocked successfully!`, 'success');
-                setShowUnlockModal(false);
-                router.reload(); 
-            }
-        } catch(e) { 
-            addToast(e.response?.data?.error || "Purchase Failed", 'error'); 
-        } finally {
-            setIsPurchasing(false);
-        }
     };
 
     const claimMission = async (id, reward) => {
@@ -277,7 +230,7 @@ export default function Lobby() {
 
                             <div className="absolute bottom-6 left-6 z-30">
                                 <div className="text-xs text-cyan-400 font-black tracking-widest mb-1 flex items-center gap-2 bg-black/60 px-2 py-1 rounded w-fit backdrop-blur-sm border border-cyan-500/30">
-                                    <MapPin size={12}/> {isOwned ? 'ACCESS GRANTED' : 'LOCKED REGION'}
+                                    <MapPin size={12}/> {isOwned ? 'ACCESS GRANTED' : 'HIGH ROLLER REGION'}
                                 </div>
                                 <h1 className="text-4xl font-black italic uppercase text-white drop-shadow-xl leading-none mb-2" style={{textShadow: '0 0 20px rgba(0,0,0,0.8)'}}>
                                     {selectedIsland.name}
@@ -289,7 +242,7 @@ export default function Lobby() {
                                 {!isOwned && (
                                     <div className="mt-2 flex flex-col gap-1">
                                         <div className="bg-black/80 border border-red-500/50 text-red-400 text-[9px] font-bold px-3 py-1.5 rounded-lg flex items-center gap-1 w-fit">
-                                            <Lock size={10}/> REQUIRES LEVELING
+                                            <Lock size={10}/> DEP. {selectedIsland.reqDeposit.toLocaleString()} TO UNLOCK
                                         </div>
                                     </div>
                                 )}
@@ -307,7 +260,7 @@ export default function Lobby() {
 
             {/* --- MODALS --- */}
             
-            {/* 1. Unlock Island Modal (RPG Progression) */}
+            {/* 1. Unlock Island Modal (V3 Deposit Progression) */}
             <AnimatePresence>
                 {showUnlockModal && selectedIsland && (
                     <div className="fixed inset-0 z-50 bg-black/90 flex items-center justify-center p-6 backdrop-blur-md animate-in zoom-in-95" onClick={() => setShowUnlockModal(false)}>
@@ -322,56 +275,32 @@ export default function Lobby() {
                             
                             <div className="p-6 bg-black/90">
                                 <p className="text-sm text-gray-300 mb-4 leading-relaxed">
-                                    To enter <strong className="text-white">{selectedIsland.name}</strong>, you must meet the sector requirements or purchase an override pass.
+                                    To enter <strong className="text-white">{selectedIsland.name}</strong>, you must meet the VIP lifetime deposit requirements for this sector.
                                 </p>
 
-                                {/* Requirement 1: Spins */}
-                                <div className="mb-4">
-                                    <div className="flex justify-between text-xs font-bold text-gray-400 mb-1">
-                                        <span>TOTAL SPINS</span>
-                                        <span className={userStats.totalSpins >= selectedIsland.reqSpins ? "text-green-400" : "text-white"}>
-                                            {userStats.totalSpins.toLocaleString()} / {selectedIsland.reqSpins.toLocaleString()}
-                                        </span>
-                                    </div>
-                                    <div className="w-full h-2 bg-gray-800 rounded-full overflow-hidden border border-white/10">
-                                        <div className={`h-full transition-all duration-1000 ${userStats.totalSpins >= selectedIsland.reqSpins ? 'bg-green-500' : 'bg-cyan-500'}`} 
-                                             style={{ width: `${Math.min(100, (userStats.totalSpins / selectedIsland.reqSpins) * 100 || 0)}%` }}></div>
-                                    </div>
-                                </div>
-
-                                {/* Requirement 2: Deposits */}
+                                {/* Requirement: Deposits */}
                                 <div className="mb-6">
                                     <div className="flex justify-between text-xs font-bold text-gray-400 mb-1">
-                                        <span>TOTAL DEPOSITED</span>
+                                        <span>LIFETIME DEPOSITS</span>
                                         <span className={userStats.totalDeposited >= selectedIsland.reqDeposit ? "text-green-400" : "text-white"}>
                                             {userStats.totalDeposited.toLocaleString()} / {selectedIsland.reqDeposit.toLocaleString()} MMK
                                         </span>
                                     </div>
-                                    <div className="w-full h-2 bg-gray-800 rounded-full overflow-hidden border border-white/10">
-                                        <div className={`h-full transition-all duration-1000 ${userStats.totalDeposited >= selectedIsland.reqDeposit ? 'bg-green-500' : 'bg-cyan-500'}`} 
+                                    <div className="w-full h-3 bg-gray-800 rounded-full overflow-hidden border border-white/10">
+                                        <div className={`h-full transition-all duration-1000 ${userStats.totalDeposited >= selectedIsland.reqDeposit ? 'bg-green-500' : 'bg-gradient-to-r from-cyan-600 to-cyan-400'}`} 
                                              style={{ width: `${Math.min(100, (userStats.totalDeposited / selectedIsland.reqDeposit) * 100 || 0)}%` }}></div>
                                     </div>
+                                    <p className="text-[10px] text-gray-500 mt-2 text-center">
+                                        Increase your lifetime deposits by making a top-up in the cashier to unlock higher tier floors.
+                                    </p>
                                 </div>
 
-                                {/* OR Purchase Override */}
-                                {selectedIsland.unlock_price > 0 && (
-                                    <>
-                                        <div className="relative flex py-2 items-center mb-4">
-                                            <div className="flex-grow border-t border-gray-700"></div>
-                                            <span className="flex-shrink-0 mx-4 text-gray-500 text-xs font-bold uppercase tracking-widest">OR OVERRIDE</span>
-                                            <div className="flex-grow border-t border-gray-700"></div>
-                                        </div>
-
-                                        <button 
-                                            onClick={() => handleDirectPurchase(selectedIsland)}
-                                            disabled={isPurchasing}
-                                            className="w-full py-3 rounded-xl bg-gradient-to-r from-yellow-600 to-orange-600 text-white font-black text-sm shadow-[0_0_20px_rgba(234,179,8,0.3)] flex items-center justify-center gap-2 hover:scale-[1.02] active:scale-95 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-                                        >
-                                            {isPurchasing ? <Loader2 className="animate-spin" size={18} /> : <Unlock size={18}/>}
-                                            PAY {parseFloat(selectedIsland.unlock_price).toLocaleString()} MMK
-                                        </button>
-                                    </>
-                                )}
+                                <button 
+                                    onClick={() => { setShowUnlockModal(false); router.push('/wallet'); }}
+                                    className="w-full py-3 rounded-xl bg-gradient-to-r from-green-600 to-emerald-600 text-white font-black text-sm shadow-[0_0_20px_rgba(34,197,94,0.3)] flex items-center justify-center gap-2 hover:scale-[1.02] active:scale-95 transition-all"
+                                >
+                                    <Coins size={18}/> GO TO CASHIER
+                                </button>
                             </div>
                         </GlassCard>
                     </div>
@@ -417,7 +346,7 @@ export default function Lobby() {
 
             {showDailyBonus && <DailyBonusModal onClose={() => setShowDailyBonus(false)} />}
 
-            <BottomDock activeCharId={user.active_pet_id} onNavigate={(path) => router.push(`/${path}`)} onOpenBank={() => router.push('/wallet')} />
+            <BottomDock activeCharId={user?.active_pet_id} onNavigate={(path) => router.push(`/${path}`)} onOpenBank={() => router.push('/wallet')} />
         </div>
     );
 }
