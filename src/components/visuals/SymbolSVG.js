@@ -72,15 +72,24 @@ const SymbolSVG = ({
                 <stop offset="100%" stopColor="#001133" />
             </linearGradient>
 
-            {/* Image 17: Slopara Pink/Blonde */}
-            <linearGradient id="blondeHair" x1="0" y1="0" x2="0" y2="1">
+            {/* Image 17: Slopara Pink/Blonde Complex Shaders */}
+            <linearGradient id="blondeHair" x1="0" y1="0" x2="1" y2="1">
                 <stop offset="0%" stopColor="#fff5cc" />
-                <stop offset="50%" stopColor="#ffcc00" />
-                <stop offset="100%" stopColor="#cc7a00" />
+                <stop offset="30%" stopColor="#ffea80" />
+                <stop offset="70%" stopColor="#ffcc00" />
+                <stop offset="100%" stopColor="#cca300" />
             </linearGradient>
+            
             <linearGradient id="magicalPink" x1="0" y1="0" x2="1" y2="1">
-                <stop offset="0%" stopColor="#ff99cc" />
+                <stop offset="0%" stopColor="#ffb3d9" />
+                <stop offset="40%" stopColor="#ff4d94" />
                 <stop offset="100%" stopColor="#cc0052" />
+            </linearGradient>
+
+            <linearGradient id="skinTone" x1="0" y1="0" x2="1" y2="1">
+                <stop offset="0%" stopColor="#ffffff" />
+                <stop offset="50%" stopColor="#ffe6d5" />
+                <stop offset="100%" stopColor="#ffb399" />
             </linearGradient>
 
             {/* Gems for JP */}
@@ -197,44 +206,110 @@ const SymbolSVG = ({
         </g>
     );
 
-    // ID 2: SLOPARA (Matches Image 17 - Anime Girl with Twin Tails & Bows)
+    // ID 2: SLOPARA (Highly Detailed Anime Girl - Image 17)
     const renderSlopara = () => (
         <g filter="url(#dropShadow)">
-            <circle cx="50" cy="50" r="45" fill="url(#auraRay)" opacity="0.4" />
-            
-            {/* Twin Tails (Blonde) */}
-            <path d="M 50 30 Q -10 10 5 80 Q 20 60 40 30" fill="url(#blondeHair)" stroke="#b37700" strokeWidth="1" filter="url(#innerGlow)"/>
-            <path d="M 50 30 Q 110 10 95 80 Q 80 60 60 30" fill="url(#blondeHair)" stroke="#b37700" strokeWidth="1" filter="url(#innerGlow)"/>
-            
-            {/* Hair Bows */}
-            <path d="M 30 25 L 15 15 L 20 35 Z" fill="url(#magicalPink)" stroke="#fff" strokeWidth="0.5" />
-            <path d="M 70 25 L 85 15 L 80 35 Z" fill="url(#magicalPink)" stroke="#fff" strokeWidth="0.5" />
-            <polygon points="28,25 33,20 38,25 33,30" fill="url(#goldMetal)" />
-            <polygon points="72,25 67,20 62,25 67,30" fill="url(#goldMetal)" />
+            {/* Dynamic Starburst Aura */}
+            <g className="animate-[pulse_3s_ease-in-out_infinite]" opacity="0.8">
+                <circle cx="50" cy="50" r="45" fill="url(#auraRay)" />
+                <path d="M 50 0 L 53 47 L 100 50 L 53 53 L 50 100 L 47 53 L 0 50 L 47 47 Z" fill="#fff" opacity="0.5" />
+                <path d="M 15 15 L 48 48 M 85 15 L 52 48 M 85 85 L 52 52 M 15 85 L 48 52" stroke="#fff" strokeWidth="2" opacity="0.3" />
+                {/* Floating ambient stars */}
+                <path d="M 15 35 L 17 38 L 20 37 L 18 40 L 20 43 L 17 42 L 15 45 L 14 42 L 11 43 L 13 40 L 11 37 L 14 38 Z" fill="url(#goldMetal)" />
+                <path d="M 85 45 L 87 48 L 90 47 L 88 50 L 90 53 L 87 52 L 85 55 L 84 52 L 81 53 L 83 50 L 81 47 L 84 48 Z" fill="url(#goldMetal)" />
+            </g>
 
-            {/* Anime Face & Head */}
-            <circle cx="50" cy="40" r="22" fill="#fff0e6" stroke="#e6b3b3" strokeWidth="1" />
+            {/* Back Hair (Flowing Twin Tails) */}
+            <path d="M 50 35 C 10 20, -5 60, 10 80 C 30 100, 40 70, 45 45 Z" fill="url(#blondeHair)" filter="url(#innerGlow)"/>
+            <path d="M 50 35 C 90 20, 105 60, 90 80 C 70 100, 60 70, 55 45 Z" fill="url(#blondeHair)" filter="url(#innerGlow)"/>
             
-            {/* Eyes */}
-            <ellipse cx="40" cy="40" rx="5" ry="7" fill="#0066cc" />
-            <circle cx="41" cy="38" r="2" fill="#fff" />
-            <ellipse cx="60" cy="40" rx="5" ry="7" fill="#0066cc" />
-            <circle cx="59" cy="38" r="2" fill="#fff" />
-            
-            {/* Smile & Blush */}
-            <path d="M 45 48 Q 50 55 55 48 Z" fill="#ff4d4d" />
-            <ellipse cx="32" cy="45" rx="4" ry="2" fill="#ff9999" opacity="0.6" />
-            <ellipse cx="68" cy="45" rx="4" ry="2" fill="#ff9999" opacity="0.6" />
-            
-            {/* Magical Girl Chest Bow */}
-            <path d="M 50 65 L 30 60 L 40 75 Z" fill="url(#magicalPink)" />
-            <path d="M 50 65 L 70 60 L 60 75 Z" fill="url(#magicalPink)" />
-            <polygon points="50,60 55,68 45,68" fill="url(#goldMetal)" />
+            {/* Twin Tail Highlights */}
+            <path d="M 20 40 C 10 50, 15 70, 20 75 C 25 60, 25 45, 30 40 Z" fill="#ffffff" opacity="0.4" />
+            <path d="M 80 40 C 90 50, 85 70, 80 75 C 75 60, 75 45, 70 40 Z" fill="#ffffff" opacity="0.4" />
 
-            {/* 3D "SLOPARA" Text Logo */}
+            {/* Hair Bows (Magical Girl Style) */}
+            <g transform="translate(28, 22) rotate(-20)">
+                <path d="M 0 0 C -18 -12, -22 12, -5 18 Z" fill="url(#magicalPink)" stroke="#ff3385" strokeWidth="1" filter="url(#innerGlow)" />
+                <path d="M 0 0 C 18 -12, 22 12, 5 18 Z" fill="url(#magicalPink)" stroke="#ff3385" strokeWidth="1" filter="url(#innerGlow)" />
+                <polygon points="0,-4 3,1 7,-1 4,4 6,8 0,6 -6,8 -4,4 -7,-1 -3,1" fill="url(#goldMetal)" />
+            </g>
+            <g transform="translate(72, 22) rotate(20)">
+                <path d="M 0 0 C -18 -12, -22 12, -5 18 Z" fill="url(#magicalPink)" stroke="#ff3385" strokeWidth="1" filter="url(#innerGlow)" />
+                <path d="M 0 0 C 18 -12, 22 12, 5 18 Z" fill="url(#magicalPink)" stroke="#ff3385" strokeWidth="1" filter="url(#innerGlow)" />
+                <polygon points="0,-4 3,1 7,-1 4,4 6,8 0,6 -6,8 -4,4 -7,-1 -3,1" fill="url(#goldMetal)" />
+            </g>
+
+            {/* Neck & Shoulders */}
+            <path d="M 40 55 L 40 70 C 40 75, 60 75, 60 70 L 60 55 Z" fill="url(#skinTone)" />
+            
+            {/* Sailor Collar Outfit */}
+            <path d="M 32 60 C 50 80, 68 60, 68 60 L 60 55 L 40 55 Z" fill="#ff1a66" stroke="#fff" strokeWidth="1.5" />
+            <path d="M 36 62 C 50 76, 64 62, 64 62" fill="none" stroke="#fff" strokeWidth="1" opacity="0.6" />
+
+            {/* Main Face (Anime Shape) */}
+            <ellipse cx="50" cy="44" rx="17" ry="19" fill="url(#skinTone)" stroke="#e6b3b3" strokeWidth="0.5" />
+            
+            {/* Blush */}
+            <ellipse cx="38" cy="48" rx="3.5" ry="2" fill="#ff6699" opacity="0.6" filter="blur(1px)" />
+            <ellipse cx="62" cy="48" rx="3.5" ry="2" fill="#ff6699" opacity="0.6" filter="blur(1px)" />
+
+            {/* Beautiful Anime Eyes */}
+            {/* Left Eye */}
+            <path d="M 33 42 Q 38 38 42 42 Q 38 45 33 42 Z" fill="#fff" />
+            <ellipse cx="38" cy="42" rx="3" ry="4" fill="#0066cc" />
+            <circle cx="38" cy="42" r="1.5" fill="#002266" />
+            <circle cx="37" cy="40" r="1" fill="#fff" />
+            <circle cx="39" cy="43" r="0.5" fill="#80d4ff" />
+            <path d="M 32 41 Q 38 36 43 41" fill="none" stroke="#111" strokeWidth="1.5" strokeLinecap="round" />
+            <path d="M 32 41 L 30 39 M 43 41 L 45 39" fill="none" stroke="#111" strokeWidth="0.5" />
+
+            {/* Right Eye */}
+            <path d="M 67 42 Q 62 38 58 42 Q 62 45 67 42 Z" fill="#fff" />
+            <ellipse cx="62" cy="42" rx="3" ry="4" fill="#0066cc" />
+            <circle cx="62" cy="42" r="1.5" fill="#002266" />
+            <circle cx="61" cy="40" r="1" fill="#fff" />
+            <circle cx="63" cy="43" r="0.5" fill="#80d4ff" />
+            <path d="M 68 41 Q 62 36 57 41" fill="none" stroke="#111" strokeWidth="1.5" strokeLinecap="round" />
+            <path d="M 68 41 L 70 39 M 57 41 L 55 39" fill="none" stroke="#111" strokeWidth="0.5" />
+
+            {/* Eyebrows */}
+            <path d="M 32 37 Q 38 34 43 37" fill="none" stroke="#cc7a00" strokeWidth="1" strokeLinecap="round" />
+            <path d="M 68 37 Q 62 34 57 37" fill="none" stroke="#cc7a00" strokeWidth="1" strokeLinecap="round" />
+
+            {/* Happy Open Mouth */}
+            <path d="M 46 51 Q 50 56 54 51 Q 50 52 46 51 Z" fill="#800000" />
+            <path d="M 47 52 Q 50 55 53 52 Z" fill="#ff4d4d" />
+            
+            {/* Front Bangs (Hair Overlays) */}
+            <path d="M 50 20 C 35 20, 25 32, 32 47 C 35 37, 45 35, 50 30 C 55 35, 65 37, 68 47 C 75 32, 65 20, 50 20 Z" fill="url(#blondeHair)" filter="url(#dropShadow)" />
+            <path d="M 50 20 C 45 25, 40 37, 45 44 C 48 37, 50 32, 50 20 Z" fill="#fff5cc" opacity="0.8" />
+            <path d="M 50 20 C 55 25, 60 37, 55 44 C 52 37, 50 32, 50 20 Z" fill="#fff5cc" opacity="0.8" />
+            
+            {/* Center Outfit Bow */}
+            <g transform="translate(50, 68)">
+                <path d="M 0 0 C -15 -10, -25 8, -10 16 Z" fill="url(#magicalPink)" filter="url(#innerGlow)" />
+                <path d="M 0 0 C 15 -10, 25 8, 10 16 Z" fill="url(#magicalPink)" filter="url(#innerGlow)" />
+                <polygon points="0,-6 2,-2 7,-2 4,2 5,7 0,4 -5,7 -4,2 -7,-2 -2,-2" fill="url(#goldMetal)" />
+            </g>
+
+            {/* Hand with Peace Sign */}
+            <g transform="translate(28, 62) rotate(-15)">
+                <ellipse cx="0" cy="0" rx="6" ry="5" fill="#ffffff" stroke="#e6e6e6" strokeWidth="0.5" />
+                <path d="M -3 0 L -5 -12 A 2 2 0 0 1 -1 -12 L -1 0" fill="#ffffff" stroke="#e6e6e6" strokeWidth="0.5" />
+                <path d="M 1 0 L 1 -10 A 2 2 0 0 1 5 -10 L 5 0" fill="#ffffff" stroke="#e6e6e6" strokeWidth="0.5" />
+                <path d="M -5 2 L -8 0 A 2 2 0 0 1 -6 -2 L -3 0" fill="#ffffff" />
+                <path d="M 0 3 A 4 2 0 0 0 5 0" fill="none" stroke="#cccccc" strokeWidth="1" />
+            </g>
+
+            {/* Huge 3D "SLOPARA" Text Logo (Bottom Center) */}
             <g transform="translate(50, 88)">
-                <text x="0" y="2" textAnchor="middle" fill="#800000" fontSize="22" fontWeight="900" stroke="#fff" strokeWidth="3" style={{fontFamily: 'Impact, sans-serif'}}>SLOPARA</text>
-                <text x="0" y="0" textAnchor="middle" fill="url(#goldMetal)" fontSize="22" fontWeight="900" stroke="#cc0000" strokeWidth="0.5" style={{fontFamily: 'Impact, sans-serif'}}>SLOPARA</text>
+                <text x="0" y="4" textAnchor="middle" fill="#4d0000" fontSize="22" fontWeight="900" stroke="#4d0000" strokeWidth="8" style={{fontFamily: 'Impact, sans-serif'}}>SLOPARA</text>
+                <text x="0" y="2" textAnchor="middle" fill="#ff1a1a" fontSize="22" fontWeight="900" stroke="#ff1a1a" strokeWidth="3" style={{fontFamily: 'Impact, sans-serif'}}>SLOPARA</text>
+                <text x="0" y="0" textAnchor="middle" fill="url(#goldMetal)" fontSize="22" fontWeight="900" stroke="#fff" strokeWidth="0.5" style={{fontFamily: 'Impact, sans-serif'}}>SLOPARA</text>
+                
+                <circle cx="-35" cy="-8" r="1.5" fill="#fff" className="animate-ping" />
+                <circle cx="35" cy="2" r="1" fill="#fff" className="animate-ping" style={{animationDelay: '0.5s'}} />
+                <circle cx="0" cy="-2" r="1.5" fill="#fff" className="animate-ping" style={{animationDelay: '1s'}} />
             </g>
         </g>
     );
@@ -365,13 +440,13 @@ const SymbolSVG = ({
             {/* Left Cherry Orb */}
             <circle cx="30" cy="65" r="22" fill="url(#cherryRed)" filter="url(#innerGlow)" />
             {/* Left Cherry Gloss */}
-            <ellipse cx="20" cy="55" rx="8" ry="4" fill="#ffffff" opacity="0.8" transform="rotate(-30 20 55)" pointerEvents="none" />
+            <ellipse cx="20" cy="55" rx="8" ry="4" fill="#ffffff" opacity="0.8" transform="rotate(-40 20 55)" pointerEvents="none" />
             <circle cx="38" cy="78" r="3" fill="#ff9999" opacity="0.5" pointerEvents="none" />
             
             {/* Right Cherry Orb (Overlapping) */}
             <circle cx="70" cy="68" r="24" fill="url(#cherryRed)" filter="url(#innerGlow)" />
             {/* Right Cherry Gloss */}
-            <ellipse cx="60" cy="57" rx="9" ry="4.5" fill="#ffffff" opacity="0.8" transform="rotate(-30 60 57)" pointerEvents="none" />
+            <ellipse cx="60" cy="57" rx="9" ry="4.5" fill="#ffffff" opacity="0.8" transform="rotate(-40 60 57)" pointerEvents="none" />
             <circle cx="80" cy="82" r="3.5" fill="#ff9999" opacity="0.5" pointerEvents="none" />
         </g>
     );
