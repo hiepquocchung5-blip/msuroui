@@ -8,13 +8,14 @@ const SymbolSVG = ({
 }) => {
 
     // --- 1. DYNAMIC THEME ENGINE ---
+    // Adapts the aura and lighting based on the 5 V3 Islands
     const getTheme = (island) => {
         const themes = {
-            1: { aura: '#FFD700', particle: 'star' },     // Kyoto: Gold Stars
-            2: { aura: '#00f3ff', particle: 'sparkle' },  // Neon: Cyan Sparkles
-            3: { aura: '#ff4500', particle: 'ember' },    // Edo: Fire Embers
-            4: { aura: '#ffb3c6', particle: 'petal' },    // Hanami: Sakura Petals
-            5: { aura: '#8a2be2', particle: 'soul' },     // Yokai: Purple Soul Flames
+            1: { aura: '#FFD700', glow: 'rgba(255, 215, 0, 0.8)' },    // Kyoto: Gold
+            2: { aura: '#00f3ff', glow: 'rgba(0, 243, 255, 0.8)' },    // Neon: Cyan
+            3: { aura: '#ff4500', glow: 'rgba(255, 69, 0, 0.8)' },     // Edo: Magma
+            4: { aura: '#ffb3c6', glow: 'rgba(255, 179, 198, 0.8)' },  // Hanami: Sakura
+            5: { aura: '#8a2be2', glow: 'rgba(138, 43, 226, 0.8)' },   // Yokai: Purple
         };
         return themes[island] || themes[1];
     };
@@ -24,52 +25,85 @@ const SymbolSVG = ({
     // --- 2. PREMIUM 3D SHADERS & DEFINITIONS ---
     const renderDefs = () => (
         <defs>
-            {/* Glossy Textures */}
-            <radialGradient id="blueOrb" cx="40%" cy="30%" r="60%">
-                <stop offset="0%" stopColor="#80dfff" />
+            {/* Image 11: Replay Blue Orb */}
+            <radialGradient id="replayOrb" cx="40%" cy="30%" r="60%">
+                <stop offset="0%" stopColor="#b3ebff" />
                 <stop offset="30%" stopColor="#00aaff" />
-                <stop offset="80%" stopColor="#0055ff" />
-                <stop offset="100%" stopColor="#002288" />
+                <stop offset="70%" stopColor="#0055cc" />
+                <stop offset="100%" stopColor="#001144" />
             </radialGradient>
 
+            {/* Image 12: Deep Cherry Gloss */}
             <radialGradient id="cherryRed" cx="35%" cy="30%" r="65%">
                 <stop offset="0%" stopColor="#ffffff" />
                 <stop offset="15%" stopColor="#ff1a40" />
-                <stop offset="60%" stopColor="#cc0000" />
-                <stop offset="100%" stopColor="#4d0000" />
+                <stop offset="50%" stopColor="#cc0000" />
+                <stop offset="85%" stopColor="#4d0000" />
+                <stop offset="100%" stopColor="#1a0000" />
             </radialGradient>
+            
+            <linearGradient id="leafGreen" x1="0" y1="0" x2="1" y2="1">
+                <stop offset="0%" stopColor="#a3ff47" />
+                <stop offset="50%" stopColor="#2eb82e" />
+                <stop offset="100%" stopColor="#004d00" />
+            </linearGradient>
 
+            {/* Image 13 & 18: Rich Gold Metal */}
             <linearGradient id="goldMetal" x1="0%" y1="0%" x2="100%" y2="100%">
-                <stop offset="0%" stopColor="#ffe680" />
+                <stop offset="0%" stopColor="#fff2a8" />
                 <stop offset="25%" stopColor="#ffcc00" />
                 <stop offset="50%" stopColor="#b38600" />
                 <stop offset="75%" stopColor="#ffcc00" />
                 <stop offset="100%" stopColor="#4d3300" />
             </linearGradient>
 
-            <linearGradient id="blueTexture" x1="0%" y1="0%" x2="100%" y2="100%">
-                <stop offset="0%" stopColor="#80d4ff" />
-                <stop offset="50%" stopColor="#0077b3" />
-                <stop offset="100%" stopColor="#002266" />
+            {/* Image 14: Melon Textures */}
+            <linearGradient id="melonFlesh" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor="#ffcccc" />
+                <stop offset="20%" stopColor="#ff3333" />
+                <stop offset="80%" stopColor="#cc0000" />
+                <stop offset="100%" stopColor="#e6ffcc" />
             </linearGradient>
 
-            <linearGradient id="pinkGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+            {/* Image 16: Blue Textured 7 */}
+            <linearGradient id="sevenBlue" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stopColor="#66ccff" />
+                <stop offset="40%" stopColor="#0066cc" />
+                <stop offset="100%" stopColor="#001133" />
+            </linearGradient>
+
+            {/* Image 17: Slopara Pink/Blonde */}
+            <linearGradient id="blondeHair" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor="#fff5cc" />
+                <stop offset="50%" stopColor="#ffcc00" />
+                <stop offset="100%" stopColor="#cc7a00" />
+            </linearGradient>
+            <linearGradient id="magicalPink" x1="0" y1="0" x2="1" y2="1">
                 <stop offset="0%" stopColor="#ff99cc" />
-                <stop offset="50%" stopColor="#ff3385" />
-                <stop offset="100%" stopColor="#b30047" />
+                <stop offset="100%" stopColor="#cc0052" />
             </linearGradient>
 
-            {/* Gems */}
-            <linearGradient id="gemBlue" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stopColor="#00ffff"/><stop offset="100%" stopColor="#000080"/></linearGradient>
-            <linearGradient id="gemGreen" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stopColor="#00ff00"/><stop offset="100%" stopColor="#003300"/></linearGradient>
-            <linearGradient id="gemPink" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stopColor="#ff00ff"/><stop offset="100%" stopColor="#800080"/></linearGradient>
+            {/* Gems for JP */}
+            <radialGradient id="gemCyan" cx="30%" cy="30%" r="70%"><stop offset="0%" stopColor="#ffffff"/><stop offset="40%" stopColor="#00ffff"/><stop offset="100%" stopColor="#006666"/></radialGradient>
+            <radialGradient id="gemGreen" cx="30%" cy="30%" r="70%"><stop offset="0%" stopColor="#ffffff"/><stop offset="40%" stopColor="#00ff00"/><stop offset="100%" stopColor="#004d00"/></radialGradient>
+            <radialGradient id="gemMagenta" cx="30%" cy="30%" r="70%"><stop offset="0%" stopColor="#ffffff"/><stop offset="40%" stopColor="#ff00ff"/><stop offset="100%" stopColor="#660066"/></radialGradient>
 
-            {/* Filters */}
+            {/* 3D Shadows & Lighting */}
             <filter id="dropShadow" x="-20%" y="-20%" width="140%" height="140%">
-                <feDropShadow dx="0" dy="6" stdDeviation="4" floodColor="#000" floodOpacity="0.7"/>
+                <feDropShadow dx="0" dy="6" stdDeviation="4" floodColor="#000" floodOpacity="0.75"/>
                 <feDropShadow dx="0" dy="2" stdDeviation="1" floodColor="#000" floodOpacity="0.9"/>
             </filter>
 
+            <filter id="innerGlow">
+                <feGaussianBlur in="SourceAlpha" stdDeviation="2" result="blur"/>
+                <feSpecularLighting in="blur" surfaceScale="3" specularConstant="1.5" specularExponent="20" lightingColor="#ffffff" result="spec">
+                    <fePointLight x="-10" y="-10" z="30"/>
+                </feSpecularLighting>
+                <feComposite in="spec" in2="SourceAlpha" operator="in" result="specOut"/>
+                <feComposite in="SourceGraphic" in2="specOut" operator="arithmetic" k1="0" k2="1" k3="1" k4="0"/>
+            </filter>
+
+            {/* Gemini Aura Win Pulse */}
             <filter id="winPulse" x="-50%" y="-50%" width="200%" height="200%">
                 <feGaussianBlur stdDeviation="8" result="blur"/>
                 <feColorMatrix type="matrix" values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 3 0" />
@@ -79,10 +113,9 @@ const SymbolSVG = ({
                 </feMerge>
             </filter>
 
-            {/* Light Rays */}
-            <radialGradient id="lightRay" cx="50%" cy="50%" r="50%">
-                <stop offset="0%" stopColor="#ffffff" stopOpacity="0.8" />
-                <stop offset="50%" stopColor={theme.aura} stopOpacity="0.4" />
+            <radialGradient id="auraRay" cx="50%" cy="50%" r="50%">
+                <stop offset="0%" stopColor="#ffffff" stopOpacity="0.9" />
+                <stop offset="40%" stopColor={theme.aura} stopOpacity="0.6" />
                 <stop offset="100%" stopColor={theme.aura} stopOpacity="0" />
             </radialGradient>
         </defs>
@@ -93,251 +126,290 @@ const SymbolSVG = ({
         if (!isWinning) return null;
         return (
             <g className="pointer-events-none">
-                {/* Background Burst */}
-                <circle cx="50" cy="50" r="45" fill="url(#lightRay)">
-                    <animate attributeName="opacity" values="0.4;1;0.4" dur="1s" repeatCount="indefinite" />
-                    <animateTransform attributeName="transform" type="scale" values="0.9; 1.1; 0.9" dur="1s" repeatCount="indefinite" transformOrigin="50 50" />
+                {/* Expanding Energy Ring */}
+                <circle cx="50" cy="50" r="45" fill="none" stroke={theme.aura} strokeWidth="2" opacity="0.8">
+                    <animate attributeName="r" values="30; 55; 30" dur="1.5s" repeatCount="indefinite" />
+                    <animate attributeName="opacity" values="0.8; 0; 0.8" dur="1.5s" repeatCount="indefinite" />
                 </circle>
                 
-                {/* Rotating Light Beams */}
-                <g opacity="0.6">
-                    <animateTransform attributeName="transform" type="rotate" from="0 50 50" to="360 50 50" dur="4s" repeatCount="indefinite" />
-                    <polygon points="48,10 52,10 50,50" fill="url(#lightRay)" />
-                    <polygon points="48,90 52,90 50,50" fill="url(#lightRay)" />
-                    <polygon points="10,48 10,52 50,50" fill="url(#lightRay)" />
-                    <polygon points="90,48 90,52 50,50" fill="url(#lightRay)" />
-                </g>
+                {/* Backlight Burst */}
+                <circle cx="50" cy="50" r="40" fill="url(#auraRay)">
+                    <animateTransform attributeName="transform" type="scale" values="0.9; 1.15; 0.9" dur="1s" repeatCount="indefinite" transformOrigin="50 50" />
+                </circle>
 
-                {/* Particles */}
-                {[...Array(6)].map((_, i) => (
-                    <circle key={i} cx="50" cy="50" r={Math.random() * 2 + 1} fill="#FFF" filter="drop-shadow(0 0 2px #FFF)">
-                        <animateTransform 
-                            attributeName="transform" 
-                            type="translate" 
-                            values={`0 0; ${Math.cos(i * 60) * 40} ${Math.sin(i * 60) * 40}`} 
-                            dur={`${Math.random() * 1 + 0.5}s`} 
-                            repeatCount="indefinite" 
-                        />
-                        <animate attributeName="opacity" values="1;0" dur={`${Math.random() * 1 + 0.5}s`} repeatCount="indefinite" />
-                    </circle>
+                {/* Star Particles */}
+                {[...Array(8)].map((_, i) => (
+                    <g key={i} transform={`rotate(${i * 45} 50 50)`}>
+                        <path d="M 50 10 L 52 15 L 50 20 L 48 15 Z" fill="#FFF" filter="drop-shadow(0 0 2px #FFF)">
+                            <animateTransform attributeName="transform" type="translate" values="0 0; 0 -15" dur={`${Math.random() * 0.5 + 0.5}s`} repeatCount="indefinite" />
+                            <animate attributeName="opacity" values="1;0" dur={`${Math.random() * 0.5 + 0.5}s`} repeatCount="indefinite" />
+                        </path>
+                    </g>
                 ))}
             </g>
         );
     };
 
-    // --- 4. HIGH FIDELITY SYMBOL RECREATIONS ---
+    // --- 4. HIGH FIDELITY SYMBOL RECREATIONS (Matched to Images) ---
 
-    // ID 1: GRAND JP (Matches Image 18)
+    // ID 1: GRAND JP (Matches Image 18 - Golden Crown, Coins, Gems)
     const renderGrandJP = () => (
         <g filter="url(#dropShadow)">
             {/* Background Light Burst */}
-            <circle cx="50" cy="50" r="40" fill="url(#lightRay)" opacity="0.5" />
+            <circle cx="50" cy="50" r="45" fill="url(#auraRay)" opacity="0.6" />
             
-            {/* Crown */}
-            <path d="M 20 45 L 25 20 L 38 35 L 50 15 L 62 35 L 75 20 L 80 45 Z" fill="url(#goldMetal)" stroke="#663300" strokeWidth="1" />
-            <circle cx="25" cy="20" r="3" fill="url(#gemBlue)" />
-            <circle cx="50" cy="15" r="4" fill="url(#gemPink)" />
-            <circle cx="75" cy="20" r="3" fill="url(#gemGreen)" />
+            {/* Palm Fronds (Background) */}
+            <path d="M 20 60 Q 5 40 10 20 Q 25 35 30 50 Z" fill="#006600" />
+            <path d="M 80 60 Q 95 40 90 20 Q 75 35 70 50 Z" fill="#006600" />
             
-            {/* Ribbon Background */}
-            <path d="M 5 60 Q 50 70 95 60 L 90 75 Q 50 85 10 75 Z" fill="#cc0000" />
-            
-            {/* GRAND Text */}
-            <text x="50" y="52" textAnchor="middle" fill="url(#goldMetal)" fontSize="20" fontWeight="900" stroke="#4d0000" strokeWidth="2" letterSpacing="1" style={{fontFamily: 'Impact, sans-serif'}}>GRAND</text>
-            <text x="50" y="52" textAnchor="middle" fill="#fff" fontSize="20" fontWeight="900" stroke="none" letterSpacing="1" opacity="0.4" style={{fontFamily: 'Impact, sans-serif'}}>GRAND</text>
-            
-            {/* JP Text */}
-            <text x="50" y="78" textAnchor="middle" fill="url(#goldMetal)" fontSize="32" fontWeight="900" stroke="#4d0000" strokeWidth="2" style={{fontFamily: 'Impact, sans-serif'}}>JP</text>
-            
-            {/* Gems at Bottom */}
-            <polygon points="30,85 20,95 40,95" fill="url(#gemBlue)" stroke="#fff" strokeWidth="0.5" />
-            <polygon points="50,82 40,95 60,95" fill="url(#gemGreen)" stroke="#fff" strokeWidth="0.5" />
-            <polygon points="70,85 60,95 80,95" fill="url(#gemPink)" stroke="#fff" strokeWidth="0.5" />
+            {/* Pile of Gold Coins */}
+            <g stroke="#805500" strokeWidth="0.5">
+                <ellipse cx="25" cy="75" rx="14" ry="6" fill="url(#goldMetal)" />
+                <ellipse cx="75" cy="75" rx="14" ry="6" fill="url(#goldMetal)" />
+                <ellipse cx="15" cy="82" rx="12" ry="5" fill="url(#goldMetal)" />
+                <ellipse cx="85" cy="82" rx="12" ry="5" fill="url(#goldMetal)" />
+                <ellipse cx="50" cy="88" rx="18" ry="7" fill="url(#goldMetal)" />
+            </g>
+
+            {/* Huge 3D "GRAND JP" Text */}
+            <g transform="translate(50, 48)">
+                {/* 3D Extrusion */}
+                <text x="0" y="4" textAnchor="middle" fill="#4d0000" fontSize="24" fontWeight="900" stroke="#4d0000" strokeWidth="6" style={{fontFamily: 'Impact, sans-serif'}}>GRAND</text>
+                <text x="0" y="0" textAnchor="middle" fill="url(#goldMetal)" fontSize="24" fontWeight="900" stroke="#fff" strokeWidth="1" letterSpacing="1" style={{fontFamily: 'Impact, sans-serif'}}>GRAND</text>
+                
+                <text x="0" y="32" textAnchor="middle" fill="#4d0000" fontSize="34" fontWeight="900" stroke="#4d0000" strokeWidth="8" style={{fontFamily: 'Impact, sans-serif'}}>JP</text>
+                <text x="0" y="28" textAnchor="middle" fill="#ff1a1a" fontSize="34" fontWeight="900" stroke="url(#goldMetal)" strokeWidth="2" style={{fontFamily: 'Impact, sans-serif'}}>JP</text>
+            </g>
+
+            {/* The Crown */}
+            <g transform="translate(50, 22) scale(0.8)">
+                <path d="M -30 10 L -20 -15 L -10 5 L 0 -20 L 10 5 L 20 -15 L 30 10 Z" fill="url(#goldMetal)" stroke="#663300" strokeWidth="1" filter="url(#innerGlow)" />
+                <circle cx="-20" cy="-15" r="4" fill="url(#gemCyan)" />
+                <circle cx="0" cy="-20" r="5" fill="url(#gemMagenta)" />
+                <circle cx="20" cy="-15" r="4" fill="url(#gemGreen)" />
+                <path d="M -25 10 Q 0 15 25 10" fill="none" stroke="#ff0000" strokeWidth="3" />
+            </g>
+
+            {/* Massive Foreground Gems */}
+            <polygon points="35,80 25,95 45,95" fill="url(#gemCyan)" stroke="#fff" strokeWidth="1" filter="url(#innerGlow)" />
+            <polygon points="65,80 55,95 75,95" fill="url(#gemGreen)" stroke="#fff" strokeWidth="1" filter="url(#innerGlow)" />
+            <polygon points="50,75 35,90 65,90" fill="url(#gemMagenta)" stroke="#fff" strokeWidth="1" filter="url(#innerGlow)" />
         </g>
     );
 
-    // ID 2: SLOPARA (Matches Image 17)
+    // ID 2: SLOPARA (Matches Image 17 - Anime Girl with Twin Tails & Bows)
     const renderSlopara = () => (
         <g filter="url(#dropShadow)">
-            {/* Bright Aura */}
-            <circle cx="50" cy="50" r="45" fill="url(#lightRay)" opacity="0.3" />
+            <circle cx="50" cy="50" r="45" fill="url(#auraRay)" opacity="0.4" />
             
             {/* Twin Tails (Blonde) */}
-            <path d="M 50 40 Q 10 30 15 80 Q 25 60 40 40" fill="#ffd700" />
-            <path d="M 50 40 Q 90 30 85 80 Q 75 60 60 40" fill="#ffd700" />
+            <path d="M 50 30 Q -10 10 5 80 Q 20 60 40 30" fill="url(#blondeHair)" stroke="#b37700" strokeWidth="1" filter="url(#innerGlow)"/>
+            <path d="M 50 30 Q 110 10 95 80 Q 80 60 60 30" fill="url(#blondeHair)" stroke="#b37700" strokeWidth="1" filter="url(#innerGlow)"/>
             
-            {/* Pink Bows */}
-            <polygon points="35,25 20,20 25,35" fill="url(#pinkGradient)" />
-            <polygon points="65,25 80,20 75,35" fill="url(#pinkGradient)" />
+            {/* Hair Bows */}
+            <path d="M 30 25 L 15 15 L 20 35 Z" fill="url(#magicalPink)" stroke="#fff" strokeWidth="0.5" />
+            <path d="M 70 25 L 85 15 L 80 35 Z" fill="url(#magicalPink)" stroke="#fff" strokeWidth="0.5" />
+            <polygon points="28,25 33,20 38,25 33,30" fill="url(#goldMetal)" />
+            <polygon points="72,25 67,20 62,25 67,30" fill="url(#goldMetal)" />
 
-            {/* Face */}
-            <circle cx="50" cy="45" r="20" fill="#fff0e6" />
+            {/* Anime Face & Head */}
+            <circle cx="50" cy="40" r="22" fill="#fff0e6" stroke="#e6b3b3" strokeWidth="1" />
             
-            {/* Anime Eyes (Large Blue) */}
-            <ellipse cx="42" cy="45" rx="4" ry="6" fill="#0055ff" />
-            <circle cx="43" cy="43" r="1.5" fill="#fff" />
-            <ellipse cx="58" cy="45" rx="4" ry="6" fill="#0055ff" />
-            <circle cx="57" cy="43" r="1.5" fill="#fff" />
+            {/* Eyes */}
+            <ellipse cx="40" cy="40" rx="5" ry="7" fill="#0066cc" />
+            <circle cx="41" cy="38" r="2" fill="#fff" />
+            <ellipse cx="60" cy="40" rx="5" ry="7" fill="#0066cc" />
+            <circle cx="59" cy="38" r="2" fill="#fff" />
             
-            {/* Happy Mouth */}
-            <path d="M 45 52 Q 50 58 55 52 Z" fill="#ff4d4d" />
+            {/* Smile & Blush */}
+            <path d="M 45 48 Q 50 55 55 48 Z" fill="#ff4d4d" />
+            <ellipse cx="32" cy="45" rx="4" ry="2" fill="#ff9999" opacity="0.6" />
+            <ellipse cx="68" cy="45" rx="4" ry="2" fill="#ff9999" opacity="0.6" />
             
-            {/* Idol Outfit Top */}
-            <path d="M 35 60 Q 50 65 65 60 L 60 75 Q 50 80 40 75 Z" fill="url(#pinkGradient)" />
-            <polygon points="50,68 45,63 55,63" fill="url(#goldMetal)" />
+            {/* Magical Girl Chest Bow */}
+            <path d="M 50 65 L 30 60 L 40 75 Z" fill="url(#magicalPink)" />
+            <path d="M 50 65 L 70 60 L 60 75 Z" fill="url(#magicalPink)" />
+            <polygon points="50,60 55,68 45,68" fill="url(#goldMetal)" />
 
-            {/* SLOPARA 3D Logo */}
+            {/* 3D "SLOPARA" Text Logo */}
             <g transform="translate(50, 88)">
-                <text x="0" y="0" textAnchor="middle" fill="#cc0000" fontSize="22" fontWeight="900" stroke="#fff" strokeWidth="3" letterSpacing="0" style={{fontFamily: 'Impact, sans-serif'}}>SLOPARA</text>
-                <text x="0" y="0" textAnchor="middle" fill="url(#goldMetal)" fontSize="22" fontWeight="900" stroke="#800000" strokeWidth="0.5" letterSpacing="0" style={{fontFamily: 'Impact, sans-serif'}}>SLOPARA</text>
+                <text x="0" y="2" textAnchor="middle" fill="#800000" fontSize="22" fontWeight="900" stroke="#fff" strokeWidth="3" style={{fontFamily: 'Impact, sans-serif'}}>SLOPARA</text>
+                <text x="0" y="0" textAnchor="middle" fill="url(#goldMetal)" fontSize="22" fontWeight="900" stroke="#cc0000" strokeWidth="0.5" style={{fontFamily: 'Impact, sans-serif'}}>SLOPARA</text>
             </g>
         </g>
     );
 
-    // ID 3: SEVEN (Matches Image 16)
+    // ID 3: SEVEN (Matches Image 16 - Blue Core, Double Gold Rim)
     const renderSeven = () => (
         <g filter="url(#dropShadow)">
-            {/* Deep Gold Outer Border (3D Extrusion) */}
-            <path d="M 18 18 L 88 18 L 88 38 L 52 92 L 28 92 L 60 42 L 18 42 Z" fill="#4d3300" transform="translate(2, 4)" />
+            {/* Base Extrusion (Shadow side) */}
+            <path d="M 18 22 L 88 22 L 88 42 L 52 92 L 28 92 L 60 46 L 18 46 Z" fill="#4d2600" transform="translate(2, 4)" />
             
-            {/* Main Gold Rim */}
-            <path d="M 15 15 L 85 15 L 85 35 L 50 88 L 30 88 L 60 40 L 15 40 Z" fill="url(#goldMetal)" stroke="#331a00" strokeWidth="1" />
+            {/* Outer Thick Gold Rim */}
+            <path d="M 15 15 L 85 15 L 85 38 L 48 90 L 25 90 L 58 42 L 15 42 Z" fill="url(#goldMetal)" stroke="#331a00" strokeWidth="1" filter="url(#innerGlow)" />
             
-            {/* Inner Gold Lip */}
-            <path d="M 22 22 L 78 22 L 78 30 L 46 82 L 38 82 L 66 36 L 22 36 Z" fill="#805500" />
+            {/* Inner Dark Gold Trench */}
+            <path d="M 23 23 L 77 23 L 77 34 L 43 82 L 33 82 L 64 38 L 23 38 Z" fill="#805500" />
             
-            {/* Blue Textured Core */}
-            <path d="M 25 25 L 75 25 L 75 28 L 44 78 L 40 78 L 65 33 L 25 33 Z" fill="url(#blueTexture)" />
+            {/* Center Textured Blue Core */}
+            <path d="M 26 26 L 74 26 L 74 31 L 41 78 L 37 78 L 62 35 L 26 35 Z" fill="url(#sevenBlue)" filter="url(#innerGlow)" />
             
-            {/* Hand-painted white gloss highlights */}
-            <path d="M 28 26 L 68 26 L 62 29 L 28 29 Z" fill="#ffffff" opacity="0.6" />
-            <path d="M 64 36 L 43 72 L 41 72 L 61 36 Z" fill="#ffffff" opacity="0.3" />
+            {/* High-Gloss Hand Painted Highlights */}
+            <path d="M 28 27 L 70 27 L 65 30 L 28 30 Z" fill="#ffffff" opacity="0.6" pointerEvents="none" />
+            <path d="M 64 36 L 43 72 L 41 72 L 61 36 Z" fill="#ffffff" opacity="0.4" pointerEvents="none" />
+            <path d="M 20 18 L 80 18 L 78 20 L 20 20 Z" fill="#ffffff" opacity="0.8" pointerEvents="none" />
             
-            {/* Gold Sparkles at base */}
-            <circle cx="35" cy="85" r="5" fill="url(#goldMetal)" filter="url(#dropShadow)" opacity="0.8" />
-            <circle cx="55" cy="88" r="4" fill="url(#goldMetal)" filter="url(#dropShadow)" opacity="0.8" />
+            {/* Base Sparkles */}
+            <circle cx="30" cy="85" r="4" fill="url(#goldMetal)" filter="url(#dropShadow)" opacity="0.9" />
+            <circle cx="55" cy="88" r="3" fill="url(#goldMetal)" filter="url(#dropShadow)" opacity="0.9" />
         </g>
     );
 
-    // ID 4: BELL (Matches Image 13)
+    // ID 4: BELL (Matches Image 13 - Massive Gold Bell on Coins)
     const renderBell = () => (
         <g filter="url(#dropShadow)">
-            {/* Stack of Gold Coins underneath */}
-            <ellipse cx="40" cy="85" rx="15" ry="5" fill="url(#goldMetal)" stroke="#664d00" strokeWidth="1" />
-            <ellipse cx="65" cy="82" rx="15" ry="5" fill="url(#goldMetal)" stroke="#664d00" strokeWidth="1" />
-            <ellipse cx="30" cy="78" rx="15" ry="5" fill="url(#goldMetal)" stroke="#664d00" strokeWidth="1" />
-            <ellipse cx="75" cy="75" rx="15" ry="5" fill="url(#goldMetal)" stroke="#664d00" strokeWidth="1" />
-            <ellipse cx="50" cy="88" rx="18" ry="6" fill="url(#goldMetal)" stroke="#664d00" strokeWidth="1" />
+            {/* Large Coin Pile */}
+            <g stroke="#805500" strokeWidth="0.5">
+                <ellipse cx="30" cy="80" rx="16" ry="6" fill="url(#goldMetal)" />
+                <ellipse cx="70" cy="82" rx="16" ry="6" fill="url(#goldMetal)" />
+                <ellipse cx="20" cy="86" rx="16" ry="6" fill="url(#goldMetal)" />
+                <ellipse cx="80" cy="86" rx="16" ry="6" fill="url(#goldMetal)" />
+                <ellipse cx="50" cy="90" rx="20" ry="7" fill="url(#goldMetal)" />
+                <ellipse cx="40" cy="85" rx="16" ry="6" fill="url(#goldMetal)" />
+                <ellipse cx="60" cy="87" rx="16" ry="6" fill="url(#goldMetal)" />
+            </g>
 
-            {/* Top Knob */}
-            <circle cx="50" cy="15" r="8" fill="url(#goldMetal)" />
-            <path d="M 45 22 L 55 22 L 55 30 L 45 30 Z" fill="#664d00" />
+            {/* Bell Knob */}
+            <circle cx="50" cy="18" r="8" fill="url(#goldMetal)" filter="url(#innerGlow)" />
+            <path d="M 44 24 L 56 24 L 56 32 L 44 32 Z" fill="#805500" />
             
-            {/* Bell Body */}
-            <path d="M 50 25 C 20 25, 10 60, 5 70 C 5 80, 95 80, 95 70 C 90 60, 80 25, 50 25 Z" fill="url(#goldMetal)" />
+            {/* Main Bell Body */}
+            <path d="M 50 28 C 20 28, 10 65, 5 75 C 5 85, 95 85, 95 75 C 90 65, 80 28, 50 28 Z" fill="url(#goldMetal)" filter="url(#innerGlow)" />
             
-            {/* Dark Inner Hollow */}
-            <ellipse cx="50" cy="72" rx="42" ry="12" fill="#332200" />
+            {/* Bottom Opening (Dark Hollow) */}
+            <ellipse cx="50" cy="78" rx="43" ry="12" fill="#331a00" />
             
-            {/* Clapper / Ringer */}
-            <path d="M 50 65 L 50 82" stroke="#cca300" strokeWidth="4" />
-            <circle cx="50" cy="85" r="8" fill="url(#goldMetal)" />
+            {/* Hanging Clapper */}
+            <path d="M 50 65 L 50 85" stroke="#cca300" strokeWidth="5" strokeLinecap="round" />
+            <circle cx="50" cy="88" r="10" fill="url(#goldMetal)" filter="url(#innerGlow)" />
             
-            {/* Etched Lines */}
-            <path d="M 16 50 Q 50 65 84 50" fill="none" stroke="#664d00" strokeWidth="2" />
-            <path d="M 12 60 Q 50 75 88 60" fill="none" stroke="#664d00" strokeWidth="2" />
+            {/* Horizontal Etched Rings */}
+            <path d="M 15 55 Q 50 70 85 55" fill="none" stroke="#996600" strokeWidth="2.5" />
+            <path d="M 10 65 Q 50 80 90 65" fill="none" stroke="#996600" strokeWidth="2.5" />
             
-            {/* Glare */}
-            <path d="M 30 30 C 20 40, 20 60, 20 60 C 25 60, 35 40, 35 30 Z" fill="#ffffff" opacity="0.4" />
+            {/* Massive White Glare */}
+            <path d="M 28 35 C 20 45, 18 65, 18 65 C 25 65, 35 45, 35 35 Z" fill="#ffffff" opacity="0.5" pointerEvents="none" />
         </g>
     );
 
-    // ID 5: WATERMELON (Matches Image 14)
+    // ID 5: WATERMELON (Matches Image 14 - Glossy Rind, Red Flesh, Seeds)
     const renderMelon = () => (
         <g filter="url(#dropShadow)">
-            {/* Dark Green Rind Base */}
-            <path d="M 5 45 Q 50 100 95 45 Z" fill="#003300" />
+            {/* Deep Green Outer Rind */}
+            <path d="M 5 45 Q 50 105 95 45 Z" fill="#003300" />
             
-            {/* Bright Green Rind */}
-            <path d="M 8 45 Q 50 95 92 45 Z" fill="url(#gemGreen)" />
+            {/* Bright Green Rind Layer */}
+            <path d="M 8 45 Q 50 100 92 45 Z" fill="#00cc00" filter="url(#innerGlow)" />
             
-            {/* Inner Yellow/White Rind Edge */}
-            <path d="M 12 45 Q 50 85 88 45 Z" fill="#e6ffcc" />
+            {/* Tiger Stripes on Rind */}
+            <path d="M 30 45 Q 35 65 25 80 M 50 45 V 90 M 70 45 Q 65 65 75 80" fill="none" stroke="#004d00" strokeWidth="6" strokeLinecap="round" opacity="0.8" />
             
-            {/* Bright Red Flesh */}
-            <path d="M 15 45 Q 50 80 85 45 L 50 20 Z" fill="url(#cherryRed)" />
+            {/* Inner White/Yellow Rind */}
+            <path d="M 12 45 Q 50 88 88 45 Z" fill="#e6ffcc" />
             
-            {/* Realistic Black Seeds with highlights */}
+            {/* Juicy Red Flesh */}
+            <path d="M 15 45 Q 50 82 85 45 L 50 18 Z" fill="url(#melonFlesh)" filter="url(#innerGlow)" />
+            
+            {/* Highly Detailed Black Seeds */}
             <g fill="#1a0000">
-                {/* Row 1 */}
-                <ellipse cx="40" cy="35" rx="2" ry="4" transform="rotate(25 40 35)" />
-                <ellipse cx="50" cy="38" rx="2" ry="4" />
-                <ellipse cx="60" cy="35" rx="2" ry="4" transform="rotate(-25 60 35)" />
-                {/* Row 2 */}
-                <ellipse cx="32" cy="45" rx="2" ry="4" transform="rotate(35 32 45)" />
-                <ellipse cx="43" cy="50" rx="2" ry="4" transform="rotate(15 43 50)" />
-                <ellipse cx="57" cy="50" rx="2" ry="4" transform="rotate(-15 57 50)" />
-                <ellipse cx="68" cy="45" rx="2" ry="4" transform="rotate(-35 68 45)" />
+                {/* Top Row */}
+                <ellipse cx="40" cy="35" rx="2.5" ry="5" transform="rotate(25 40 35)" />
+                <ellipse cx="50" cy="38" rx="2.5" ry="5" />
+                <ellipse cx="60" cy="35" rx="2.5" ry="5" transform="rotate(-25 60 35)" />
+                {/* Bottom Row */}
+                <ellipse cx="32" cy="48" rx="2.5" ry="5" transform="rotate(40 32 48)" />
+                <ellipse cx="43" cy="54" rx="2.5" ry="5" transform="rotate(15 43 54)" />
+                <ellipse cx="57" cy="54" rx="2.5" ry="5" transform="rotate(-15 57 54)" />
+                <ellipse cx="68" cy="48" rx="2.5" ry="5" transform="rotate(-40 68 48)" />
             </g>
             
-            {/* Wet Juice Glare */}
-            <path d="M 25 40 Q 50 65 75 40 L 50 28 Z" fill="#ffffff" opacity="0.3" />
-            
-            {/* Splash at the bottom */}
-            <ellipse cx="50" cy="85" rx="30" ry="5" fill="#00ffff" opacity="0.4" filter="url(#winPulse)" />
+            {/* Wet Juice Reflections */}
+            <path d="M 25 40 Q 50 68 75 40 L 50 25 Z" fill="#ffffff" opacity="0.25" pointerEvents="none" />
+            <circle cx="20" cy="40" r="3" fill="#fff" opacity="0.6" pointerEvents="none" />
+            <circle cx="80" cy="40" r="2" fill="#fff" opacity="0.6" pointerEvents="none" />
         </g>
     );
 
-    // ID 6: CHERRY (Matches Image 12)
+    // ID 6: CHERRY (Matches Image 12 - Two giant glossy cherries, detailed leaves)
     const renderCherry = () => (
         <g filter="url(#dropShadow)">
-            {/* Stems */}
-            <path d="M 50 15 Q 35 30 30 60" fill="none" stroke="#336600" strokeWidth="4" strokeLinecap="round" />
-            <path d="M 50 15 Q 65 30 70 60" fill="none" stroke="#336600" strokeWidth="4" strokeLinecap="round" />
+            {/* Light Green Stems */}
+            <path d="M 50 15 Q 35 30 30 65" fill="none" stroke="#66cc00" strokeWidth="5" strokeLinecap="round" />
+            <path d="M 50 15 Q 65 30 70 70" fill="none" stroke="#66cc00" strokeWidth="5" strokeLinecap="round" />
             
-            {/* Stem Knot */}
-            <rect x="45" y="10" width="10" height="6" rx="2" fill="#663300" />
+            {/* Wood Knot at top */}
+            <rect x="44" y="10" width="12" height="7" rx="2" fill="#8b4513" stroke="#4a2500" strokeWidth="1" />
             
-            {/* Leaves */}
-            <path d="M 50 15 Q 10 -5 15 35 Q 35 35 50 15" fill="url(#gemGreen)" stroke="#003300" strokeWidth="1" />
-            <path d="M 50 15 Q 90 -5 85 35 Q 65 35 50 15" fill="url(#gemGreen)" stroke="#003300" strokeWidth="1" />
+            {/* Left Huge Leaf */}
+            <g filter="url(#innerGlow)">
+                <path d="M 48 18 Q 5 0 10 35 Q 30 40 48 18 Z" fill="url(#leafGreen)" stroke="#004d00" strokeWidth="1.5" />
+                <path d="M 45 18 Q 20 15 15 30" fill="none" stroke="#004d00" strokeWidth="1.5" opacity="0.6" />
+            </g>
+
+            {/* Right Huge Leaf */}
+            <g filter="url(#innerGlow)">
+                <path d="M 52 18 Q 95 0 90 35 Q 70 40 52 18 Z" fill="url(#leafGreen)" stroke="#004d00" strokeWidth="1.5" />
+                <path d="M 55 18 Q 80 15 85 30" fill="none" stroke="#004d00" strokeWidth="1.5" opacity="0.6" />
+            </g>
             
-            {/* Left Cherry */}
-            <circle cx="30" cy="65" r="22" fill="url(#cherryRed)" />
-            <ellipse cx="20" cy="55" rx="8" ry="4" fill="#ffffff" opacity="0.8" transform="rotate(-40 20 55)" />
+            {/* Left Cherry Orb */}
+            <circle cx="30" cy="65" r="22" fill="url(#cherryRed)" filter="url(#innerGlow)" />
+            {/* Left Cherry Gloss */}
+            <ellipse cx="20" cy="55" rx="8" ry="4" fill="#ffffff" opacity="0.8" transform="rotate(-30 20 55)" pointerEvents="none" />
+            <circle cx="38" cy="78" r="3" fill="#ff9999" opacity="0.5" pointerEvents="none" />
             
-            {/* Right Cherry (Overlapping) */}
-            <circle cx="70" cy="68" r="24" fill="url(#cherryRed)" />
-            <ellipse cx="60" cy="56" rx="9" ry="4.5" fill="#ffffff" opacity="0.8" transform="rotate(-40 60 56)" />
+            {/* Right Cherry Orb (Overlapping) */}
+            <circle cx="70" cy="68" r="24" fill="url(#cherryRed)" filter="url(#innerGlow)" />
+            {/* Right Cherry Gloss */}
+            <ellipse cx="60" cy="57" rx="9" ry="4.5" fill="#ffffff" opacity="0.8" transform="rotate(-30 60 57)" pointerEvents="none" />
+            <circle cx="80" cy="82" r="3.5" fill="#ff9999" opacity="0.5" pointerEvents="none" />
         </g>
     );
 
-    // ID 7: REPLAY (Matches Image 11)
+    // ID 7: REPLAY (Matches Image 11 - Blue Glass Orb, Silver Arrows, Ribbon)
     const renderReplay = () => (
         <g filter="url(#dropShadow)">
-            {/* Outer Blue Metallic Rim */}
-            <circle cx="50" cy="45" r="40" fill="url(#blueTexture)" />
-            <circle cx="50" cy="45" r="35" fill="url(#blueOrb)" />
+            {/* Outer Dark Rim */}
+            <circle cx="50" cy="45" r="38" fill="#003399" />
             
-            {/* Inner Glowing Core */}
-            <circle cx="50" cy="45" r="28" fill="#00f3ff" opacity="0.4" />
-            <circle cx="50" cy="45" r="20" fill="#ccffff" opacity="0.6" filter="url(#winPulse)" />
+            {/* Silver/Chrome Ring */}
+            <circle cx="50" cy="45" r="35" fill="url(#chromeMetal)" stroke="#ffffff" strokeWidth="1" filter="url(#innerGlow)" />
+            
+            {/* Inner Dark Recess */}
+            <circle cx="50" cy="45" r="28" fill="#001144" stroke="#000" strokeWidth="2" />
+            
+            {/* Liquid Blue Orb Core */}
+            <circle cx="50" cy="45" r="26" fill="url(#replayOrb)" filter="url(#innerGlow)" />
+            
+            {/* Glowing Stars in Orb */}
+            <circle cx="40" cy="35" r="1.5" fill="#fff" filter="url(#dropShadow)" className="animate-pulse" />
+            <circle cx="60" cy="55" r="2" fill="#fff" filter="url(#dropShadow)" className="animate-pulse" />
 
-            {/* Circular Arrows (White) */}
-            <g transform="translate(50, 45) scale(1.1)" fill="#ffffff">
-                <path d="M -15 -5 A 18 18 0 0 1 10 -15 L 10 -22 L 22 -12 L 10 -2 L 10 -9 A 12 12 0 0 0 -10 0 Z" />
-                <path d="M 15 5 A 18 18 0 0 1 -10 15 L -10 22 L -22 12 L -10 2 L -10 9 A 12 12 0 0 0 10 0 Z" />
+            {/* Huge 3D Circular Arrows (White/Silver) */}
+            <g transform="translate(50, 45) scale(1.15)" fill="#ffffff" stroke="#e6e6e6" strokeWidth="1">
+                <path d="M -16 -6 A 19 19 0 0 1 12 -16 L 12 -24 L 25 -13 L 12 -2 L 12 -10 A 13 13 0 0 0 -10 -1 Z" filter="url(#dropShadow)" />
+                <path d="M 16 6 A 19 19 0 0 1 -12 16 L -12 24 L -25 13 L -12 2 L -12 10 A 13 13 0 0 0 10 1 Z" filter="url(#dropShadow)" />
             </g>
 
-            {/* Bottom Ribbon */}
-            <path d="M 10 70 Q 50 85 90 70 L 85 85 Q 50 95 15 85 Z" fill="#0044cc" />
-            <path d="M 20 65 L 80 65 L 85 85 L 15 85 Z" fill="url(#blueOrb)" />
+            {/* Bottom Replay Ribbon */}
+            <path d="M 5 65 Q 50 80 95 65 L 90 85 Q 50 95 10 85 Z" fill="#0055ff" />
+            <path d="M 15 62 L 85 62 L 90 82 L 10 82 Z" fill="url(#replayOrb)" stroke="#66ccff" strokeWidth="1" />
             
             {/* REPLAY Text */}
-            <text x="50" y="80" textAnchor="middle" fill="#ffffff" fontSize="14" fontWeight="900" letterSpacing="1" style={{fontFamily: 'Impact, sans-serif'}} stroke="#003399" strokeWidth="1">REPLAY</text>
+            <text x="50" y="78" textAnchor="middle" fill="#ffffff" fontSize="15" fontWeight="900" letterSpacing="1" style={{fontFamily: 'Impact, sans-serif'}} stroke="#002266" strokeWidth="1.5">REPLAY</text>
             
-            {/* Glass Dome Glare */}
-            <ellipse cx="40" cy="25" rx="20" ry="10" fill="#ffffff" opacity="0.5" transform="rotate(-25 40 25)" pointerEvents="none" />
+            {/* Top Glass Dome Glare */}
+            <ellipse cx="40" cy="25" rx="20" ry="8" fill="#ffffff" opacity="0.6" transform="rotate(-20 40 25)" pointerEvents="none" />
         </g>
     );
 
@@ -366,17 +438,17 @@ const SymbolSVG = ({
         >
             {renderDefs()}
             
-            {/* Dynamic Gemini Aura (Triggers on win) */}
+            {/* Dynamic Gemini Aura (Triggers heavily on win) */}
             {renderWinAura()}
 
             {/* Main Hand-drawn Vector Artwork */}
             {renderSymbolContent()}
 
-            {/* Glowing Border Box on Win */}
+            {/* Glowing Border Box on Win (Classic Slot Highlight) */}
             {isWinning && (
                 <rect 
                     x="2" y="2" width="96" height="96" rx="16" 
-                    fill="none" stroke={theme.aura} strokeWidth="4" 
+                    fill="none" stroke={theme.aura} strokeWidth="5" 
                     filter="url(#winPulse)" 
                     pointerEvents="none" 
                     className="animate-pulse"
