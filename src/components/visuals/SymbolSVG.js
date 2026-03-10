@@ -7,77 +7,71 @@ const SymbolSVG = ({
     isWinning = false 
 }) => {
 
-    // --- PREMIUM IMAGE-QUALITY DEFS ---
+    // --- 1. DYNAMIC THEME ENGINE ---
+    const getTheme = (island) => {
+        const themes = {
+            1: { aura: '#FFD700', particle: 'star' },     // Kyoto: Gold Stars
+            2: { aura: '#00f3ff', particle: 'sparkle' },  // Neon: Cyan Sparkles
+            3: { aura: '#ff4500', particle: 'ember' },    // Edo: Fire Embers
+            4: { aura: '#ffb3c6', particle: 'petal' },    // Hanami: Sakura Petals
+            5: { aura: '#8a2be2', particle: 'soul' },     // Yokai: Purple Soul Flames
+        };
+        return themes[island] || themes[1];
+    };
+
+    const theme = getTheme(islandId);
+
+    // --- 2. PREMIUM 3D SHADERS & DEFINITIONS ---
     const renderDefs = () => (
         <defs>
-            {/* 3D Glossy Fruit Gradients */}
-            <radialGradient id="cherryGloss" cx="30%" cy="30%" r="70%">
-                <stop offset="0%" stopColor="#ffcccc" />
-                <stop offset="15%" stopColor="#ff0044" />
-                <stop offset="70%" stopColor="#aa0000" />
-                <stop offset="100%" stopColor="#330000" />
-            </radialGradient>
-            
-            <radialGradient id="melonRind" cx="50%" cy="80%" r="80%">
-                <stop offset="0%" stopColor="#00ff00" />
-                <stop offset="60%" stopColor="#008000" />
-                <stop offset="100%" stopColor="#003300" />
+            {/* Glossy Textures */}
+            <radialGradient id="blueOrb" cx="40%" cy="30%" r="60%">
+                <stop offset="0%" stopColor="#80dfff" />
+                <stop offset="30%" stopColor="#00aaff" />
+                <stop offset="80%" stopColor="#0055ff" />
+                <stop offset="100%" stopColor="#002288" />
             </radialGradient>
 
-            <linearGradient id="melonFlesh" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor="#ff4d4d" />
-                <stop offset="80%" stopColor="#cc0000" />
-                <stop offset="100%" stopColor="#e6ffe6" />
-            </linearGradient>
+            <radialGradient id="cherryRed" cx="35%" cy="30%" r="65%">
+                <stop offset="0%" stopColor="#ffffff" />
+                <stop offset="15%" stopColor="#ff1a40" />
+                <stop offset="60%" stopColor="#cc0000" />
+                <stop offset="100%" stopColor="#4d0000" />
+            </radialGradient>
 
-            {/* Metallic Gradients */}
             <linearGradient id="goldMetal" x1="0%" y1="0%" x2="100%" y2="100%">
                 <stop offset="0%" stopColor="#ffe680" />
                 <stop offset="25%" stopColor="#ffcc00" />
                 <stop offset="50%" stopColor="#b38600" />
                 <stop offset="75%" stopColor="#ffcc00" />
-                <stop offset="100%" stopColor="#664d00" />
+                <stop offset="100%" stopColor="#4d3300" />
             </linearGradient>
 
-            <linearGradient id="chromeMetal" x1="0%" y1="0%" x2="0%" y2="100%">
-                <stop offset="0%" stopColor="#ffffff" />
-                <stop offset="40%" stopColor="#cccccc" />
-                <stop offset="50%" stopColor="#666666" />
-                <stop offset="60%" stopColor="#eeeeee" />
-                <stop offset="100%" stopColor="#333333" />
+            <linearGradient id="blueTexture" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stopColor="#80d4ff" />
+                <stop offset="50%" stopColor="#0077b3" />
+                <stop offset="100%" stopColor="#002266" />
             </linearGradient>
 
-            {/* Hanko Stamp Ink */}
-            <radialGradient id="hankoRed" cx="50%" cy="50%" r="50%">
-                <stop offset="0%" stopColor="#ff3333" />
-                <stop offset="80%" stopColor="#cc0000" />
-                <stop offset="100%" stopColor="#8b0000" />
-            </radialGradient>
+            <linearGradient id="pinkGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+                <stop offset="0%" stopColor="#ff99cc" />
+                <stop offset="50%" stopColor="#ff3385" />
+                <stop offset="100%" stopColor="#b30047" />
+            </linearGradient>
 
-            {/* Glowing Neon Replay */}
-            <radialGradient id="cyanGlow" cx="50%" cy="50%" r="50%">
-                <stop offset="0%" stopColor="#00ffff" stopOpacity="1" />
-                <stop offset="70%" stopColor="#0088ff" stopOpacity="0.8" />
-                <stop offset="100%" stopColor="#0000ff" stopOpacity="0" />
-            </radialGradient>
+            {/* Gems */}
+            <linearGradient id="gemBlue" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stopColor="#00ffff"/><stop offset="100%" stopColor="#000080"/></linearGradient>
+            <linearGradient id="gemGreen" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stopColor="#00ff00"/><stop offset="100%" stopColor="#003300"/></linearGradient>
+            <linearGradient id="gemPink" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stopColor="#ff00ff"/><stop offset="100%" stopColor="#800080"/></linearGradient>
 
-            {/* Advanced Filters */}
-            <filter id="dropShadow3D" x="-20%" y="-20%" width="150%" height="150%">
-                <feDropShadow dx="0" dy="6" stdDeviation="4" floodColor="#000" floodOpacity="0.6"/>
-                <feDropShadow dx="0" dy="2" stdDeviation="1" floodColor="#000" floodOpacity="0.8"/>
+            {/* Filters */}
+            <filter id="dropShadow" x="-20%" y="-20%" width="140%" height="140%">
+                <feDropShadow dx="0" dy="6" stdDeviation="4" floodColor="#000" floodOpacity="0.7"/>
+                <feDropShadow dx="0" dy="2" stdDeviation="1" floodColor="#000" floodOpacity="0.9"/>
             </filter>
 
-            <filter id="specularHighlight">
-                <feGaussianBlur in="SourceAlpha" stdDeviation="1.5" result="blur"/>
-                <feSpecularLighting in="blur" surfaceScale="5" specularConstant="1" specularExponent="40" lightingColor="#ffffff" result="spec">
-                    <fePointLight x="-20" y="-30" z="50"/>
-                </feSpecularLighting>
-                <feComposite in="spec" in2="SourceAlpha" operator="in" result="specOut"/>
-                <feComposite in="SourceGraphic" in2="specOut" operator="arithmetic" k1="0" k2="1" k3="1" k4="0"/>
-            </filter>
-
-            <filter id="winPulseGlow" x="-50%" y="-50%" width="200%" height="200%">
-                <feGaussianBlur stdDeviation="5" result="blur"/>
+            <filter id="winPulse" x="-50%" y="-50%" width="200%" height="200%">
+                <feGaussianBlur stdDeviation="8" result="blur"/>
                 <feColorMatrix type="matrix" values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 3 0" />
                 <feMerge>
                     <feMergeNode in="blur"/>
@@ -85,231 +79,279 @@ const SymbolSVG = ({
                 </feMerge>
             </filter>
 
-            {/* Patterns */}
-            <pattern id="seigaiha" width="20" height="20" patternUnits="userSpaceOnUse" patternTransform="scale(0.5)">
-                <circle cx="10" cy="20" r="10" fill="none" stroke="#002200" strokeWidth="2" opacity="0.5"/>
-                <circle cx="10" cy="20" r="7" fill="none" stroke="#002200" strokeWidth="1" opacity="0.4"/>
-                <circle cx="0" cy="10" r="10" fill="none" stroke="#002200" strokeWidth="2" opacity="0.5"/>
-                <circle cx="0" cy="10" r="7" fill="none" stroke="#002200" strokeWidth="1" opacity="0.4"/>
-                <circle cx="20" cy="10" r="10" fill="none" stroke="#002200" strokeWidth="2" opacity="0.5"/>
-                <circle cx="20" cy="10" r="7" fill="none" stroke="#002200" strokeWidth="1" opacity="0.4"/>
-            </pattern>
+            {/* Light Rays */}
+            <radialGradient id="lightRay" cx="50%" cy="50%" r="50%">
+                <stop offset="0%" stopColor="#ffffff" stopOpacity="0.8" />
+                <stop offset="50%" stopColor={theme.aura} stopOpacity="0.4" />
+                <stop offset="100%" stopColor={theme.aura} stopOpacity="0" />
+            </radialGradient>
         </defs>
     );
 
-    // --- 1. BIG BONUS (Massive 3D "7") ---
-    const renderSeven = () => {
-        const themeColors = {
-            1: ['#ff1a1a', '#800000'], // Zen: Red
-            2: ['#ff00ff', '#4b0082'], // Neon: Pink
-            3: ['#ff4500', '#330000'], // Magma: Orange/Red
-            4: ['#ffb3c6', '#ff0066'], // Hanami: Pink/White
-            5: ['#8a2be2', '#000000'], // Yokai: Purple/Black
-            8: ['#00ff00', '#003300'], // Cyber: Green
-            10: ['#1a0033', '#000000'] // Void: Black
-        };
-        const [cTop, cBot] = themeColors[islandId] || themeColors[1];
-        
+    // --- 3. GEMINI FEATURE: DYNAMIC WIN AURA ---
+    const renderWinAura = () => {
+        if (!isWinning) return null;
         return (
-            <g filter="url(#dropShadow3D)">
-                <defs>
-                    <linearGradient id="sevenGrad" x1="0" y1="0" x2="1" y2="1">
-                        <stop offset="0%" stopColor={cTop} />
-                        <stop offset="100%" stopColor={cBot} />
-                    </linearGradient>
-                </defs>
-
-                {/* 3D Extrusion (Back/Side Layers) */}
-                <path d="M 30 20 L 90 20 L 60 85 L 35 85 L 60 38 L 30 38 Z" fill="#111" transform="translate(4, 6)" />
-                <path d="M 90 20 L 94 26 L 64 91 L 60 85 Z" fill="#222" /> 
-                <path d="M 35 85 L 39 91 L 64 91 L 60 85 Z" fill="#0a0a0a" /> 
-
-                {/* Main Front Face with Specular Lighting */}
-                <path d="M 26 16 L 86 16 L 56 81 L 31 81 L 56 34 L 26 34 Z" fill="url(#sevenGrad)" stroke="url(#goldMetal)" strokeWidth="2.5" filter="url(#specularHighlight)" />
+            <g className="pointer-events-none">
+                {/* Background Burst */}
+                <circle cx="50" cy="50" r="45" fill="url(#lightRay)">
+                    <animate attributeName="opacity" values="0.4;1;0.4" dur="1s" repeatCount="indefinite" />
+                    <animateTransform attributeName="transform" type="scale" values="0.9; 1.1; 0.9" dur="1s" repeatCount="indefinite" transformOrigin="50 50" />
+                </circle>
                 
-                {/* Embedded Reflections (Glass Sheen) */}
-                <path d="M 30 19 L 80 19 L 70 30 L 30 30 Z" fill="#ffffff" opacity="0.4" pointerEvents="none" />
-                <path d="M 52 40 L 40 65 L 48 65 L 56 40 Z" fill="#ffffff" opacity="0.2" pointerEvents="none" />
-            </g>
-        );
-    };
-
-    // --- 2. REG BONUS (Silver Crest) ---
-    const renderRegBonus = () => (
-        <g filter="url(#dropShadow3D)" transform="scale(0.85) translate(10, 10)">
-            <path d="M 30 20 L 90 20 L 60 85 L 35 85 L 60 38 L 30 38 Z" fill="#0a0a0a" transform="translate(4, 6)" />
-            <path d="M 26 16 L 86 16 L 56 81 L 31 81 L 56 34 L 26 34 Z" fill="url(#chromeMetal)" stroke="#555" strokeWidth="2.5" filter="url(#specularHighlight)" />
-            <path d="M 30 19 L 80 19 L 70 30 L 30 30 Z" fill="#ffffff" opacity="0.6" pointerEvents="none" />
-            
-            {/* Text Ribbon */}
-            <g transform="translate(50, 72) rotate(-12)">
-                <rect x="-30" y="-10" width="60" height="20" rx="3" fill="#800" stroke="url(#goldMetal)" strokeWidth="1.5" />
-                <text x="0" y="4" textAnchor="middle" fill="#fff" fontSize="12" fontWeight="900" letterSpacing="1.5">BONUS</text>
-            </g>
-        </g>
-    );
-
-    // --- 3. BAR SYMBOL (Chunky Plaque with Hanko Stamp) ---
-    const renderBar = () => (
-        <g filter="url(#dropShadow3D)">
-            {/* Thick Base Extrusion */}
-            <rect x="18" y="38" width="64" height="28" rx="3" fill="#0a0a0a" />
-            <path d="M 82 35 L 86 39 V 67 L 82 63 Z" fill="#1a1a1a" />
-            <path d="M 14 63 L 18 67 H 86 L 82 63 Z" fill="#111" />
-
-            {/* Front Metallic Plate */}
-            <rect x="14" y="35" width="68" height="28" rx="4" fill="#1a1a1a" stroke="url(#chromeMetal)" strokeWidth="3" filter="url(#specularHighlight)" />
-            
-            {/* Bolt Heads */}
-            <circle cx="20" cy="41" r="2" fill="url(#chromeMetal)" />
-            <circle cx="76" cy="41" r="2" fill="url(#chromeMetal)" />
-            <circle cx="20" cy="57" r="2" fill="url(#chromeMetal)" />
-            <circle cx="76" cy="57" r="2" fill="url(#chromeMetal)" />
-
-            {/* Engraved Text */}
-            <text x="48" y="55" textAnchor="middle" fill="#fff" fontSize="20" fontWeight="900" letterSpacing="3" style={{textShadow: '0px 3px 5px rgba(0,0,0,1)'}}>BAR</text>
-            
-            {/* Hanko Stamp Overlay (Right Edge) */}
-            <g transform="translate(68, 42) rotate(-15)" filter="url(#dropShadow3D)">
-                <rect x="-9" y="-9" width="18" height="18" rx="2" fill="url(#hankoRed)" stroke="#fff" strokeWidth="0.5" opacity="0.95" />
-                <text x="0" y="4" textAnchor="middle" fill="#fff" fontSize="10" fontWeight="bold" fontFamily="serif" opacity="0.9">吉</text> {/* Kichi = Good Luck */}
-            </g>
-            
-            {/* Glass Curvature Highlight */}
-            <path d="M 16 37 Q 48 45 80 37 V 42 Q 48 50 16 42 Z" fill="#fff" opacity="0.3" pointerEvents="none" />
-        </g>
-    );
-
-    // --- 4. BELL (Traditional Suzu Shrine Bell) ---
-    const renderBell = () => (
-        <g filter="url(#dropShadow3D)">
-            {/* Suzu-o Twine/Rope Hanging Behind */}
-            <path d="M 50 0 C 45 10, 55 20, 50 30" fill="none" stroke="#ddd" strokeWidth="6" strokeLinecap="round" />
-            <path d="M 50 0 C 55 10, 45 20, 50 30" fill="none" stroke="#cc0000" strokeWidth="6" strokeLinecap="round" />
-            
-            {/* Solid Brass Sphere */}
-            <circle cx="50" cy="55" r="35" fill="url(#goldMetal)" filter="url(#specularHighlight)" />
-            
-            {/* Engraved Horizontal Lines typical of Suzu */}
-            <path d="M 17 45 Q 50 55 83 45" fill="none" stroke="#8a5a00" strokeWidth="2.5" opacity="0.7"/>
-            <path d="M 15 55 Q 50 65 85 55" fill="none" stroke="#8a5a00" strokeWidth="2.5" opacity="0.7"/>
-
-            {/* The Bottom Sound Slit */}
-            <path d="M 25 75 Q 50 85 75 75" fill="none" stroke="#331a00" strokeWidth="6" strokeLinecap="round" />
-            <circle cx="25" cy="75" r="6" fill="#331a00" />
-            <circle cx="75" cy="75" r="6" fill="#331a00" />
-
-            {/* Spherical Glare */}
-            <ellipse cx="35" cy="35" rx="12" ry="6" fill="#fff" opacity="0.7" transform="rotate(-30 35 35)" pointerEvents="none" />
-        </g>
-    );
-
-    // --- 5. WATERMELON (3D Crescent with Seigaiha Waves) ---
-    const renderMelon = () => (
-        <g filter="url(#dropShadow3D)">
-            {/* Shadow / Base Rind Thickness */}
-            <path d="M 10 45 Q 50 95 90 45 Z" fill="#001100" transform="translate(0, 8)"/>
-            
-            {/* Outer Green Rind */}
-            <path d="M 10 45 Q 50 95 90 45 Z" fill="url(#melonRind)" stroke="#002200" strokeWidth="3" filter="url(#specularHighlight)" />
-            
-            {/* Japanese Seigaiha Pattern applied to rind */}
-            <path d="M 10 45 Q 50 95 90 45 Z" fill="url(#seigaiha)" opacity="0.7" />
-
-            {/* Dark Tiger Stripes */}
-            <path d="M 30 45 Q 35 65 30 75 M 50 45 V 85 M 70 45 Q 65 65 70 75" fill="none" stroke="#001a00" strokeWidth="6" strokeLinecap="round" opacity="0.8" />
-            
-            {/* Inner White Rind Layer */}
-            <path d="M 10 45 Q 50 15 90 45 Q 50 60 10 45 Z" fill="#e6ffe6" stroke="#003300" strokeWidth="1.5" />
-            
-            {/* Bright Red/Pink Flesh */}
-            <path d="M 15 45 Q 50 20 85 45 Q 50 55 15 45 Z" fill="url(#melonFlesh)" filter="url(#specularHighlight)" />
-            
-            {/* Embedded Seeds */}
-            <g fill="#1a0000" transform="translate(0, 0)">
-                <ellipse cx="40" cy="40" rx="2" ry="3.5" transform="rotate(20 40 40)" />
-                <ellipse cx="50" cy="43" rx="2" ry="3.5" />
-                <ellipse cx="60" cy="40" rx="2" ry="3.5" transform="rotate(-20 60 40)" />
-            </g>
-
-            {/* Wet Juicy Glare */}
-            <path d="M 20 45 Q 50 25 80 45 Q 50 50 20 45 Z" fill="#fff" opacity="0.4" pointerEvents="none" />
-        </g>
-    );
-
-    // --- 6. CHERRY (Deep red, 3D glossy spheres with Bonsai Leaf) ---
-    const renderCherry = () => (
-        <g filter="url(#dropShadow3D)">
-            {/* Stems connecting down */}
-            <path d="M 50 20 Q 40 25 30 60" fill="none" stroke="#331a00" strokeWidth="4" strokeLinecap="round" />
-            <path d="M 50 20 Q 65 25 70 65" fill="none" stroke="#331a00" strokeWidth="4" strokeLinecap="round" />
-            
-            {/* Japanese Bonsai-style Leaf */}
-            <g filter="url(#specularHighlight)">
-                <path d="M 50 20 Q 75 5 85 20 Q 65 30 50 20 Z" fill="#228b22" stroke="#003300" strokeWidth="1.5" />
-                <path d="M 50 20 Q 70 15 80 20" fill="none" stroke="#003300" strokeWidth="1" />
-            </g>
-
-            {/* Left Cherry Sphere */}
-            <circle cx="30" cy="65" r="18" fill="url(#cherryGloss)" filter="url(#specularHighlight)" />
-            <ellipse cx="23" cy="57" rx="6" ry="3" fill="#fff" opacity="0.8" transform="rotate(-30 23 57)" pointerEvents="none" />
-            {/* Bounced ambient light under cherry */}
-            <path d="M 25 78 A 12 12 0 0 0 42 70" fill="none" stroke="#ffb3b3" strokeWidth="1.5" opacity="0.6" pointerEvents="none" /> 
-
-            {/* Right Cherry Sphere (Overlaps Left) */}
-            <circle cx="70" cy="70" r="20" fill="url(#cherryGloss)" filter="url(#specularHighlight)" />
-            <ellipse cx="62" cy="61" rx="7" ry="3.5" fill="#fff" opacity="0.8" transform="rotate(-30 62 61)" pointerEvents="none" />
-            <path d="M 64 85 A 14 14 0 0 0 84 76" fill="none" stroke="#ffb3b3" strokeWidth="1.5" opacity="0.6" pointerEvents="none" />
-        </g>
-    );
-
-    // --- 7. REPLAY (Glowing Mitsudomoe Coin) ---
-    const renderReplay = () => {
-        return (
-            <g filter="url(#dropShadow3D)">
-                {/* Thick Coin Edge */}
-                <circle cx="50" cy="54" r="32" fill="#0a0a0a" />
-                
-                {/* Silver/Chrome Coin Face */}
-                <circle cx="50" cy="50" r="32" fill="url(#chromeMetal)" stroke="#333" strokeWidth="2" filter="url(#specularHighlight)" />
-                
-                {/* Inner Dark Recess */}
-                <circle cx="50" cy="50" r="24" fill="#050505" stroke="#222" strokeWidth="1.5" />
-                
-                {/* Glowing Base behind emblem */}
-                <circle cx="50" cy="50" r="22" fill="url(#cyanGlow)" opacity="0.6" />
-
-                {/* Mitsudomoe (Triple Comma Swirl) */}
-                <g transform="translate(50, 50) scale(0.42)" fill="#00f3ff">
-                    <path d="M 0 -20 A 20 20 0 1 1 -17 10 A 10 10 0 1 0 0 -20 Z" />
-                    <path d="M 0 -20 A 20 20 0 1 1 -17 10 A 10 10 0 1 0 0 -20 Z" transform="rotate(120)" />
-                    <path d="M 0 -20 A 20 20 0 1 1 -17 10 A 10 10 0 1 0 0 -20 Z" transform="rotate(240)" />
+                {/* Rotating Light Beams */}
+                <g opacity="0.6">
+                    <animateTransform attributeName="transform" type="rotate" from="0 50 50" to="360 50 50" dur="4s" repeatCount="indefinite" />
+                    <polygon points="48,10 52,10 50,50" fill="url(#lightRay)" />
+                    <polygon points="48,90 52,90 50,50" fill="url(#lightRay)" />
+                    <polygon points="10,48 10,52 50,50" fill="url(#lightRay)" />
+                    <polygon points="90,48 90,52 50,50" fill="url(#lightRay)" />
                 </g>
 
-                {/* Encircling Holographic Arrows */}
-                <path d="M 50 30 A 20 20 0 1 1 30 50" fill="none" stroke="#00f3ff" strokeWidth="4.5" strokeLinecap="round" style={{filter: `drop-shadow(0 0 4px #00f3ff)`}} />
-                <polygon points="22,48 38,48 30,35" fill="#00f3ff" style={{filter: `drop-shadow(0 0 4px #00f3ff)`}} />
-                
-                {/* Overlay Text */}
-                <text x="50" y="54" textAnchor="middle" fill="#fff" fontSize="9" fontWeight="900" letterSpacing="1.5" style={{textShadow: '0 2px 4px #000'}}>REPLAY</text>
-                
-                {/* Heavy Glass Bubble Dome over the center */}
-                <ellipse cx="45" cy="40" rx="14" ry="8" fill="#fff" opacity="0.3" transform="rotate(-30 45 40)" pointerEvents="none" />
+                {/* Particles */}
+                {[...Array(6)].map((_, i) => (
+                    <circle key={i} cx="50" cy="50" r={Math.random() * 2 + 1} fill="#FFF" filter="drop-shadow(0 0 2px #FFF)">
+                        <animateTransform 
+                            attributeName="transform" 
+                            type="translate" 
+                            values={`0 0; ${Math.cos(i * 60) * 40} ${Math.sin(i * 60) * 40}`} 
+                            dur={`${Math.random() * 1 + 0.5}s`} 
+                            repeatCount="indefinite" 
+                        />
+                        <animate attributeName="opacity" values="1;0" dur={`${Math.random() * 1 + 0.5}s`} repeatCount="indefinite" />
+                    </circle>
+                ))}
             </g>
         );
     };
 
-    // --- ROUTER ---
-    const renderSymbol = () => {
+    // --- 4. HIGH FIDELITY SYMBOL RECREATIONS ---
+
+    // ID 1: GRAND JP (Matches Image 18)
+    const renderGrandJP = () => (
+        <g filter="url(#dropShadow)">
+            {/* Background Light Burst */}
+            <circle cx="50" cy="50" r="40" fill="url(#lightRay)" opacity="0.5" />
+            
+            {/* Crown */}
+            <path d="M 20 45 L 25 20 L 38 35 L 50 15 L 62 35 L 75 20 L 80 45 Z" fill="url(#goldMetal)" stroke="#663300" strokeWidth="1" />
+            <circle cx="25" cy="20" r="3" fill="url(#gemBlue)" />
+            <circle cx="50" cy="15" r="4" fill="url(#gemPink)" />
+            <circle cx="75" cy="20" r="3" fill="url(#gemGreen)" />
+            
+            {/* Ribbon Background */}
+            <path d="M 5 60 Q 50 70 95 60 L 90 75 Q 50 85 10 75 Z" fill="#cc0000" />
+            
+            {/* GRAND Text */}
+            <text x="50" y="52" textAnchor="middle" fill="url(#goldMetal)" fontSize="20" fontWeight="900" stroke="#4d0000" strokeWidth="2" letterSpacing="1" style={{fontFamily: 'Impact, sans-serif'}}>GRAND</text>
+            <text x="50" y="52" textAnchor="middle" fill="#fff" fontSize="20" fontWeight="900" stroke="none" letterSpacing="1" opacity="0.4" style={{fontFamily: 'Impact, sans-serif'}}>GRAND</text>
+            
+            {/* JP Text */}
+            <text x="50" y="78" textAnchor="middle" fill="url(#goldMetal)" fontSize="32" fontWeight="900" stroke="#4d0000" strokeWidth="2" style={{fontFamily: 'Impact, sans-serif'}}>JP</text>
+            
+            {/* Gems at Bottom */}
+            <polygon points="30,85 20,95 40,95" fill="url(#gemBlue)" stroke="#fff" strokeWidth="0.5" />
+            <polygon points="50,82 40,95 60,95" fill="url(#gemGreen)" stroke="#fff" strokeWidth="0.5" />
+            <polygon points="70,85 60,95 80,95" fill="url(#gemPink)" stroke="#fff" strokeWidth="0.5" />
+        </g>
+    );
+
+    // ID 2: SLOPARA (Matches Image 17)
+    const renderSlopara = () => (
+        <g filter="url(#dropShadow)">
+            {/* Bright Aura */}
+            <circle cx="50" cy="50" r="45" fill="url(#lightRay)" opacity="0.3" />
+            
+            {/* Twin Tails (Blonde) */}
+            <path d="M 50 40 Q 10 30 15 80 Q 25 60 40 40" fill="#ffd700" />
+            <path d="M 50 40 Q 90 30 85 80 Q 75 60 60 40" fill="#ffd700" />
+            
+            {/* Pink Bows */}
+            <polygon points="35,25 20,20 25,35" fill="url(#pinkGradient)" />
+            <polygon points="65,25 80,20 75,35" fill="url(#pinkGradient)" />
+
+            {/* Face */}
+            <circle cx="50" cy="45" r="20" fill="#fff0e6" />
+            
+            {/* Anime Eyes (Large Blue) */}
+            <ellipse cx="42" cy="45" rx="4" ry="6" fill="#0055ff" />
+            <circle cx="43" cy="43" r="1.5" fill="#fff" />
+            <ellipse cx="58" cy="45" rx="4" ry="6" fill="#0055ff" />
+            <circle cx="57" cy="43" r="1.5" fill="#fff" />
+            
+            {/* Happy Mouth */}
+            <path d="M 45 52 Q 50 58 55 52 Z" fill="#ff4d4d" />
+            
+            {/* Idol Outfit Top */}
+            <path d="M 35 60 Q 50 65 65 60 L 60 75 Q 50 80 40 75 Z" fill="url(#pinkGradient)" />
+            <polygon points="50,68 45,63 55,63" fill="url(#goldMetal)" />
+
+            {/* SLOPARA 3D Logo */}
+            <g transform="translate(50, 88)">
+                <text x="0" y="0" textAnchor="middle" fill="#cc0000" fontSize="22" fontWeight="900" stroke="#fff" strokeWidth="3" letterSpacing="0" style={{fontFamily: 'Impact, sans-serif'}}>SLOPARA</text>
+                <text x="0" y="0" textAnchor="middle" fill="url(#goldMetal)" fontSize="22" fontWeight="900" stroke="#800000" strokeWidth="0.5" letterSpacing="0" style={{fontFamily: 'Impact, sans-serif'}}>SLOPARA</text>
+            </g>
+        </g>
+    );
+
+    // ID 3: SEVEN (Matches Image 16)
+    const renderSeven = () => (
+        <g filter="url(#dropShadow)">
+            {/* Deep Gold Outer Border (3D Extrusion) */}
+            <path d="M 18 18 L 88 18 L 88 38 L 52 92 L 28 92 L 60 42 L 18 42 Z" fill="#4d3300" transform="translate(2, 4)" />
+            
+            {/* Main Gold Rim */}
+            <path d="M 15 15 L 85 15 L 85 35 L 50 88 L 30 88 L 60 40 L 15 40 Z" fill="url(#goldMetal)" stroke="#331a00" strokeWidth="1" />
+            
+            {/* Inner Gold Lip */}
+            <path d="M 22 22 L 78 22 L 78 30 L 46 82 L 38 82 L 66 36 L 22 36 Z" fill="#805500" />
+            
+            {/* Blue Textured Core */}
+            <path d="M 25 25 L 75 25 L 75 28 L 44 78 L 40 78 L 65 33 L 25 33 Z" fill="url(#blueTexture)" />
+            
+            {/* Hand-painted white gloss highlights */}
+            <path d="M 28 26 L 68 26 L 62 29 L 28 29 Z" fill="#ffffff" opacity="0.6" />
+            <path d="M 64 36 L 43 72 L 41 72 L 61 36 Z" fill="#ffffff" opacity="0.3" />
+            
+            {/* Gold Sparkles at base */}
+            <circle cx="35" cy="85" r="5" fill="url(#goldMetal)" filter="url(#dropShadow)" opacity="0.8" />
+            <circle cx="55" cy="88" r="4" fill="url(#goldMetal)" filter="url(#dropShadow)" opacity="0.8" />
+        </g>
+    );
+
+    // ID 4: BELL (Matches Image 13)
+    const renderBell = () => (
+        <g filter="url(#dropShadow)">
+            {/* Stack of Gold Coins underneath */}
+            <ellipse cx="40" cy="85" rx="15" ry="5" fill="url(#goldMetal)" stroke="#664d00" strokeWidth="1" />
+            <ellipse cx="65" cy="82" rx="15" ry="5" fill="url(#goldMetal)" stroke="#664d00" strokeWidth="1" />
+            <ellipse cx="30" cy="78" rx="15" ry="5" fill="url(#goldMetal)" stroke="#664d00" strokeWidth="1" />
+            <ellipse cx="75" cy="75" rx="15" ry="5" fill="url(#goldMetal)" stroke="#664d00" strokeWidth="1" />
+            <ellipse cx="50" cy="88" rx="18" ry="6" fill="url(#goldMetal)" stroke="#664d00" strokeWidth="1" />
+
+            {/* Top Knob */}
+            <circle cx="50" cy="15" r="8" fill="url(#goldMetal)" />
+            <path d="M 45 22 L 55 22 L 55 30 L 45 30 Z" fill="#664d00" />
+            
+            {/* Bell Body */}
+            <path d="M 50 25 C 20 25, 10 60, 5 70 C 5 80, 95 80, 95 70 C 90 60, 80 25, 50 25 Z" fill="url(#goldMetal)" />
+            
+            {/* Dark Inner Hollow */}
+            <ellipse cx="50" cy="72" rx="42" ry="12" fill="#332200" />
+            
+            {/* Clapper / Ringer */}
+            <path d="M 50 65 L 50 82" stroke="#cca300" strokeWidth="4" />
+            <circle cx="50" cy="85" r="8" fill="url(#goldMetal)" />
+            
+            {/* Etched Lines */}
+            <path d="M 16 50 Q 50 65 84 50" fill="none" stroke="#664d00" strokeWidth="2" />
+            <path d="M 12 60 Q 50 75 88 60" fill="none" stroke="#664d00" strokeWidth="2" />
+            
+            {/* Glare */}
+            <path d="M 30 30 C 20 40, 20 60, 20 60 C 25 60, 35 40, 35 30 Z" fill="#ffffff" opacity="0.4" />
+        </g>
+    );
+
+    // ID 5: WATERMELON (Matches Image 14)
+    const renderMelon = () => (
+        <g filter="url(#dropShadow)">
+            {/* Dark Green Rind Base */}
+            <path d="M 5 45 Q 50 100 95 45 Z" fill="#003300" />
+            
+            {/* Bright Green Rind */}
+            <path d="M 8 45 Q 50 95 92 45 Z" fill="url(#gemGreen)" />
+            
+            {/* Inner Yellow/White Rind Edge */}
+            <path d="M 12 45 Q 50 85 88 45 Z" fill="#e6ffcc" />
+            
+            {/* Bright Red Flesh */}
+            <path d="M 15 45 Q 50 80 85 45 L 50 20 Z" fill="url(#cherryRed)" />
+            
+            {/* Realistic Black Seeds with highlights */}
+            <g fill="#1a0000">
+                {/* Row 1 */}
+                <ellipse cx="40" cy="35" rx="2" ry="4" transform="rotate(25 40 35)" />
+                <ellipse cx="50" cy="38" rx="2" ry="4" />
+                <ellipse cx="60" cy="35" rx="2" ry="4" transform="rotate(-25 60 35)" />
+                {/* Row 2 */}
+                <ellipse cx="32" cy="45" rx="2" ry="4" transform="rotate(35 32 45)" />
+                <ellipse cx="43" cy="50" rx="2" ry="4" transform="rotate(15 43 50)" />
+                <ellipse cx="57" cy="50" rx="2" ry="4" transform="rotate(-15 57 50)" />
+                <ellipse cx="68" cy="45" rx="2" ry="4" transform="rotate(-35 68 45)" />
+            </g>
+            
+            {/* Wet Juice Glare */}
+            <path d="M 25 40 Q 50 65 75 40 L 50 28 Z" fill="#ffffff" opacity="0.3" />
+            
+            {/* Splash at the bottom */}
+            <ellipse cx="50" cy="85" rx="30" ry="5" fill="#00ffff" opacity="0.4" filter="url(#winPulse)" />
+        </g>
+    );
+
+    // ID 6: CHERRY (Matches Image 12)
+    const renderCherry = () => (
+        <g filter="url(#dropShadow)">
+            {/* Stems */}
+            <path d="M 50 15 Q 35 30 30 60" fill="none" stroke="#336600" strokeWidth="4" strokeLinecap="round" />
+            <path d="M 50 15 Q 65 30 70 60" fill="none" stroke="#336600" strokeWidth="4" strokeLinecap="round" />
+            
+            {/* Stem Knot */}
+            <rect x="45" y="10" width="10" height="6" rx="2" fill="#663300" />
+            
+            {/* Leaves */}
+            <path d="M 50 15 Q 10 -5 15 35 Q 35 35 50 15" fill="url(#gemGreen)" stroke="#003300" strokeWidth="1" />
+            <path d="M 50 15 Q 90 -5 85 35 Q 65 35 50 15" fill="url(#gemGreen)" stroke="#003300" strokeWidth="1" />
+            
+            {/* Left Cherry */}
+            <circle cx="30" cy="65" r="22" fill="url(#cherryRed)" />
+            <ellipse cx="20" cy="55" rx="8" ry="4" fill="#ffffff" opacity="0.8" transform="rotate(-40 20 55)" />
+            
+            {/* Right Cherry (Overlapping) */}
+            <circle cx="70" cy="68" r="24" fill="url(#cherryRed)" />
+            <ellipse cx="60" cy="56" rx="9" ry="4.5" fill="#ffffff" opacity="0.8" transform="rotate(-40 60 56)" />
+        </g>
+    );
+
+    // ID 7: REPLAY (Matches Image 11)
+    const renderReplay = () => (
+        <g filter="url(#dropShadow)">
+            {/* Outer Blue Metallic Rim */}
+            <circle cx="50" cy="45" r="40" fill="url(#blueTexture)" />
+            <circle cx="50" cy="45" r="35" fill="url(#blueOrb)" />
+            
+            {/* Inner Glowing Core */}
+            <circle cx="50" cy="45" r="28" fill="#00f3ff" opacity="0.4" />
+            <circle cx="50" cy="45" r="20" fill="#ccffff" opacity="0.6" filter="url(#winPulse)" />
+
+            {/* Circular Arrows (White) */}
+            <g transform="translate(50, 45) scale(1.1)" fill="#ffffff">
+                <path d="M -15 -5 A 18 18 0 0 1 10 -15 L 10 -22 L 22 -12 L 10 -2 L 10 -9 A 12 12 0 0 0 -10 0 Z" />
+                <path d="M 15 5 A 18 18 0 0 1 -10 15 L -10 22 L -22 12 L -10 2 L -10 9 A 12 12 0 0 0 10 0 Z" />
+            </g>
+
+            {/* Bottom Ribbon */}
+            <path d="M 10 70 Q 50 85 90 70 L 85 85 Q 50 95 15 85 Z" fill="#0044cc" />
+            <path d="M 20 65 L 80 65 L 85 85 L 15 85 Z" fill="url(#blueOrb)" />
+            
+            {/* REPLAY Text */}
+            <text x="50" y="80" textAnchor="middle" fill="#ffffff" fontSize="14" fontWeight="900" letterSpacing="1" style={{fontFamily: 'Impact, sans-serif'}} stroke="#003399" strokeWidth="1">REPLAY</text>
+            
+            {/* Glass Dome Glare */}
+            <ellipse cx="40" cy="25" rx="20" ry="10" fill="#ffffff" opacity="0.5" transform="rotate(-25 40 25)" pointerEvents="none" />
+        </g>
+    );
+
+    // --- 5. COMPONENT ROUTER ---
+    const renderSymbolContent = () => {
         switch(parseInt(id)) {
-            case 1: return renderSeven(); 
-            case 2: return renderRegBonus();
-            case 3: return renderBar();
+            case 1: return renderGrandJP(); 
+            case 2: return renderSlopara();
+            case 3: return renderSeven();
             case 4: return renderBell();
             case 5: return renderMelon();
             case 6: return renderCherry();
             case 7: return renderReplay(); 
-            default: return <circle cx="50" cy="50" r="20" fill="#333" filter="url(#dropShadow3D)" />;
+            default: return <circle cx="50" cy="50" r="20" fill="#333" filter="url(#dropShadow)" />;
         }
     };
 
@@ -317,23 +359,27 @@ const SymbolSVG = ({
         <svg 
             viewBox="0 0 100 100" 
             className={`w-full h-full transition-all duration-300 
-                ${isWinning ? 'animate-[pulse_1s_cubic-bezier(0.4,0,0.6,1)_infinite] scale-[1.15] z-10' : 'scale-100'} 
-                ${variant === 'glitch' ? 'animate-[pulse_0.1s_linear_infinite]' : ''}
-                ${variant === 'dim' ? 'brightness-50 grayscale-[50%]' : ''}
+                ${isWinning ? 'scale-[1.15] z-10' : 'scale-100'} 
+                ${variant === 'glitch' ? 'animate-[pulse_0.1s_linear_infinite] opacity-50' : ''}
+                ${variant === 'dim' ? 'brightness-50 grayscale-[30%]' : ''}
             `}
         >
             {renderDefs()}
             
-            {/* The Main Symbol Render */}
-            {renderSymbol()}
+            {/* Dynamic Gemini Aura (Triggers on win) */}
+            {renderWinAura()}
 
-            {/* Glowing Win Box (Only visible if part of a winning line) */}
+            {/* Main Hand-drawn Vector Artwork */}
+            {renderSymbolContent()}
+
+            {/* Glowing Border Box on Win */}
             {isWinning && (
                 <rect 
-                    x="2" y="2" width="96" height="96" rx="12" 
-                    fill="none" stroke="url(#goldMetal)" strokeWidth="4" 
-                    filter="url(#winPulseGlow)" 
+                    x="2" y="2" width="96" height="96" rx="16" 
+                    fill="none" stroke={theme.aura} strokeWidth="4" 
+                    filter="url(#winPulse)" 
                     pointerEvents="none" 
+                    className="animate-pulse"
                 />
             )}
         </svg>
