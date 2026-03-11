@@ -6,12 +6,9 @@ const CRITICAL_ASSETS = [
     '/assets/characters/luna.png',
     '/assets/characters/mika.png',
     '/assets/characters/kira.png',
-    '/assets/characters/yami.png',
-    '/assets/characters/glacia.png',
-    '/assets/characters/sky.png',
-    '/assets/characters/ivy.png',
+   
     '/assets/characters/cyber.png',
-    '/assets/characters/penny.png',
+    
     '/assets/characters/void.png',
     
     // Machine Headers
@@ -20,11 +17,7 @@ const CRITICAL_ASSETS = [
     '/assets/machines/header_3.png',
     '/assets/machines/header_4.png',
     '/assets/machines/header_5.png',
-    '/assets/machines/header_6.png',
-    '/assets/machines/header_7.png',
-    '/assets/machines/header_8.png',
-    '/assets/machines/header_9.png',
-    '/assets/machines/header_10.png',
+    
 
     // Machine Bellies
     '/assets/machines/belly_1.png',
@@ -32,11 +25,7 @@ const CRITICAL_ASSETS = [
     '/assets/machines/belly_3.png',
     '/assets/machines/belly_4.png',
     '/assets/machines/belly_5.png',
-    '/assets/machines/belly_6.png',
-    '/assets/machines/belly_7.png',
-    '/assets/machines/belly_8.png',
-    '/assets/machines/belly_9.png',
-    '/assets/machines/belly_10.png'
+    
 ];
 
 export const useAssetPreloader = () => {
