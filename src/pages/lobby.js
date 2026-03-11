@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useRouter } from 'next/router';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../context/AuthContext';
@@ -7,7 +7,7 @@ import api, { game, user as userApi } from '../services/api';
 import { 
     ChevronLeft, ChevronRight, Lock, Coins, MapPin, Loader2, 
     Bell, Trophy, Calendar, ClipboardList, CheckCircle, AlertTriangle, 
-    Users, Activity, Flame, Layers, Sparkles
+    Users, Activity, Flame, Layers, Sparkles, Zap
 } from 'lucide-react';
 
 import CharacterSVG from '../components/visuals/CharacterSVG';
@@ -91,6 +91,11 @@ export default function Lobby() {
     // Live Ticker State
     const [jackpotAmount, setJackpotAmount] = useState(3000000);
     const [activePlayers, setActivePlayers] = useState(0);
+    const prevJackpotRef = useRef(null);
+    
+    // Global Celebration State
+    const [showJpCelebration, setShowJpCelebration] = useState(false);
+    const [coinParticles, setCoinParticles] = useState([]);
     
     // V3 User Progression Data
     const [userStats, setUserStats] = useState({ totalDeposited: 0 });
@@ -104,9 +109,18 @@ export default function Lobby() {
 
     const { playSound } = useGameSound();
 
+    // Trigger Coin Shower function for celebrations
+    const triggerCoinShower = useCallback(() => {
+        const newParticles = Array.from({length: 80}).map((_, i) => ({
+            id: Date.now() + i, left: Math.random() * 100, delay: Math.random() * 2,
+            scale: 0.5 + Math.random(), rotation: Math.random() * 360
+        }));
+        setCoinParticles(newParticles);
+        setTimeout(() => setCoinParticles([]), 5000);
+    }, []);
+
     // --- 1. INITIALIZATION & CACHING SEQUENCE ---
     useEffect(() => {
-        // Simulate high-end app caching/downloading assets to local storage on first load
         const hasCached = localStorage.getItem('suropara_assets_cached');
         
         if (!hasCached) {
@@ -129,7 +143,7 @@ export default function Lobby() {
     // --- 2. FETCH LIVE DATA ---
     useEffect(() => {
         const initLobby = async () => {
-            if (isAppLoading) return; // Wait for cache sequence
+            if (isAppLoading) return;
 
             try {
                 const [resIslands, resNotifs, resMissions, resProfile, resTicker] = await Promise.all([
@@ -141,31 +155,49 @@ export default function Lobby() {
                 ]);
 
                 if (resIslands.data.status === 'success') {
+                    // Update to support NEW V3 Island Names and progression requirements
                     const progressionIslands = resIslands.data.data.map(island => {
                         let reqDeposit = parseFloat(island.req_deposit) || 0;
                         let totalMachines = 0;
+                        let productionName = island.name;
+                        
+                        // Hard-syncing names and floor-logic for V3 Deployment
                         switch(parseInt(island.id)) {
-                            case 1: totalMachines = 900; break;
-                            case 2: totalMachines = 720; break;
-                            case 3: totalMachines = 540; break;
-                            case 4: totalMachines = 360; break;
-                            case 5: totalMachines = 180; break;
-                            default: totalMachines = 200;
+                            case 1: 
+                                totalMachines = 900; 
+                                productionName = "Kyoto Zen";
+                                break;
+                            case 2: 
+                                totalMachines = 720; 
+                                productionName = "Okinawa Tropic";
+                                break;
+                            case 3: 
+                                totalMachines = 540; 
+                                productionName = "Osaka Neon";
+                                break;
+                            case 4: 
+                                totalMachines = 360; 
+                                productionName = "Tokyo Cyber";
+                                break;
+                            case 5: 
+                                totalMachines = 180; 
+                                productionName = "Ginza Gold";
+                                break;
+                            default: 
+                                totalMachines = 200;
                         }
-                        return { ...island, reqDeposit, totalMachines };
+                        return { ...island, name: productionName, reqDeposit, totalMachines };
                     });
                     setIslands(progressionIslands);
                 }
                 
                 if (resNotifs.data.status === 'success') setUnreadCount(resNotifs.data.count || 0);
                 if (resMissions.data.status === 'success') setMissions(resMissions.data.data);
-                
-                if (resProfile.data.status === 'success') {
-                    setUserStats({ totalDeposited: resProfile.data.user.total_deposited || 0 });
-                }
+                if (resProfile.data.status === 'success') setUserStats({ totalDeposited: resProfile.data.user.total_deposited || 0 });
 
                 if (resTicker.data.status === 'success') {
                     setJackpotAmount(resTicker.data.jackpot_amount || 3000000);
+                    prevJackpotRef.current = resTicker.data.jackpot_amount || 3000000;
                     setActivePlayers(Math.floor(Math.random() * 500) + 1200);
                     setServerPing(true);
                 }
@@ -175,7 +207,6 @@ export default function Lobby() {
                     const lastClaimStr = localStorage.getItem(`daily_claim_time_${user.id}`);
                     const now = new Date().getTime();
                     const hours24 = 86400000; 
-
                     if (!lastClaimStr || (now - parseInt(lastClaimStr) > hours24)) {
                         setTimeout(() => setShowDailyBonus(true), 1500);
                     }
@@ -190,13 +221,24 @@ export default function Lobby() {
         if (!loading && user) initLobby();
     }, [loading, user, addToast, isAppLoading]);
 
-    // Live Jackpot Polling (10s intervals)
+    // --- LIVE JACKPOT POLLING & CELEBRATION DETECTION ---
     useEffect(() => {
         const interval = setInterval(async () => {
             try {
                 const res = await game.getTicker();
                 if (res.data.status === 'success' && res.data.jackpot_amount) {
-                    setJackpotAmount(res.data.jackpot_amount);
+                    const newJp = res.data.jackpot_amount;
+                    
+                    // Detect a Jackpot Win! (If it drops by more than 500k instantly)
+                    if (prevJackpotRef.current !== null && (prevJackpotRef.current - newJp > 500000)) {
+                        playSound('bigwin');
+                        setShowJpCelebration(true);
+                        triggerCoinShower();
+                        setTimeout(() => setShowJpCelebration(false), 8000);
+                    }
+                    
+                    setJackpotAmount(newJp);
+                    prevJackpotRef.current = newJp;
                     setServerPing(true);
                 }
             } catch (e) {
@@ -204,7 +246,7 @@ export default function Lobby() {
             }
         }, 10000);
         return () => clearInterval(interval);
-    }, []);
+    }, [playSound, triggerCoinShower]);
 
     // Navigation
     const handleNav = (direction) => {
@@ -220,7 +262,6 @@ export default function Lobby() {
 
     const selectedIsland = islands.length > 0 ? islands[currentIndex] : null;
     
-    // Check Unlock Status
     const checkProgressionUnlock = useCallback((island) => {
         if (!island) return false;
         if (island.id === 1 || island.reqDeposit === 0) return true; 
@@ -253,7 +294,7 @@ export default function Lobby() {
         }
     };
 
-    // --- INITIAL LOADING SCREEN (The "Download" Sim) ---
+    // --- INITIAL LOADING SCREEN ---
     if (loading || isAppLoading) {
         return (
             <div className="bg-[#050505] min-h-screen flex flex-col items-center justify-center relative overflow-hidden">
@@ -276,7 +317,7 @@ export default function Lobby() {
                                 <span>Caching Assets...</span>
                                 <span>{cacheProgress}%</span>
                             </div>
-                            <div className="w-full h-1 bg-gray-900 rounded-full overflow-hidden border border-white/10">
+                            <div className="w-full h-1 bg-gray-900 rounded-full overflow-hidden border border-white/10 relative">
                                 <div className="h-full bg-gradient-to-r from-pink-500 to-cyan-400 shadow-[0_0_10px_pink] transition-all duration-200" style={{width: `${cacheProgress}%`}}></div>
                             </div>
                         </div>
@@ -289,19 +330,34 @@ export default function Lobby() {
 
     if (islands.length === 0) return null;
 
+    // --- DYNAMIC GJP STYLING LOGIC ---
     const jpProgressPercent = Math.min(100, Math.max(0, ((jackpotAmount - 3000000) / (7200000 - 3000000)) * 100));
+    const isJPHot = jackpotAmount >= 3600000 && jackpotAmount < 7000000;
+    const isJPCritical = jackpotAmount >= 7000000;
+
+    let jpContainerClass = "w-full max-w-sm sm:max-w-md rounded-2xl p-3 sm:p-4 flex flex-col items-center text-center backdrop-blur-md relative overflow-hidden transition-all duration-1000 ";
+    if (isJPCritical) {
+        jpContainerClass += "bg-gradient-to-b from-purple-900/60 to-black/90 border-2 border-purple-500 shadow-[0_0_50px_rgba(168,85,247,0.6)] animate-[shake-epic_0.5s_infinite]";
+    } else if (isJPHot) {
+        jpContainerClass += "bg-gradient-to-b from-red-900/60 to-black/90 border border-red-500 shadow-[0_0_40px_rgba(239,68,68,0.5)] animate-pulse";
+    } else {
+        jpContainerClass += "bg-gradient-to-b from-yellow-900/30 to-black/80 border border-yellow-500/40 shadow-[0_0_30px_rgba(234,179,8,0.2)]";
+    }
 
     return (
         <div className="min-h-[100dvh] bg-[#050505] pb-[90px] relative overflow-hidden flex flex-col selection:bg-pink-500 selection:text-black font-sans">
-            
+            <style dangerouslySetInnerHTML={{__html: `
+                @keyframes shake-epic { 0%, 100% { transform: translate(0,0) rotate(0deg); } 10%, 30%, 50%, 70%, 90% { transform: translate(-2px, 2px) rotate(-1deg); } 20%, 40%, 60%, 80% { transform: translate(2px, -2px) rotate(1deg); } }
+            `}} />
+
             <SakuraParticles />
 
             {/* Global Ticker & Events */}
             <div className="relative z-50"><GlobalTicker /></div>
             <ActiveEvents />
 
-            {/* --- RESPONSIVE HEADER (Wallet link removed, visually enhanced) --- */}
-            <div className="pt-3 px-4 sm:px-6 pb-2 flex flex-col sm:flex-row justify-between items-start sm:items-center z-20 bg-gradient-to-b from-black/95 to-transparent backdrop-blur-md sticky top-8 gap-3 sm:gap-0 border-b border-white/5">
+            {/* --- RESPONSIVE HEADER --- */}
+            <div className="pt-3 px-4 sm:px-6 pb-2 flex flex-col sm:flex-row justify-between items-start sm:items-center z-20 bg-gradient-to-b from-black/95 to-transparent backdrop-blur-sm sticky top-8 gap-3 sm:gap-0 border-b border-white/5">
                 
                 {/* Level Progress (RPG Style) */}
                 <div className="flex flex-col gap-1 w-full sm:w-auto">
@@ -342,7 +398,6 @@ export default function Lobby() {
                         </button>
                     </div>
 
-                    {/* STATIC BALANCE DISPLAY (Wallet link removed) */}
                     <div className="bg-black/60 px-3 sm:px-4 py-1.5 sm:py-2 rounded-full border border-yellow-500/40 flex items-center gap-2 backdrop-blur-md shadow-[0_0_20px_rgba(234,179,8,0.15)] cursor-default">
                         <Coins className="w-4 h-4 sm:w-5 sm:h-5 text-yellow-400 animate-pulse" />
                         <span className="text-yellow-400 font-mono font-black text-sm sm:text-base tracking-tight">{parseFloat(user.balance).toLocaleString()}</span>
@@ -355,21 +410,32 @@ export default function Lobby() {
                 <motion.div 
                     initial={{ opacity: 0, y: -20 }}
                     animate={{ opacity: 1, y: 0 }}
-                    className="w-full max-w-sm sm:max-w-md bg-gradient-to-b from-yellow-900/30 to-black/80 border border-yellow-500/40 rounded-2xl p-3 sm:p-4 flex flex-col items-center text-center shadow-[0_0_40px_rgba(234,179,8,0.2)] backdrop-blur-md relative overflow-hidden"
+                    className={jpContainerClass}
                 >
                     <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/stardust.png')] opacity-30 animate-[pulse_4s_ease-in-out_infinite] mix-blend-color-dodge"></div>
                     
-                    <h3 className="text-yellow-500 font-black text-[10px] sm:text-xs tracking-[0.2em] mb-1 flex items-center gap-2 drop-shadow-md">
-                        <Sparkles size={14} className="animate-bounce" /> GRAND JACKPOT <span className="text-yellow-700 font-serif">[ 大当り ]</span>
+                    {isJPCritical && <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/circuit-board.png')] opacity-20 mix-blend-overlay"></div>}
+                    
+                    <h3 className={`font-black text-[10px] sm:text-xs tracking-[0.2em] mb-1 flex items-center gap-2 drop-shadow-md z-10 ${isJPCritical ? 'text-purple-300 animate-pulse' : (isJPHot ? 'text-red-400' : 'text-yellow-500')}`}>
+                        {isJPCritical ? <Zap size={14} className="animate-bounce fill-current"/> : <Sparkles size={14} className="animate-bounce" />}
+                        GRAND JACKPOT <span className="font-serif">[ 大当り ]</span>
                     </h3>
                     
-                    <div className="text-3xl sm:text-5xl font-mono font-black text-transparent bg-clip-text bg-gradient-to-b from-white via-yellow-200 to-yellow-600 drop-shadow-[0_0_15px_rgba(255,215,0,0.8)] tracking-tighter">
+                    <div className={`text-3xl sm:text-5xl font-mono font-black tracking-tighter z-10 ${isJPCritical ? 'text-transparent bg-clip-text bg-gradient-to-b from-purple-200 via-pink-400 to-red-600 drop-shadow-[0_0_20px_rgba(236,72,153,1)]' : (isJPHot ? 'text-transparent bg-clip-text bg-gradient-to-b from-yellow-200 via-orange-500 to-red-600 drop-shadow-[0_0_15px_rgba(239,68,68,0.8)]' : 'text-transparent bg-clip-text bg-gradient-to-b from-white via-yellow-200 to-yellow-600 drop-shadow-[0_0_15px_rgba(255,215,0,0.8)]')}`}>
                         <RollupNumber value={jackpotAmount} />
                     </div>
                     
-                    <div className="absolute bottom-0 left-0 w-full h-[3px] bg-gray-900">
+                    <div className="mt-1 z-10">
+                         {isJPCritical ? (
+                             <span className="bg-purple-600 text-white font-bold px-3 py-0.5 rounded-full text-[9px] tracking-widest uppercase border border-white/50 shadow-[0_0_15px_purple]">CRITICAL MASS DETECTED</span>
+                         ) : isJPHot ? (
+                             <span className="bg-red-600 text-white font-bold px-3 py-0.5 rounded-full text-[9px] tracking-widest uppercase shadow-[0_0_10px_red]">TRIGGER HOT</span>
+                         ) : null}
+                    </div>
+
+                    <div className="absolute bottom-0 left-0 w-full h-[3px] bg-gray-900 z-10">
                         <div 
-                            className={`h-full transition-all duration-500 shadow-[0_0_10px_currentColor] ${jackpotAmount >= 7000000 ? 'bg-purple-500 text-purple-500' : jackpotAmount >= 3600000 ? 'bg-red-500 text-red-500' : 'bg-yellow-500 text-yellow-500'}`} 
+                            className={`h-full transition-all duration-500 shadow-[0_0_10px_currentColor] ${isJPCritical ? 'bg-purple-500 text-purple-500' : isJPHot ? 'bg-red-500 text-red-500' : 'bg-yellow-500 text-yellow-500'}`} 
                             style={{ width: `${jpProgressPercent}%` }} 
                         />
                     </div>
@@ -452,9 +518,66 @@ export default function Lobby() {
                 ))}
             </div>
 
+            {/* --- GLOBAL JACKPOT WINNER OVERLAY CELEBRATION --- */}
+            <AnimatePresence>
+                {showJpCelebration && (
+                    <motion.div 
+                        initial={{ opacity: 0, backdropFilter: 'blur(0px)' }}
+                        animate={{ opacity: 1, backdropFilter: 'blur(15px)' }}
+                        exit={{ opacity: 0, backdropFilter: 'blur(0px)' }}
+                        className="fixed inset-0 z-[100] bg-black/80 flex items-center justify-center p-6 overflow-hidden pointer-events-none"
+                    >
+                        {/* Celebration Particles */}
+                        {coinParticles.map(c => (
+                            <div key={c.id} className="absolute top-[-20px] animate-fall z-0" style={{ left: `${c.left}%`, animationDuration: '3s', animationDelay: `${c.delay}s`, transform: `scale(${c.scale}) rotate(${c.rotation}deg)` }}>
+                                <div className="w-8 h-8 bg-yellow-400 rounded-full border-4 border-yellow-200 shadow-[0_0_15px_gold] flex items-center justify-center font-black text-yellow-700 text-lg"><Coins size={16} strokeWidth={3}/></div>
+                            </div>
+                        ))}
+
+                        <motion.div 
+                            initial={{ scale: 0.5, y: 100 }} 
+                            animate={{ scale: 1, y: 0, transition: { type: "spring", stiffness: 200, damping: 15 } }} 
+                            className="relative z-10 flex flex-col items-center w-full max-w-lg"
+                        >
+                            <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/stardust.png')] opacity-50 mix-blend-color-dodge animate-[spin_30s_linear_infinite] rounded-full blur-3xl"></div>
+                            
+                            <GlassCard className="w-full p-8 sm:p-12 text-center flex flex-col items-center border-t-8 border-b-8 border-yellow-400 shadow-[0_0_100px_rgba(255,215,0,0.6)] bg-gradient-to-br from-yellow-900/60 to-black">
+                                <motion.div animate={{ rotate: [0, -5, 5, -5, 0], scale: [1, 1.1, 1] }} transition={{ duration: 1, repeat: Infinity }} className="mb-4">
+                                    <Trophy size={80} className="text-yellow-400 drop-shadow-[0_0_30px_gold] mx-auto" />
+                                </motion.div>
+                                
+                                <h1 className="text-4xl sm:text-6xl font-black italic text-transparent bg-clip-text bg-gradient-to-b from-yellow-200 via-orange-500 to-red-600 drop-shadow-2xl mb-2 animate-pulse uppercase tracking-tighter">
+                                    JACKPOT HIT!
+                                </h1>
+                                <p className="text-yellow-400 font-bold text-sm sm:text-lg tracking-widest font-serif mb-6 drop-shadow-md">
+                                    [ 奇跡の大当り ]
+                                </p>
+                                
+                                <div className="text-gray-300 text-xs sm:text-sm bg-black/50 px-6 py-3 rounded-full border border-white/20 mb-6 shadow-inner">
+                                    A lucky player just cracked the vault!
+                                </div>
+                                
+                                <div className="mt-2 text-cyan-400 font-mono text-[10px] animate-pulse">
+                                    POOL RESET & BUILDING NOW
+                                </div>
+                            </GlassCard>
+                            
+                            {/* Cheering character */}
+                            <motion.div 
+                                initial={{ y: 200, opacity: 0 }}
+                                animate={{ y: 0, opacity: 1 }}
+                                transition={{ delay: 0.5, type: "spring", damping: 12 }}
+                                className="absolute -bottom-24 -right-10 w-48 h-48 drop-shadow-2xl pointer-events-none"
+                            >
+                                <CharacterSVG type="luna" mood="win" />
+                            </motion.div>
+                        </motion.div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
+
             {/* --- MODALS --- */}
             
-            {/* 1. Unlock Island Modal (Cashier Links Removed) */}
             <AnimatePresence>
                 {showUnlockModal && selectedIsland && (
                     <motion.div 
@@ -482,7 +605,6 @@ export default function Lobby() {
                                     is a High Roller sector. You must increase your VIP Rank to gain entry.
                                 </p>
 
-                                {/* Requirement: Deposits Visualized as VIP Rank */}
                                 <div className="mb-6 bg-white/5 p-4 rounded-xl border border-white/10">
                                     <div className="flex justify-between text-[10px] sm:text-xs font-bold text-gray-400 mb-2 uppercase tracking-widest">
                                         <span>VIP Progress</span>
@@ -520,7 +642,7 @@ export default function Lobby() {
                     >
                         <motion.div 
                             initial={{ scale: 0.95, y: 20 }} animate={{ scale: 1, y: 0 }} exit={{ scale: 0.95, y: 20 }}
-                            className="w-full max-w-md p-0 overflow-hidden bg-white/5 border border-blue-500/50 rounded-2xl shadow-[0_0_40px_rgba(59,130,246,0.2)]" 
+                            className="w-full max-md p-0 overflow-hidden bg-white/5 border border-blue-500/50 rounded-2xl shadow-[0_0_40px_rgba(59,130,246,0.2)]" 
                             onClick={e => e.stopPropagation()}
                         >
                             <div className="bg-gradient-to-r from-blue-950 to-black p-4 sm:p-5 flex justify-between items-center border-b border-blue-500/30">
@@ -567,8 +689,7 @@ export default function Lobby() {
 
             {showDailyBonus && <DailyBonusModal onClose={() => setShowDailyBonus(false)} />}
 
-            {/* Bottom Dock requires high z-index to overlay carousel safely */}
-            {/* Note: onOpenBank is safely passed but wallet navigation is hidden inside the dock itself if needed, or left as a profile link */}
+            {/* Bottom Dock */}
             <div className="relative z-50">
                 <BottomDock activeCharId={user?.active_pet_id} onNavigate={(path) => router.push(`/${path}`)} />
             </div>
