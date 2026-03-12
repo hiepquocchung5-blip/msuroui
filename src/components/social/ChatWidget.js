@@ -23,57 +23,92 @@ export default function ChatWidget() {
     const scrollRef = useRef(null);
     const lastIdRef = useRef(0);
     const isUserScrolling = useRef(false);
-    const eventSourceRef = useRef(null); // Keep track of the SSE connection
+    const eventSourceRef = useRef(null);
+    const reconnectTimeoutRef = useRef(null);
 
     // --- REAL-TIME SSE CONNECTION ---
     useEffect(() => {
-        // Construct the full URL to the new SSE endpoint
-        const baseUrl = process.env.NEXT_PUBLIC_API_URL ;
-        const streamUrl = `${baseUrl}/social/chat_stream.php?last_id=${lastIdRef.current}`;
-
-        // Initialize EventSource (Server-Sent Events)
-        const sse = new EventSource(streamUrl);
-        eventSourceRef.current = sse;
-
-        sse.onmessage = (event) => {
-            try {
-                const res = JSON.parse(event.data);
-                if (res.status === 'success' && res.data.length > 0) {
-                    const newMsgs = res.data;
-                    
-                    setMessages(prev => {
-                        const existingIds = new Set(prev.map(m => m.id));
-                        const uniqueNew = newMsgs.filter(m => !existingIds.has(m.id));
-                        
-                        if (uniqueNew.length > 0) {
-                            lastIdRef.current = Math.max(...uniqueNew.map(m => m.id));
-                            
-                            if (!isOpen) {
-                                setUnreadCount(prevCount => prevCount + uniqueNew.length);
-                                playPop();
-                            }
-                            return [...prev, ...uniqueNew].sort((a, b) => a.id - b.id).slice(-100); 
-                        }
-                        return prev;
-                    });
-                }
-            } catch (e) {
-                console.error("SSE Parse Error", e);
+        // We wrap the connection logic in a function so we can call it recursively for reconnections
+        const connectSSE = () => {
+            if (eventSourceRef.current) {
+                eventSourceRef.current.close();
             }
+
+            const baseUrl = process.env.NEXT_PUBLIC_API_URL;
+            // Dynamically inject the latest ID so we don't fetch duplicate history on reconnect
+            const streamUrl = `${baseUrl}/social/chat_stream.php?last_id=${lastIdRef.current}`;
+            
+            const sse = new EventSource(streamUrl);
+            eventSourceRef.current = sse;
+
+            // Handle standard data messages
+            sse.onmessage = (event) => {
+                try {
+                    const res = JSON.parse(event.data);
+                    if (res.status === 'success' && res.data.length > 0) {
+                        const newMsgs = res.data;
+                        
+                        setMessages(prev => {
+                            const existingIds = new Set(prev.map(m => m.id));
+                            const uniqueNew = newMsgs.filter(m => !existingIds.has(m.id));
+                            
+                            if (uniqueNew.length > 0) {
+                                // Update the last known ID
+                                lastIdRef.current = Math.max(...uniqueNew.map(m => m.id));
+                                
+                                // Update unread count if the chat is closed
+                                setIsOpen(currentIsOpen => {
+                                    if (!currentIsOpen) {
+                                        setUnreadCount(prevCount => prevCount + uniqueNew.length);
+                                        playPop();
+                                    }
+                                    return currentIsOpen;
+                                });
+
+                                return [...prev, ...uniqueNew].sort((a, b) => a.id - b.id).slice(-100); 
+                            }
+                            return prev;
+                        });
+                    }
+                } catch (e) {
+                    console.error("SSE Parse Error", e);
+                }
+            };
+
+            // Listen for custom server-sent errors (like DB drops from our PHP script)
+            sse.addEventListener('error', (event) => {
+                if (event.data) {
+                    try {
+                        const errorData = JSON.parse(event.data);
+                        console.warn("Server SSE Warning:", errorData.message);
+                    } catch (e) {}
+                }
+            });
+
+            // Handle actual connection drops
+            sse.onerror = () => {
+                console.warn("SSE Connection lost. Reconnecting with latest ID...");
+                sse.close(); // Prevent native auto-reconnect which uses the old URL
+                
+                // Exponential backoff or standard 3-second delay
+                clearTimeout(reconnectTimeoutRef.current);
+                reconnectTimeoutRef.current = setTimeout(() => {
+                    connectSSE();
+                }, 3000);
+            };
         };
 
-        sse.onerror = (error) => {
-            console.warn("SSE Connection lost, reconnecting...", error);
-            // EventSource auto-reconnects, but you can add custom logic here if needed
-        };
+        // Start initial connection
+        connectSSE();
 
         // Cleanup on unmount
         return () => {
+            clearTimeout(reconnectTimeoutRef.current);
             if (eventSourceRef.current) {
                 eventSourceRef.current.close();
             }
         };
-    }, [isOpen]); // We can keep isOpen in dependency array if we want to change behavior based on it, but usually best to just run once
+    }, []); // Empty dependency array: run once and keep alive in background
 
     // Auto-scroll logic
     useEffect(() => {
@@ -101,9 +136,8 @@ export default function ChatWidget() {
         setIsSending(true);
 
         try {
-            // We still use standard POST to send messages
             await api.post('/social/chat.php', { message: msgToSend });
-            // The SSE stream will automatically pick up the new message and push it to us
+            // The SSE stream will automatically pick up the new message and push it
         } catch (e) {
             console.error("Chat Error", e);
         } finally {
