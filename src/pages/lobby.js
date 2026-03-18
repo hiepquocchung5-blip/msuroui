@@ -4,9 +4,12 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext'; 
 import api, { game, user as userApi } from '../services/api';
+
+// FIXED: Added ALL missing icons including Users and AlertTriangle
 import { 
     ChevronLeft, ChevronRight, Lock, Coins, MapPin, Loader2, 
-    Bell, Trophy, Calendar, ClipboardList, Activity, Layers, Sparkles, Zap, Unlock, Users 
+    Bell, Trophy, Calendar, ClipboardList, Activity, Layers, 
+    Sparkles, Zap, Unlock, Users, AlertTriangle 
 } from 'lucide-react';
 
 import CharacterSVG from '../components/visuals/CharacterSVG';
@@ -474,7 +477,7 @@ export default function Lobby() {
                                             ></div>
                                         </div>
                                         <div className="mt-2 flex items-center gap-1.5 text-red-400 text-[10px] font-bold">
-                                            <Unlock size={12} className="opacity-70" /> DEPOSIT MORE TO UNLOCK
+                                            <AlertTriangle size={12} className="opacity-70" /> DEPOSIT MORE TO UNLOCK
                                         </div>
                                     </div>
                                 )}
