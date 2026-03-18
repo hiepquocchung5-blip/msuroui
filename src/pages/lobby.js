@@ -6,7 +6,7 @@ import { useToast } from '../context/ToastContext';
 import api, { game, user as userApi } from '../services/api';
 import { 
     ChevronLeft, ChevronRight, Lock, Coins, MapPin, Loader2, 
-    Bell, Trophy, Calendar, ClipboardList, Activity, Layers, Sparkles, Zap, Unlock
+    Bell, Trophy, Calendar, ClipboardList, Activity, Layers, Sparkles, Zap, Unlock, Users 
 } from 'lucide-react';
 
 import CharacterSVG from '../components/visuals/CharacterSVG';
@@ -196,7 +196,6 @@ export default function Lobby() {
                 if (resMissions.data.status === 'success') setMissions(resMissions.data.data);
                 
                 if (resProfile.data.status === 'success') {
-                    // Safely parse total_deposited from profile data
                     const deposited = parseFloat(resProfile.data.user.total_deposited) || 0;
                     setUserStats({ totalDeposited: deposited });
                 }
@@ -285,10 +284,7 @@ export default function Lobby() {
 
     const handleEnter = async (island) => {
         playSound('click');
-        if (!isOwned) {
-            // Flash a visual feedback that it's locked
-            return;
-        }
+        if (!isOwned) return;
         router.push(`/game/${island.id}`);
     };
 
