@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { 
     ChevronLeft, Minus, Plus, Zap, StopCircle, Gamepad2, 
     Trophy, Flame, MessageCircle, TrendingUp, 
-    ShieldAlert, X, Coins, Repeat, Target, Activity, Cpu, MapPin, HelpCircle, AlertOctagon
+    ShieldAlert, X, Coins, Repeat, Target, Activity, Cpu, MapPin, HelpCircle, AlertOctagon, Crown
 } from 'lucide-react';
 import { useRouter } from 'next/router';
 
@@ -34,7 +34,16 @@ const PAYTABLE_DATA = [
 ];
 
 const PAYLINES = [[0, 1, 2], [3, 4, 5], [6, 7, 8], [0, 4, 8], [6, 4, 2]];
-const BET_AMOUNTS = [100, 500, 1000, 5000, 10000];
+
+// --- ISLAND SPECIFIC LUXURY BET TIERS ---
+const ISLAND_BET_AMOUNTS = {
+    1: [100, 500, 1000, 5000],             // Kyoto Zen (Starter)
+    2: [1000, 5000, 10000, 20000],         // Neon Arcade (Mid)
+    3: [5000, 10000, 50000, 100000],       // Edo Castle (High)
+    4: [10000, 50000, 100000, 250000],     // Hanami Fest (Very High)
+    5: [50000, 100000, 500000, 1000000],   // Spirited Yokai (Whale)
+    default: [100, 500, 1000, 5000, 10000]
+};
 
 // --- ROLLUP COUNTER ---
 const RollupNumber = ({ value, duration = 1000 }) => {
@@ -139,10 +148,19 @@ const PlayView = ({ machine, island, onLeave }) => {
     
     const [reelThud, setReelThud] = useState([false, false, false]);
     const [currentJackpot, setCurrentJackpot] = useState(3000000);
-    const currentBet = BET_AMOUNTS[betIndex];
+    
+    // Dynamic Bet Tiers based on Island
+    const activeBetAmounts = useMemo(() => ISLAND_BET_AMOUNTS[island?.id] || ISLAND_BET_AMOUNTS.default, [island?.id]);
+    
+    useEffect(() => {
+        if (betIndex >= activeBetAmounts.length) setBetIndex(activeBetAmounts.length - 1);
+    }, [activeBetAmounts, betIndex]);
+
+    const currentBet = activeBetAmounts[betIndex] || activeBetAmounts[0];
 
     const isProcessing = useRef(false);
     const winHandled = useRef(false); 
+    const winTimeoutRef = useRef(null);
     const isCurrentlySpinning = isSpinning.some(s => s);
     const isReachWaitState = isReachEye && isCurrentlySpinning && !isSpinning[0] && !isSpinning[1] && isSpinning[2];
 
@@ -163,17 +181,13 @@ const PlayView = ({ machine, island, onLeave }) => {
     useEffect(() => {
         const handleOrientation = (e) => {
             if (!e.gamma || !e.beta) return;
-            // Gamma: left/right (-90 to 90). Beta: front/back (-180 to 180)
             const x = Math.min(Math.max(e.gamma / 4, -15), 15);
             const y = Math.min(Math.max((e.beta - 45) / 4, -15), 15);
             setMousePos({ x, y: -y }); 
         };
-        
-        // Only attach device orientation on mobile devices to prevent permission loops on desktop
         if (isMobile && typeof window !== 'undefined' && window.DeviceOrientationEvent) {
             window.addEventListener('deviceorientation', handleOrientation);
         }
-        
         return () => window.removeEventListener('deviceorientation', handleOrientation);
     }, [isMobile]);
 
@@ -239,6 +253,7 @@ const PlayView = ({ machine, island, onLeave }) => {
         if (levelUpData) { playSound('bigwin'); triggerCoinShower(80); }
     }, [levelUpData, playSound]);
 
+    // Win Processing
     useEffect(() => {
         if (lastWin > 0 && winStage === 'idle' && !winHandled.current && !isCurrentlySpinning) {
             winHandled.current = true; 
@@ -249,7 +264,7 @@ const PlayView = ({ machine, island, onLeave }) => {
 
             if (!bonusMode && (!autoPlay || isBigWin)) {
                 setWinStage('celebrating');
-                setTimeout(() => {
+                winTimeoutRef.current = setTimeout(() => {
                     setWinStage('idle');
                     setLastWin(0); 
                 }, isJackpot ? 6000 : (winTier === 'EPIC' ? 4000 : 2500));
@@ -257,6 +272,8 @@ const PlayView = ({ machine, island, onLeave }) => {
         } 
         
         if (!isCurrentlySpinning) isProcessing.current = false;
+        
+        return () => { if (winTimeoutRef.current) clearTimeout(winTimeoutRef.current); };
     }, [lastWin, autoPlay, playSound, bonusMode, winStage, isCurrentlySpinning, winTier, isJackpot, setLastWin]);
 
     const triggerCoinShower = (amount = 40) => {
@@ -266,6 +283,16 @@ const PlayView = ({ machine, island, onLeave }) => {
         }));
         setCoinParticles(newParticles);
         setTimeout(() => setCoinParticles([]), 4000);
+    };
+
+    // Fast Skip for Win Animations
+    const handleSkipWin = () => {
+        if (winStage === 'celebrating') {
+            playSound('click');
+            if (winTimeoutRef.current) clearTimeout(winTimeoutRef.current);
+            setWinStage('idle');
+            setLastWin(0);
+        }
     };
 
     const handleSpin = useCallback(() => {
@@ -329,6 +356,7 @@ const PlayView = ({ machine, island, onLeave }) => {
             if(resetIdleTimer) resetIdleTimer();
             if (e.code === 'Space') { 
                 e.preventDefault(); 
+                if (winStage === 'celebrating') { handleSkipWin(); return; }
                 if (isCurrentlySpinning) handleQuickStop();
                 else handleSpin(); 
             }
@@ -338,7 +366,7 @@ const PlayView = ({ machine, island, onLeave }) => {
         };
         window.addEventListener('keydown', handleKeyDown);
         return () => window.removeEventListener('keydown', handleKeyDown);
-    }, [handleSpin, handleQuickStop, handleManualStop, isCurrentlySpinning, resetIdleTimer]);
+    }, [handleSpin, handleQuickStop, handleManualStop, isCurrentlySpinning, resetIdleTimer, winStage]);
 
     const winDetails = useMemo(() => {
         if (!winningLines || winningLines.length === 0) return null;
@@ -354,7 +382,7 @@ const PlayView = ({ machine, island, onLeave }) => {
 
     return (
         <div 
-            className={`min-h-[100dvh] bg-black relative flex flex-col overflow-hidden transition-colors duration-1000 ${bonusMode === 'HEAVEN' ? 'bg-purple-950' : (bonusMode ? 'bg-red-950' : '')}`}
+            className={`min-h-[100dvh] bg-black relative flex flex-col overflow-hidden transition-colors duration-1000 ${bonusMode === 'HEAVEN' ? 'bg-purple-950' : (bonusMode ? 'bg-red-950' : '')} ${inZone && !isCurrentlySpinning ? 'border-2 border-yellow-500/50 shadow-[inset_0_0_50px_rgba(234,179,8,0.2)]' : ''}`}
             onPointerMove={handlePointerMove} 
             onPointerDown={resetIdleTimer}
         >
@@ -455,7 +483,7 @@ const PlayView = ({ machine, island, onLeave }) => {
                 <div className={`absolute bottom-0 left-0 h-[2px] transition-all duration-500 shadow-[0_0_8px_currentColor] ${currentJackpot >= 7000000 ? 'bg-purple-500 text-purple-500' : currentJackpot >= 3600000 ? 'bg-red-500 text-red-500' : 'bg-yellow-500 text-yellow-500'}`} style={{ width: `${jpProgressPercent}%` }} />
             </div>
             
-            {/* --- RESPONSIVE CYBER HUD --- */}
+            {/* --- CYBER HUD --- */}
             <div className="absolute top-16 md:top-20 left-0 w-full px-2 md:px-6 flex flex-row justify-between items-start z-40 pointer-events-none mt-1">
                 
                 {/* Left Side: Navigation & Momentum */}
@@ -478,10 +506,18 @@ const PlayView = ({ machine, island, onLeave }) => {
                     </div>
                     
                     <div className={`pointer-events-auto w-fit bg-black/80 border rounded-lg md:rounded-xl p-1 md:p-2 px-2 md:px-3 flex items-center gap-1 md:gap-3 backdrop-blur-md shadow-lg transition-colors duration-500 mt-1 ${momentumMult > 1.5 ? 'border-purple-500 shadow-[0_0_15px_purple]' : 'border-cyan-500/30'}`}>
-                        <TrendingUp size={12} className={`md:w-4 md:h-4 ${momentumMult > 1.5 ? 'text-purple-400 animate-pulse' : 'text-cyan-400'}`} />
+                        {sessionWinStreak > 2 ? (
+                            <Flame size={12} className="md:w-4 md:h-4 text-orange-500 animate-pulse fill-orange-500" />
+                        ) : (
+                            <TrendingUp size={12} className={`md:w-4 md:h-4 ${momentumMult > 1.5 ? 'text-purple-400 animate-pulse' : 'text-cyan-400'}`} />
+                        )}
                         <div>
-                            <div className={`text-[6px] md:text-[8px] font-bold uppercase tracking-wider ${momentumMult > 1.5 ? 'text-purple-500' : 'text-cyan-500'}`}>Momentum</div>
-                            <div className="text-[10px] md:text-sm font-mono font-black text-white leading-none mt-0.5">x{momentumMult.toFixed(1)}</div>
+                            <div className={`text-[6px] md:text-[8px] font-bold uppercase tracking-wider ${sessionWinStreak > 2 ? 'text-orange-500' : (momentumMult > 1.5 ? 'text-purple-500' : 'text-cyan-500')}`}>
+                                {sessionWinStreak > 2 ? 'WIN STREAK' : 'Momentum'}
+                            </div>
+                            <div className="text-[10px] md:text-sm font-mono font-black text-white leading-none mt-0.5">
+                                {sessionWinStreak > 2 ? `x${sessionWinStreak}` : `x${momentumMult.toFixed(1)}`}
+                            </div>
                         </div>
                     </div>
 
@@ -496,7 +532,7 @@ const PlayView = ({ machine, island, onLeave }) => {
                 <div className="flex flex-col items-end gap-1 md:gap-2">
                     <div className="pointer-events-auto bg-gradient-to-r from-gray-900 to-black border border-yellow-500/30 rounded-full px-2 md:px-4 py-1 md:py-2 flex items-center gap-1 md:gap-2 backdrop-blur-md shadow-[0_0_20px_rgba(234,179,8,0.15)] cursor-pointer hover:border-yellow-500/60 transition-all duration-300 group" onClick={() => router.push('/wallet')}>
                         <Coins size={12} className="text-yellow-400 md:w-4 md:h-4 group-hover:animate-spin-slow" />
-                        <span className="text-white font-mono font-black text-[10px] md:text-base tracking-tight"><RollupNumber value={user?.balance || 0} /></span>
+                        <span className="text-white font-mono font-black text-sm sm:text-base tracking-tight"><RollupNumber value={user?.balance || 0} /></span>
                     </div>
 
                     <div className="flex items-center gap-2 pointer-events-auto">
@@ -627,12 +663,12 @@ const PlayView = ({ machine, island, onLeave }) => {
                                 <div className="flex items-center gap-1 w-full justify-between">
                                     <button onClick={() => { playSound('click'); setBetIndex(Math.max(0, betIndex - 1))}} className="w-6 h-6 md:w-8 md:h-8 bg-gray-800 rounded flex items-center justify-center text-white active:bg-cyan-600 active:scale-[0.98] transition-all"><Minus size={14}/></button>
                                     <div className="w-12 md:w-16 text-center font-mono font-bold text-yellow-400 text-[10px] md:text-xs drop-shadow-sm leading-none">{currentBet.toLocaleString()}</div>
-                                    <button onClick={() => { playSound('click'); setBetIndex(Math.min(BET_AMOUNTS.length - 1, betIndex + 1))}} className="w-6 h-6 md:w-8 md:h-8 bg-gray-800 rounded flex items-center justify-center text-white active:bg-cyan-600 active:scale-[0.98] transition-all"><Plus size={14}/></button>
+                                    <button onClick={() => { playSound('click'); setBetIndex(Math.min(activeBetAmounts.length - 1, betIndex + 1))}} className="w-6 h-6 md:w-8 md:h-8 bg-gray-800 rounded flex items-center justify-center text-white active:bg-cyan-600 active:scale-[0.98] transition-all"><Plus size={14}/></button>
                                 </div>
                             </div>
                             
                             <button 
-                                onClick={() => { playSound('click'); setBetIndex(BET_AMOUNTS.length - 1)}} 
+                                onClick={() => { playSound('click'); setBetIndex(activeBetAmounts.length - 1)}} 
                                 disabled={isCurrentlySpinning}
                                 className={`absolute left-[2%] top-[55%] md:top-[60%] w-[80px] md:w-[100px] h-6 md:h-8 bg-gradient-to-b from-orange-600 to-orange-800 rounded-lg border-b-4 border-black text-[8px] md:text-[10px] font-black text-white flex items-center justify-center transition-all duration-300 shadow-md ${isCurrentlySpinning ? 'opacity-40 cursor-not-allowed border-b-0 translate-y-1' : 'hover:brightness-110 active:translate-y-1 active:border-b-0'}`}
                             >
@@ -719,9 +755,21 @@ const PlayView = ({ machine, island, onLeave }) => {
 
             <AnimatePresence>
                 {winStage === 'celebrating' && winDetails && !bonusMode && (
-                    <motion.div initial={{ opacity: 0, backdropFilter: 'blur(0px)' }} animate={{ opacity: 1, backdropFilter: 'blur(10px)' }} exit={{ opacity: 0 }} className="fixed inset-0 z-50 flex items-center justify-center pointer-events-none p-4">
-                        {(winTier === 'EPIC' || isJackpot) && <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/circuit-board.png')] opacity-30 mix-blend-color-dodge animate-pulse hue-rotate-90"></div>}
-                        <motion.div initial={{ scale: 0.8, y: 50 }} animate={{ scale: (winTier === 'EPIC' || isJackpot) ? 1.1 : 1, y: 0, transition: { type: "spring", stiffness: 200, damping: 20 } }} className="relative z-10 flex flex-col items-center w-full max-w-sm">
+                    <motion.div 
+                        initial={{ opacity: 0, backdropFilter: 'blur(0px)' }} 
+                        animate={{ opacity: 1, backdropFilter: 'blur(10px)' }} 
+                        exit={{ opacity: 0 }} 
+                        onClick={handleSkipWin}
+                        className="fixed inset-0 z-50 flex flex-col items-center justify-center pointer-events-auto p-4 cursor-pointer"
+                    >
+                        {(winTier === 'EPIC' || isJackpot) && <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/circuit-board.png')] opacity-30 mix-blend-color-dodge animate-pulse hue-rotate-90 pointer-events-none"></div>}
+                        
+                        {/* Tap to Skip Indicator */}
+                        <div className="absolute top-10 text-white/50 text-xs tracking-widest uppercase animate-pulse flex items-center gap-2">
+                            Tap to skip <span className="animate-bounce">↓</span>
+                        </div>
+
+                        <motion.div initial={{ scale: 0.8, y: 50 }} animate={{ scale: (winTier === 'EPIC' || isJackpot) ? 1.1 : 1, y: 0, transition: { type: "spring", stiffness: 200, damping: 20 } }} className="relative z-10 flex flex-col items-center w-full max-w-sm pointer-events-none">
                             <GlassCard className={`w-full p-6 md:p-10 text-center flex flex-col items-center border-t-8 border-b-8 ${isJackpot ? 'border-yellow-400 shadow-[0_0_150px_rgba(255,215,0,0.4)] bg-black/90' : (winDetails?.color?.replace('text-', 'border-') || 'border-cyan-400')} ${winDetails?.glow} ${winTier === 'EPIC' ? 'shadow-[0_0_100px_rgba(255,215,0,0.6)] bg-black/90' : 'bg-black/80'}`}>
                                 {isJackpot ? <h1 className="text-4xl md:text-6xl font-black italic text-transparent bg-clip-text bg-gradient-to-b from-yellow-200 via-orange-500 to-red-600 drop-shadow-2xl mb-4 animate-pulse leading-none">GRAND<br/>JACKPOT</h1> : 
                                  winTier === 'EPIC' ? <h1 className="text-5xl md:text-6xl font-black italic text-transparent bg-clip-text bg-gradient-to-b from-purple-200 to-pink-600 drop-shadow-2xl mb-4 animate-pulse">EPIC WIN</h1> : 
