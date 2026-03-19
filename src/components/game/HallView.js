@@ -2,30 +2,49 @@ import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
     ChevronLeft, Flame, Users, Zap, Search, Trophy, 
-    X, BarChart3, History, Lock, MapPin, Activity, ShieldAlert, Cpu, Target , Coins
+    X, BarChart3, History, Lock, MapPin, Activity, ShieldAlert, Cpu, Target, Coins
 } from 'lucide-react';
+import { useRouter } from 'next/router';
+
+// --- REAL PRODUCTION IMPORTS ---
+import { useAuth } from '../../context/AuthContext';
+import { useGameSound } from '../../hooks/useGameSound';
+import api from '../../services/api';
 import CabinetSVG from '../visuals/CabinetSVG';
 import CharacterSVG from '../visuals/CharacterSVG';
 import IslandLandscapeSVG from '../visuals/IslandLandscapeSVG';
 import GlobalTicker from '../ui/GlobalTicker';
 import ActiveEvents from '../ui/ActiveEvents';
-import GlassCard from '../ui/GlassCard';
-import { useGameSound } from '../../hooks/useGameSound';
 
 const MACHINES_PER_FLOOR = 90;
 
 export default function HallView({ island, machines, user, onSelectMachine, onBack }) {
-    const [filter, setFilter] = useState('ALL'); // ALL, EMPTY, HOT
+    const [filter, setFilter] = useState('ALL'); 
     const [search, setSearch] = useState('');
     const [currentFloor, setCurrentFloor] = useState(1);
     const [inspectingMachine, setInspectingMachine] = useState(null); 
     const [floorDirection, setFloorDirection] = useState(1);
+    const [currentJackpot, setCurrentJackpot] = useState(0); // NEW: Fetch GJP for Hall View
     
     // UI States
     const [showSearch, setShowSearch] = useState(false);
     const scrollContainerRef = useRef(null);
 
     const { playSound } = useGameSound();
+
+    // --- FETCH JACKPOT ---
+    useEffect(() => {
+        const fetchJackpot = async () => {
+            if (!island?.id) return;
+            try {
+                const res = await api.get(`/game/ticker.php?island_id=${island.id}`);
+                if (res.data && res.data.jackpot_amount) setCurrentJackpot(res.data.jackpot_amount);
+            } catch (e) {}
+        };
+        fetchJackpot(); 
+        const intv = setInterval(fetchJackpot, 10000);
+        return () => clearInterval(intv);
+    }, [island?.id]);
 
     // --- LOGIC: Total Floors Calculation ---
     const totalFloors = useMemo(() => {
@@ -36,7 +55,7 @@ export default function HallView({ island, machines, user, onSelectMachine, onBa
 
     // --- LOGIC: Filter Machines for Current Floor ---
     const activeMachines = useMemo(() => {
-        return machines.filter(m => {
+        return (machines || []).filter(m => {
             const mFloor = Math.ceil(m.machine_number / MACHINES_PER_FLOOR);
             if (mFloor !== currentFloor) return false;
 
@@ -49,8 +68,8 @@ export default function HallView({ island, machines, user, onSelectMachine, onBa
     }, [machines, currentFloor, filter, search]);
 
     // --- METRICS ---
-    const globalOccupied = useMemo(() => machines.filter(m => m.status === 'occupied').length, [machines]);
-    const globalRate = machines.length > 0 ? Math.round((globalOccupied / machines.length) * 100) : 0;
+    const globalOccupied = useMemo(() => (machines || []).filter(m => m.status === 'occupied').length, [machines]);
+    const globalRate = machines && machines.length > 0 ? Math.round((globalOccupied / machines.length) * 100) : 0;
     
     const floorOccupied = useMemo(() => activeMachines.filter(m => m.status === 'occupied').length, [activeMachines]);
     const floorTotal = activeMachines.length;
@@ -71,20 +90,17 @@ export default function HallView({ island, machines, user, onSelectMachine, onBa
 
     const changeFloor = (newFloor) => {
         if (newFloor === currentFloor || newFloor < 1 || newFloor > totalFloors) return;
-        playSound('spin'); // Tech sound for elevator
+        playSound('spin'); 
         setFloorDirection(newFloor > currentFloor ? 1 : -1);
         setCurrentFloor(newFloor);
         
-        // Reset scroll position when changing floors
         if (scrollContainerRef.current) {
             scrollContainerRef.current.scrollTo({ left: 0, behavior: 'smooth' });
         }
     };
 
-    // Auto-scroll to center on mount/floor change to establish perspective
     useEffect(() => {
         if (scrollContainerRef.current && activeMachines.length > 0) {
-            // Scroll slightly to the right to make it obvious there are more machines
             setTimeout(() => {
                 if (scrollContainerRef.current) {
                      scrollContainerRef.current.scrollTo({ left: 100, behavior: 'smooth' });
@@ -93,31 +109,11 @@ export default function HallView({ island, machines, user, onSelectMachine, onBa
         }
     }, [currentFloor, activeMachines.length]);
 
-    // --- ANIMATION VARIANTS (Cinematic Elevator) ---
     const floorVariants = {
-        initial: (dir) => ({ 
-            y: dir * 200, 
-            opacity: 0, 
-            scale: 0.85, 
-            filter: 'blur(15px)',
-            rotateX: dir * 15
-        }),
-        animate: { 
-            y: 0, 
-            opacity: 1, 
-            scale: 1, 
-            filter: 'blur(0px)',
-            rotateX: 0
-        },
-        exit: (dir) => ({ 
-            y: dir * -200, 
-            opacity: 0, 
-            scale: 1.15, 
-            filter: 'blur(15px)',
-            rotateX: dir * -15
-        })
+        initial: (dir) => ({ y: dir * 200, opacity: 0, scale: 0.85, filter: 'blur(15px)', rotateX: dir * 15 }),
+        animate: { y: 0, opacity: 1, scale: 1, filter: 'blur(0px)', rotateX: 0 },
+        exit: (dir) => ({ y: dir * -200, opacity: 0, scale: 1.15, filter: 'blur(15px)', rotateX: dir * -15 })
     };
-
 
     return (
         <div className="min-h-[100dvh] bg-[#050505] pb-6 relative overflow-hidden flex flex-col selection:bg-cyan-500 selection:text-black">
@@ -125,10 +121,9 @@ export default function HallView({ island, machines, user, onSelectMachine, onBa
             {/* --- IMMERSIVE BACKGROUND --- */}
             <div className="absolute inset-0 z-0 pointer-events-none">
                 <div className="absolute inset-0 scale-110 blur-[2px] opacity-40 transition-all duration-1000">
-                    <IslandLandscapeSVG islandId={island.id} />
+                    <IslandLandscapeSVG islandId={island?.id || 1} />
                 </div>
                 <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_bottom,_var(--tw-gradient-stops))] from-cyan-900/10 via-black to-black opacity-80"></div>
-                {/* Tech Grid Overlay */}
                 <div className="absolute inset-0 bg-[linear-gradient(rgba(0,243,255,0.03)_1px,transparent_1px),linear-gradient(90deg,rgba(0,243,255,0.03)_1px,transparent_1px)] bg-[size:40px_40px]"></div>
             </div>
 
@@ -151,7 +146,7 @@ export default function HallView({ island, machines, user, onSelectMachine, onBa
                                 </span>
                             </div>
                             <h2 className="text-white font-black text-xl sm:text-2xl italic uppercase tracking-wider leading-none drop-shadow-md truncate">
-                                {island.name}
+                                {island?.name || 'Unknown'}
                             </h2>
                             <div className="flex items-center gap-3 mt-1.5">
                                 <div className="flex items-center gap-1 text-[9px] sm:text-[10px] text-gray-400 font-bold tracking-widest bg-white/5 px-2 py-0.5 rounded-full border border-white/10">
@@ -172,7 +167,7 @@ export default function HallView({ island, machines, user, onSelectMachine, onBa
                     </div>
                     
                     <div className="flex items-center gap-3 w-full sm:w-auto">
-                        {/* Search Input (Hidden on mobile unless toggled) */}
+                        {/* Search Input */}
                         <div className={`relative flex-1 sm:w-40 transition-all duration-300 ${showSearch ? 'block' : 'hidden sm:block'}`}>
                             <input 
                                 type="text" 
@@ -205,7 +200,6 @@ export default function HallView({ island, machines, user, onSelectMachine, onBa
                 {/* --- ELEVATOR UI (FLOOR SELECTOR) --- */}
                 {totalFloors > 1 && (
                     <div className="w-12 sm:w-16 flex-shrink-0 bg-black/80 border-r border-white/10 flex flex-col items-center py-4 z-20 overflow-y-auto hide-scrollbar backdrop-blur-md shadow-[10px_0_30px_rgba(0,0,0,0.8)] relative">
-                        {/* Elevator Track styling */}
                         <div className="absolute top-0 bottom-0 left-1/2 w-0.5 bg-gradient-to-b from-transparent via-cyan-900/50 to-transparent -translate-x-1/2 pointer-events-none"></div>
                         
                         <div className="text-[8px] sm:text-[9px] text-cyan-500 font-black uppercase tracking-[0.3em] mb-6 opacity-80 flex items-center gap-1" style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)' }}>
@@ -240,7 +234,6 @@ export default function HallView({ island, machines, user, onSelectMachine, onBa
                     className="flex-1 overflow-x-auto overflow-y-hidden perspective-1000 flex items-center px-4 md:px-12 hide-scrollbar z-10 relative scroll-smooth"
                     style={{
                         WebkitOverflowScrolling: 'touch',
-                        // Create a subtle vignette effect at the edges of the scroll container
                         maskImage: 'linear-gradient(to right, transparent, black 5%, black 95%, transparent)',
                         WebkitMaskImage: 'linear-gradient(to right, transparent, black 5%, black 95%, transparent)'
                     }}
@@ -276,7 +269,6 @@ export default function HallView({ island, machines, user, onSelectMachine, onBa
                             ) : (
                                 activeMachines.map((m) => {
                                     const isOccupied = m.status === 'occupied';
-                                    // Parse user ID safely
                                     const isMe = user && parseInt(m.current_user_id) === parseInt(user.id);
                                     const isHot = parseFloat(m.total_payout) > 50000;
                                     const isJackpot = parseFloat(m.total_payout) > 500000;
@@ -293,7 +285,7 @@ export default function HallView({ island, machines, user, onSelectMachine, onBa
                                                 ${isOccupied && !isMe ? 'opacity-60 grayscale-[0.5] hover:opacity-80' : ''}
                                             `}
                                             style={{ 
-                                                width: 'min(75vw, 260px)', // Responsive width based on viewport
+                                                width: 'min(75vw, 260px)', 
                                                 height: '65vh',
                                                 maxHeight: '750px',
                                                 minHeight: '400px',
@@ -328,18 +320,19 @@ export default function HallView({ island, machines, user, onSelectMachine, onBa
                                                 {/* Core Cabinet Render */}
                                                 <div className="absolute inset-0 z-10 w-full h-full drop-shadow-[0_20px_25px_rgba(0,0,0,0.9)]">
                                                     <CabinetSVG 
-                                                        islandId={parseInt(island.id)} 
+                                                        islandId={parseInt(island?.id || 1)} 
                                                         visualState={isOccupied ? 'BUSY' : (isHot ? 'JACKPOT_HOT' : 'FREE')} 
                                                         mode="hall" 
                                                         stats={{ laps: m.total_laps, wins: m.total_payout }} 
-                                                        charId={island.hostess_char_id} 
+                                                        charId={island?.hostess_char_id || 'luna'} 
                                                         machineNumber={displayId} 
                                                         serialNumber={m.serial_number}
                                                         machine={m}
+                                                        currentJackpot={currentJackpot}
                                                     />
                                                 </div>
 
-                                                {/* Occupant 3D Projection Overlay */}
+                                                {/* Occupant Overlay */}
                                                 {isOccupied && (
                                                     <div className="absolute bottom-[2%] right-[-30%] w-[60%] h-[65%] z-20 pointer-events-none drop-shadow-2xl opacity-90 transition-transform duration-700 group-hover:scale-105 group-hover:-translate-x-2">
                                                         <CharacterSVG 
@@ -349,7 +342,7 @@ export default function HallView({ island, machines, user, onSelectMachine, onBa
                                                     </div>
                                                 )}
                                                 
-                                                {/* Secure Lock Overlay for occupied machines */}
+                                                {/* Secure Lock Overlay */}
                                                 {isOccupied && !isMe && (
                                                     <div className="absolute inset-0 bg-black/60 z-30 flex flex-col items-center justify-center rounded-2xl backdrop-blur-[2px] border border-white/5 transition-opacity duration-300 group-hover:bg-black/40">
                                                         <div className="bg-red-950/80 text-red-500 font-black text-[10px] sm:text-xs px-3 sm:px-4 py-1.5 rounded-lg border border-red-500/50 shadow-[0_0_20px_rgba(239,68,68,0.4)] flex items-center gap-1.5">
@@ -359,7 +352,6 @@ export default function HallView({ island, machines, user, onSelectMachine, onBa
                                                 )}
                                             </div>
                                             
-                                            {/* Hover Action Button (Hidden on touch devices usually, relies on click handler) */}
                                             {!isOccupied && (
                                                 <div className="absolute bottom-[10%] left-0 right-0 flex justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-50 pointer-events-none">
                                                     <div className="bg-cyan-500 text-black font-black text-[10px] sm:text-xs px-4 sm:px-6 py-2 sm:py-3 rounded-full shadow-[0_0_30px_cyan] flex items-center gap-1.5 transform scale-95 group-hover:scale-100 transition-transform border-2 border-white">
@@ -368,7 +360,6 @@ export default function HallView({ island, machines, user, onSelectMachine, onBa
                                                 </div>
                                             )}
 
-                                            {/* Floor Reflection / Shadow */}
                                             <div className="absolute -bottom-6 left-1/2 -translate-x-1/2 w-[80%] h-8 bg-black blur-xl rounded-full opacity-80 pointer-events-none z-0"></div>
                                             {isHot && !isOccupied && (
                                                 <div className="absolute -bottom-4 left-1/2 -translate-x-1/2 w-[60%] h-4 bg-yellow-500 blur-lg rounded-full opacity-30 pointer-events-none z-0"></div>
@@ -391,7 +382,7 @@ export default function HallView({ island, machines, user, onSelectMachine, onBa
                 </div>
             </div>
 
-            {/* --- MACHINE INSPECTOR MODAL (Cyber UI) --- */}
+            {/* --- MACHINE INSPECTOR MODAL --- */}
             <AnimatePresence>
                 {inspectingMachine && (
                     <motion.div 
@@ -404,13 +395,9 @@ export default function HallView({ island, machines, user, onSelectMachine, onBa
                             className="w-full max-w-sm p-0 overflow-hidden bg-gradient-to-b from-gray-900 to-black border border-cyan-500/50 rounded-[2rem] shadow-[0_0_50px_rgba(6,182,212,0.2)] relative" 
                             onClick={e => e.stopPropagation()}
                         >
-                            {/* Tech Background overlay */}
                             <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/circuit-board.png')] opacity-10 pointer-events-none mix-blend-color-dodge"></div>
-                            
-                            {/* Scanline Effect */}
                             <div className="absolute inset-0 bg-[linear-gradient(transparent_50%,rgba(0,0,0,0.25)_50%)] bg-[length:100%_4px] pointer-events-none z-0"></div>
                             
-                            {/* Header */}
                             <div className="bg-cyan-950/50 p-5 flex justify-between items-center border-b border-cyan-500/30 relative z-10">
                                 <div>
                                     <h3 className="text-white font-black text-2xl italic tracking-widest drop-shadow-[0_0_5px_rgba(255,255,255,0.5)] flex items-center gap-2">
@@ -418,16 +405,13 @@ export default function HallView({ island, machines, user, onSelectMachine, onBa
                                         UNIT #{currentFloor}-{( ((parseInt(inspectingMachine.machine_number) - 1) % MACHINES_PER_FLOOR) + 1 ).toString().padStart(2,'0')}
                                     </h3>
                                     <div className="text-[10px] text-cyan-300 font-bold tracking-widest uppercase flex items-center gap-1 mt-1">
-                                        <MapPin size={10} /> {island.name} • FLR {currentFloor}
+                                        <MapPin size={10} /> {island?.name} • FLR {currentFloor}
                                     </div>
                                 </div>
                                 <button onClick={() => setInspectingMachine(null)} className="text-white/50 hover:text-white bg-black/40 p-2 rounded-full border border-white/10 transition-colors"><X size={18}/></button>
                             </div>
 
-                            {/* Body */}
                             <div className="p-5 space-y-4 relative z-10">
-                                
-                                {/* Engine Specs & Predictive AI (Replaces RTP) */}
                                 <div className="flex gap-2 mb-2">
                                     <div className="flex-1 bg-black/60 border border-white/10 rounded-xl p-3 text-center shadow-inner relative overflow-hidden">
                                         <div className="absolute inset-0 bg-gradient-to-t from-red-500/10 to-transparent"></div>
@@ -444,7 +428,6 @@ export default function HallView({ island, machines, user, onSelectMachine, onBa
                                     </div>
                                 </div>
 
-                                {/* Main Stats */}
                                 <div className="bg-black/40 p-4 rounded-2xl border border-white/5 shadow-inner">
                                     <div className="flex justify-between items-center mb-3">
                                         <div className="flex items-center gap-3">
@@ -470,13 +453,11 @@ export default function HallView({ island, machines, user, onSelectMachine, onBa
                                     </div>
                                 </div>
 
-                                {/* Mock Trend Chart */}
                                 <div className="bg-black/60 p-4 rounded-2xl border border-white/5 relative overflow-hidden h-24 flex flex-col justify-between">
                                     <div className="flex items-center gap-2 text-[9px] text-gray-400 font-bold uppercase tracking-widest relative z-10">
                                         <BarChart3 size={12} className="text-cyan-500"/> Core Telemetry (Last 50)
                                     </div>
                                     <div className="flex items-end gap-1 relative z-10 h-12 w-full mt-2">
-                                        {/* Generate predictable random bars based on machine ID for visual stability */}
                                         {Array.from({length: 30}).map((_, i) => {
                                             const hash = (inspectingMachine.id * i * 17) % 100;
                                             const isSpike = hash > 85;
@@ -491,12 +472,10 @@ export default function HallView({ island, machines, user, onSelectMachine, onBa
                                     </div>
                                 </div>
 
-                                {/* Security Badge */}
                                 <div className="text-[8px] text-green-500/80 flex items-center gap-1.5 justify-center bg-green-950/20 py-1.5 rounded-lg border border-green-900/30 uppercase tracking-widest">
                                     <ShieldAlert size={10} /> AES-256 Link Encrypted & Validated
                                 </div>
 
-                                {/* Main Action */}
                                 <button 
                                     onClick={() => handleEnterMachine(inspectingMachine)}
                                     className="w-full py-4 bg-gradient-to-r from-cyan-500 to-blue-600 rounded-xl font-black text-black text-sm shadow-[0_0_25px_rgba(6,182,212,0.5)] flex items-center justify-center gap-2 hover:scale-[1.02] active:scale-95 transition-all mt-4 border border-cyan-300 tracking-widest"

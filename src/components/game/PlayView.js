@@ -144,7 +144,6 @@ const PlayView = ({ machine, island, onLeave }) => {
     const winHandled = useRef(false); 
     const isCurrentlySpinning = isSpinning.some(s => s);
 
-    // Determines if we are currently in the dramatic "Reach" wait state
     const isReachWaitState = isReachEye && isCurrentlySpinning && !isSpinning[0] && !isSpinning[1] && isSpinning[2];
 
     const MACHINES_PER_FLOOR = 90;
@@ -152,17 +151,19 @@ const PlayView = ({ machine, island, onLeave }) => {
     const relativeNum = (((machine?.machine_number || 1) - 1) % MACHINES_PER_FLOOR) + 1;
     const displayId = `${currentFloor}-${relativeNum.toString().padStart(2, '0')}`;
 
+    // NEW: Fetch specific island jackpot to pass down to the Cabinet LEDs and Ticker
     useEffect(() => {
         const fetchJackpot = async () => {
+            if (!island?.id) return;
             try {
-                const res = await api.get('/game/ticker.php');
+                const res = await api.get(`/game/ticker.php?island_id=${island.id}`);
                 if (res.data && res.data.jackpot_amount) setCurrentJackpot(res.data.jackpot_amount);
             } catch (e) {}
         };
         fetchJackpot(); 
         const jpInterval = setInterval(fetchJackpot, 10000);
         return () => clearInterval(jpInterval);
-    }, []);
+    }, [island?.id]);
 
     useEffect(() => { if (isJackpot) setCurrentJackpot(3000000); }, [isJackpot]);
 
@@ -196,7 +197,7 @@ const PlayView = ({ machine, island, onLeave }) => {
     const isOverheating = sessionWinStreak >= 3 || momentumMult > 1.2 || inZone || bonusMode;
 
     useEffect(() => {
-        if (isFreeze) { playSound('bigwin'); } // Specific freeze sound in real app
+        if (isFreeze) { playSound('bigwin'); } 
     }, [isFreeze, playSound]);
 
     useEffect(() => {
@@ -283,7 +284,6 @@ const PlayView = ({ machine, island, onLeave }) => {
         order.forEach((reelIdx) => {
             if (isSpinning[reelIdx]) {
                 setTimeout(() => stopReel(reelIdx), delay);
-                // If it's a reach sequence, preserve the suspense delay even on quick stop
                 if (isReachEye && reelIdx === 2) delay += 1500; 
                 else delay += 120; 
             }
@@ -512,6 +512,9 @@ const PlayView = ({ machine, island, onLeave }) => {
                             visualState={getCabinetState()} 
                             machineNumber={displayId}
                             serialNumber={machine?.serial_number}
+                            currentJackpot={currentJackpot}
+                            machine={machine}
+                            stats={{ laps: machine?.total_laps, wins: machine?.total_payout }}
                         />
                         {turboMode && <div className="absolute inset-0 rounded-[2rem] border-[4px] border-yellow-500 opacity-50 shadow-[0_0_30px_gold] animate-pulse pointer-events-none"></div>}
                         {isReachWaitState && <div className="absolute inset-0 rounded-[2rem] border-[4px] border-red-600 opacity-80 shadow-[inset_0_0_50px_red] animate-pulse pointer-events-none"></div>}
