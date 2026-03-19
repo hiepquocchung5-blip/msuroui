@@ -2,7 +2,7 @@ import { useState, useCallback, useRef, useEffect } from 'react';
 import api from '../services/api';
 import { useAuth } from '../context/AuthContext';
 
-export const useSlotMachine = (machineId, islandId) => {
+export const useSlotMachine = (machineId, islandId, initialSessionToken = null) => {
     const { user, updateBalance } = useAuth();
     
     // --- CORE GAME STATE ---
@@ -41,9 +41,9 @@ export const useSlotMachine = (machineId, islandId) => {
     const [isIdleKicked, setIsIdleKicked] = useState(false); 
     const [autoPlay, setAutoPlay] = useState(false);
     const [turboMode, setTurboMode] = useState(false); 
-    const [sessionToken, setSessionToken] = useState(null); 
+    const [sessionToken, setSessionToken] = useState(initialSessionToken); 
 
-    const timers = useRef([]);
+    // --- REFS FOR STABLE CALLBACKS ---
     const idleTimerRef = useRef(null); 
     const warningTimerRef = useRef(null);
     const spinDataRef = useRef(null); 
@@ -51,6 +51,7 @@ export const useSlotMachine = (machineId, islandId) => {
     const autoPlayRef = useRef(autoPlay);
     const turboModeRef = useRef(turboMode);
     const spinRef = useRef(null); 
+    const timers = useRef([]); // Store active timeouts to clear them properly
 
     useEffect(() => { autoPlayRef.current = autoPlay; }, [autoPlay]);
     useEffect(() => { turboModeRef.current = turboMode; }, [turboMode]);
@@ -105,6 +106,7 @@ export const useSlotMachine = (machineId, islandId) => {
         if (idleTimerRef.current) clearTimeout(idleTimerRef.current);
         if (warningTimerRef.current) clearTimeout(warningTimerRef.current);
         
+        // 4 Minutes = Warning | 5 Minutes = Kick
         warningTimerRef.current = setTimeout(handleIdleWarning, 240000);
         idleTimerRef.current = setTimeout(handleIdleTimeout, 300000);
     }, [handleIdleTimeout, handleIdleWarning, isIdleKicked]);
@@ -128,13 +130,12 @@ export const useSlotMachine = (machineId, islandId) => {
                     setSessionWinStreak(state.session_win_streak || 0);
                 }
             }
-        } catch (e) { 
-            // Better error surfacing
-            setError(e.response?.data?.error || "Failed to establish secure link to machine."); 
-        }
+        } catch (e) { setError(e.response?.data?.error || "Failed to connect to machine."); }
     }, [machineId, resetIdleTimer]);
 
-    useEffect(() => { if(machineId) enter(); }, [machineId, enter]);
+    useEffect(() => { 
+        if(machineId && !initialSessionToken) enter(); 
+    }, [machineId, initialSessionToken, enter]);
 
     // 2. Post-Spin Processor
     const handlePostSpinEffects = useCallback((data, currentBetAmount) => {
@@ -236,7 +237,7 @@ export const useSlotMachine = (machineId, islandId) => {
 
     // 4. Core Spin API Trigger
     const spin = useCallback(async (betAmount) => {
-        if (!user || !sessionToken) return; // Prevent spinning before fully connected
+        if (!user || !sessionToken) return; 
         
         resetIdleTimer();
 
@@ -254,8 +255,7 @@ export const useSlotMachine = (machineId, islandId) => {
         setIsReachEye(false);
         setIsFreeze(false);
         setError(null);
-        timers.current.forEach(clearTimeout); 
-        timers.current = [];
+        clearTimers(); // Clear any existing timers
 
         try {
             const res = await api.post('/game/spin.php', {
@@ -296,9 +296,11 @@ export const useSlotMachine = (machineId, islandId) => {
                 }
                 timers.current.push(setTimeout(() => stopReel(order[2]), finalReelDelay));
             } else {
-                timers.current.push(setTimeout(() => stopReel(0), 15000));
-                timers.current.push(setTimeout(() => stopReel(1), 15500));
-                timers.current.push(setTimeout(() => stopReel(2), 16000));
+                // --- 3 SECOND AUTO-STOP FOR MANUAL SPINS ---
+                // If the user doesn't hit the buttons, it gracefully stops them sequentially
+                timers.current.push(setTimeout(() => stopReel(0), 3000));
+                timers.current.push(setTimeout(() => stopReel(1), 3400));
+                timers.current.push(setTimeout(() => stopReel(2), data.is_teaser ? 5000 : 3800)); // Teasers get a massive suspense pause
             }
 
         } catch (err) {
@@ -308,7 +310,7 @@ export const useSlotMachine = (machineId, islandId) => {
             setAutoPlay(false); 
             setIsSpinning([false, false, false]);
         }
-    }, [user, machineId, sessionToken, freeSpins, bonusMode, enter, stopReel, resetIdleTimer]);
+    }, [user, machineId, sessionToken, freeSpins, bonusMode, enter, stopReel, resetIdleTimer, clearTimers]);
 
     useEffect(() => { spinRef.current = spin; }, [spin]);
 
@@ -326,6 +328,6 @@ export const useSlotMachine = (machineId, islandId) => {
         showBonusSummary, bonusTotalWin, clearBonusTotal, levelUpData, setLevelUpData,
         autoPlay, setAutoPlay, turboMode, setTurboMode,
         spin, stopReel, setLastWin,
-        isReady: !!sessionToken // NEW: Exposes connection status to UI
+        isReady: !!sessionToken
     };
 };
