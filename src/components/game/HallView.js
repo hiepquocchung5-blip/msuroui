@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { 
     ChevronLeft, Flame, Users, Search, Trophy, 
     X, BarChart3, History, Lock, MapPin, Activity, ShieldAlert, Cpu, Target, Coins,
-    ServerCrash
+    ServerCrash, Zap
 } from 'lucide-react';
 import { useRouter } from 'next/router';
 
