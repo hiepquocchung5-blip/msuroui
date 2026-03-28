@@ -3,7 +3,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { 
     ChevronLeft, Minus, Plus, Zap, StopCircle, Gamepad2, 
     Trophy, Flame, MessageCircle, TrendingUp, 
-    ShieldAlert, X, Coins, Repeat, Target, Activity, Cpu, MapPin, HelpCircle, AlertOctagon, Crown
+    ShieldAlert, X, Coins, Repeat, Target, Activity, Cpu, MapPin, 
+    HelpCircle, AlertOctagon, ShieldCheck, Terminal, Hash, Key, CheckCircle2
 } from 'lucide-react';
 import { useRouter } from 'next/router';
 
@@ -84,14 +85,14 @@ const ReelColumn = ({ isSpinning, finalSymbols, locked, isWinning, isTeaser, isR
     const isReachReel = isReachEye && isSpinning && colIdx === 2;
 
     return (
-        <div className={`flex-1 flex flex-col relative h-full bg-gradient-to-b from-[#0f1115] via-[#1c1f26] to-[#0f1115] border-x border-white/10 rounded-md overflow-hidden transition-all duration-500
+        <div className={`flex-1 flex flex-col relative h-full bg-gradient-to-b from-[#0f1115] via-[#1c1f26] to-[#0f1115] border-x border-white/10 rounded-md overflow-hidden transition-all duration-500 will-change-transform
             ${locked ? 'border-2 border-yellow-400' : ''}
             ${isReachReel ? 'ring-4 ring-red-500 shadow-[inset_0_0_80px_rgba(239,68,68,0.5)] animate-pulse saturate-150' : ''}
-        `}>
+        `} style={{ transform: 'translateZ(0)' }}>
             <svg width="0" height="0" className="absolute"><defs><filter id="vertBlur"><feGaussianBlur in="SourceGraphic" stdDeviation={isReachReel ? "0 1.5" : "0 4"} /></filter></defs></svg>
             <div className="absolute inset-0 overflow-hidden" style={{ perspective: '1000px' }}>
                 <div 
-                    className={`w-full absolute flex flex-col justify-between 
+                    className={`w-full absolute flex flex-col justify-between will-change-transform
                         ${isSpinning ? (isReachReel ? 'animate-[reel-spin-smooth_0.4s_linear_infinite]' : 'animate-[reel-spin-smooth_0.15s_linear_infinite]') : 'animate-[snap-bounce-soft_0.4s_cubic-bezier(0.2,0.8,0.2,1)_forwards]'} 
                         ${isFreeze ? 'brightness-50 grayscale' : ''}
                     `} 
@@ -133,7 +134,7 @@ const PlayView = ({ machine, island, onLeave }) => {
         showBonusSummary, bonusTotalWin, clearBonusTotal, levelUpData, setLevelUpData,
         isJackpot, setIsJackpot, lapsSinceBonus, momentumMult, inZone, error, 
         showIdleWarning, isIdleKicked, resetIdleTimer, isReady,
-        autoPlay, spin, stopReel, setAutoPlay, setLastWin, turboMode, setTurboMode
+        autoPlay, spin, stopReel, setAutoPlay, setLastWin, turboMode, setTurboMode, pfData
     } = slotLogic;
     
     const [betIndex, setBetIndex] = useState(0);
@@ -141,6 +142,7 @@ const PlayView = ({ machine, island, onLeave }) => {
     const [charInteraction, setCharInteraction] = useState(null);
     const [coinParticles, setCoinParticles] = useState([]); 
     const [showPaytable, setShowPaytable] = useState(false);
+    const [showPfModal, setShowPfModal] = useState(false);
     
     // --- Responsive & Gyroscope State ---
     const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
@@ -250,7 +252,10 @@ const PlayView = ({ machine, island, onLeave }) => {
     }, [isReachWaitState, inZone, momentumMult, sessionWinStreak, streakMult, isCurrentlySpinning]);
 
     useEffect(() => {
-        if (levelUpData) { playSound('bigwin'); triggerCoinShower(80); }
+        if (levelUpData && levelUpData.length > 0) { 
+            playSound('bigwin'); 
+            triggerCoinShower(80); 
+        }
     }, [levelUpData, playSound]);
 
     // Win Processing
@@ -296,7 +301,7 @@ const PlayView = ({ machine, island, onLeave }) => {
     };
 
     const handleSpin = useCallback(() => {
-        if (!isReady || isProcessing.current || isCurrentlySpinning || winStage !== 'idle' || isFreeze || levelUpData) return; 
+        if (!isReady || isProcessing.current || isCurrentlySpinning || winStage !== 'idle' || isFreeze || (levelUpData && levelUpData.length > 0)) return; 
         if (parseFloat(user?.balance || 0) < currentBet && freeSpins === 0 && !bonusMode) {
             addToast("Insufficient Balance", "error"); 
             setAutoPlay(false);
@@ -486,7 +491,7 @@ const PlayView = ({ machine, island, onLeave }) => {
             {/* --- CYBER HUD --- */}
             <div className="absolute top-16 md:top-20 left-0 w-full px-2 md:px-6 flex flex-row justify-between items-start z-40 pointer-events-none mt-1">
                 
-                {/* Left Side: Navigation & Momentum */}
+                {/* Left Side: Navigation, Momentum & PROVABLY FAIR */}
                 <div className="flex flex-col gap-1 md:gap-2">
                     <div className="flex items-start gap-2 md:gap-3 pointer-events-auto">
                         <button onClick={onLeave} className="w-8 h-8 md:w-10 md:h-10 flex-shrink-0 bg-black/60 border border-white/10 flex items-center justify-center text-white hover:bg-cyan-500/20 hover:text-cyan-400 hover:border-cyan-500/50 transition-all active:scale-[0.98] shadow-lg rounded-full backdrop-blur-md">
@@ -521,10 +526,18 @@ const PlayView = ({ machine, island, onLeave }) => {
                         </div>
                     </div>
 
-                    <div className="pointer-events-auto mt-0.5 md:mt-1 flex items-center gap-1 px-1.5 py-1 bg-black/60 rounded border border-white/5 w-fit shadow-sm">
-                         <AlertOctagon size={8} className={`md:w-3 md:h-3 ${volatility === 'extreme' || volatility === 'high' ? 'text-red-500' : 'text-gray-400'}`} />
-                         <span className="text-[6px] md:text-[8px] text-gray-400 uppercase tracking-widest hidden md:inline">VOLATILITY:</span>
-                         <span className={`text-[7px] md:text-[9px] font-black uppercase tracking-widest ${volatility === 'extreme' ? 'text-red-500' : volatility === 'high' ? 'text-orange-500' : volatility === 'low' ? 'text-green-400' : 'text-cyan-400'}`}>{volatility}</span>
+                    <div className="pointer-events-auto mt-0.5 md:mt-1 flex items-center gap-2">
+                        <div className="flex items-center gap-1 px-1.5 py-1 bg-black/60 rounded border border-white/5 w-fit shadow-sm">
+                             <AlertOctagon size={8} className={`md:w-3 md:h-3 ${volatility === 'extreme' || volatility === 'high' ? 'text-red-500' : 'text-gray-400'}`} />
+                             <span className="text-[6px] md:text-[8px] text-gray-400 uppercase tracking-widest hidden md:inline">VOLATILITY:</span>
+                             <span className={`text-[7px] md:text-[9px] font-black uppercase tracking-widest ${volatility === 'extreme' ? 'text-red-500' : volatility === 'high' ? 'text-orange-500' : volatility === 'low' ? 'text-green-400' : 'text-cyan-400'}`}>{volatility}</span>
+                        </div>
+                        
+                        {/* PROVABLY FAIR BADGE */}
+                        <button onClick={() => { playSound('click'); setShowPfModal(true); }} className="flex items-center gap-1 px-1.5 py-1 bg-green-900/20 rounded border border-green-500/30 hover:bg-green-900/40 transition-colors w-fit shadow-[0_0_10px_rgba(34,197,94,0.15)] cursor-pointer group">
+                             <ShieldCheck size={8} className="md:w-3 md:h-3 text-green-400 group-hover:scale-110 transition-transform" />
+                             <span className="text-[6px] md:text-[8px] text-green-400 font-bold uppercase tracking-widest">VERIFIED FAIR</span>
+                        </button>
                     </div>
                 </div>
 
@@ -560,11 +573,11 @@ const PlayView = ({ machine, island, onLeave }) => {
             </div>
 
             {/* --- MAIN GAME STAGE --- */}
-            <div className={`flex-1 flex items-center justify-center relative z-10 px-2 pt-28 pb-12 md:pb-6 ${isFreeze || winTier === 'EPIC' || isJackpot ? 'animate-shake-epic' : ''}`} style={{ perspective: isMobile ? '800px' : '1200px' }}>
+            <div className={`flex-1 flex items-center justify-center relative z-10 px-2 pt-28 pb-12 md:pb-6 will-change-transform ${isFreeze || winTier === 'EPIC' || isJackpot ? 'animate-shake-epic' : ''}`} style={{ perspective: isMobile ? '800px' : '1200px', transform: 'translateZ(0)' }}>
                 
                 {/* DYNAMIC CHARACTER LAYER (Behind Cabinet on Mobile, Beside on Desktop) */}
                 <div 
-                    className={`absolute pointer-events-none drop-shadow-2xl transition-all duration-700 ease-in-out z-0 md:z-20
+                    className={`absolute pointer-events-none drop-shadow-2xl transition-all duration-700 ease-in-out z-0 md:z-20 will-change-transform
                         ${isMobile 
                             ? 'top-[-10%] left-1/2 w-[160%] h-[120%] opacity-40 mix-blend-screen' 
                             : 'bottom-[5%] right-[-25%] w-[65%] h-[70%] opacity-100 mix-blend-normal'
@@ -588,10 +601,10 @@ const PlayView = ({ machine, island, onLeave }) => {
                 </div>
 
                 <motion.div 
-                    className="relative w-full max-w-[350px] md:max-w-[400px] aspect-[0.6] flex items-center justify-center z-10"
+                    className="relative w-full max-w-[350px] md:max-w-[400px] aspect-[0.6] flex items-center justify-center z-10 will-change-transform"
                     animate={{ rotateX: mousePos.y, rotateY: mousePos.x }}
                     transition={{ type: 'spring', stiffness: isMobile ? 50 : 75, damping: 20 }}
-                    style={{ transformStyle: 'preserve-3d' }}
+                    style={{ transformStyle: 'preserve-3d', transform: 'translateZ(0)' }}
                 >
                     {/* Cabinet Graphic */}
                     <div className="absolute inset-0 w-full h-full pointer-events-none drop-shadow-[0_30px_35px_rgba(0,0,0,0.8)]" style={{ transform: 'translateZ(-10px)' }}>
@@ -611,7 +624,7 @@ const PlayView = ({ machine, island, onLeave }) => {
                     </div>
 
                     {/* Reels Area */}
-                    <div className="absolute top-[21.25%] left-[16.67%] w-[66.67%] h-[28.75%] flex flex-col pointer-events-none" style={{ transform: 'translateZ(5px)' }}>
+                    <div className="absolute top-[21.25%] left-[16.67%] w-[66.67%] h-[28.75%] flex flex-col pointer-events-none will-change-transform" style={{ transform: 'translateZ(5px)' }}>
                         <div className={`h-[15%] flex items-center justify-between px-2 md:px-3 bg-black/90 border-b border-white/5 ${inZone && !bonusMode ? 'border-yellow-500 shadow-[0_0_15px_rgba(234,179,8,0.3)] bg-yellow-900/30' : ''}`}>
                             <span className={`text-[8px] md:text-[10px] font-black tracking-widest uppercase ${isReachWaitState ? 'text-red-500 animate-pulse' : (inZone ? 'text-yellow-400 animate-pulse' : 'text-cyan-400')}`}>
                                 {isReachWaitState ? "!!! GEKIATSU !!!" : (inZone ? "★ ZONE ACTIVE ★" : (bonusMode ? "BONUS RUSH" : "LUCKY SLOT"))}
@@ -634,7 +647,7 @@ const PlayView = ({ machine, island, onLeave }) => {
                                 />
                             ))}
 
-                            {winningLines.length > 0 && winStage !== 'gambling' && (
+                            {winningLines.length > 0 && winStage !== 'gambling' && !isJackpot && (
                                 <svg className="absolute inset-0 w-full h-full pointer-events-none z-40" preserveAspectRatio="none">
                                     <defs><filter id="winlineGlow"><feGaussianBlur stdDeviation={winTier === 'EPIC' ? "8" : "4"} result="blur"/><feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge></filter></defs>
                                     {winningLines.map(lineIdx => {
@@ -762,9 +775,9 @@ const PlayView = ({ machine, island, onLeave }) => {
                         onClick={handleSkipWin}
                         className="fixed inset-0 z-50 flex flex-col items-center justify-center pointer-events-auto p-4 cursor-pointer"
                     >
-                        {(winTier === 'EPIC' || isJackpot) && <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/circuit-board.png')] opacity-30 mix-blend-color-dodge animate-pulse hue-rotate-90 pointer-events-none"></div>}
+                        {/* Dynamic Cinematic GJP Override */}
+                        {isJackpot && <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/circuit-board.png')] opacity-30 mix-blend-color-dodge animate-pulse hue-rotate-90 pointer-events-none"></div>}
                         
-                        {/* Tap to Skip Indicator */}
                         <div className="absolute top-10 text-white/50 text-xs tracking-widest uppercase animate-pulse flex items-center gap-2">
                             Tap to skip <span className="animate-bounce">↓</span>
                         </div>
@@ -774,12 +787,17 @@ const PlayView = ({ machine, island, onLeave }) => {
                                 {isJackpot ? <h1 className="text-4xl md:text-6xl font-black italic text-transparent bg-clip-text bg-gradient-to-b from-yellow-200 via-orange-500 to-red-600 drop-shadow-2xl mb-4 animate-pulse leading-none">GRAND<br/>JACKPOT</h1> : 
                                  winTier === 'EPIC' ? <h1 className="text-5xl md:text-6xl font-black italic text-transparent bg-clip-text bg-gradient-to-b from-purple-200 to-pink-600 drop-shadow-2xl mb-4 animate-pulse">EPIC WIN</h1> : 
                                  winTier === 'MEGA' ? <h1 className="text-4xl md:text-5xl font-black italic text-transparent bg-clip-text bg-gradient-to-b from-cyan-200 to-blue-600 drop-shadow-lg mb-4">MEGA WIN</h1> : null}
+                                
                                 <motion.div animate={{ rotate: [0, -5, 5, -5, 0], scale: [1, 1.15, 1] }} transition={{ duration: 0.6, repeat: Infinity, ease: "easeInOut" }} className="w-24 h-24 md:w-32 md:h-32 mb-4 md:mb-6">
-                                    <SymbolSVG id={winDetails.id} islandId={parseInt(island?.id || 1)} isWinning={true} />
+                                    <SymbolSVG id={isJackpot ? 1 : winDetails.id} islandId={parseInt(island?.id || 1)} isWinning={true} />
                                 </motion.div>
-                                <h2 className={`text-2xl md:text-4xl font-black italic tracking-tighter uppercase drop-shadow-2xl ${winDetails?.color}`}>{winDetails?.name}</h2>
+                                
+                                <h2 className={`text-2xl md:text-4xl font-black italic tracking-tighter uppercase drop-shadow-2xl ${isJackpot ? 'text-red-500' : winDetails?.color}`}>
+                                    {isJackpot ? 'GRAND JACKPOT' : winDetails?.name}
+                                </h2>
+                                
                                 <div className="text-4xl md:text-6xl font-mono font-black text-white drop-shadow-[0_0_40px_rgba(255,255,255,0.8)] mt-4 md:mt-6 bg-white/10 px-4 md:px-8 py-2 md:py-3 rounded-2xl border border-white/20 backdrop-blur-md">
-                                    +<RollupNumber value={lastWin} duration={winTier === 'EPIC' ? 2500 : 1500} />
+                                    +<RollupNumber value={lastWin} duration={winTier === 'EPIC' || isJackpot ? 2500 : 1500} />
                                 </div>
                             </GlassCard>
                         </motion.div>
@@ -798,6 +816,54 @@ const PlayView = ({ machine, island, onLeave }) => {
                                 +<RollupNumber value={bonusTotalWin} duration={2000} />
                             </div>
                             <button onClick={() => { playSound('click'); clearBonusTotal(); }} className="w-full py-3 sm:py-4 bg-white text-black font-black text-base sm:text-lg rounded-xl shadow-[0_0_30px_rgba(255,255,255,0.6)] hover:scale-[1.02] active:scale-[0.98] transition-all duration-300">CONTINUE</button>
+                        </GlassCard>
+                    </motion.div>
+                )}
+            </AnimatePresence>
+
+            <AnimatePresence>
+                {showPfModal && pfData && (
+                    <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} className="fixed inset-0 z-[150] bg-black/90 backdrop-blur-md flex items-center justify-center p-4 pointer-events-auto" onClick={() => setShowPfModal(false)}>
+                        <GlassCard className="w-full max-w-md p-0 overflow-hidden border-green-500/50 shadow-[0_0_50px_rgba(34,197,94,0.2)]" onClick={e => e.stopPropagation()}>
+                            <div className="bg-gradient-to-r from-green-900/60 to-black p-4 flex justify-between items-center border-b border-green-500/30">
+                                <h3 className="text-white font-black text-sm md:text-base flex items-center gap-2 tracking-widest italic">
+                                    <ShieldCheck size={18} className="text-green-400" /> PROVABLY FAIR
+                                </h3>
+                                <button onClick={() => setShowPfModal(false)} className="text-white/70 hover:text-white transition-colors"><X size={20}/></button>
+                            </div>
+                            <div className="p-4 md:p-6 bg-black/90 font-mono text-[10px] md:text-xs space-y-4">
+                                <p className="text-gray-400 leading-relaxed font-sans mb-4">
+                                    Every spin is cryptographically verified. The outcome is mathematically generated using a combination of your client seed, the server seed, and the current nonce.
+                                </p>
+                                
+                                <div className="space-y-1">
+                                    <div className="text-gray-500 uppercase font-bold flex items-center gap-1"><Terminal size={12}/> Server Seed Hash (Committed)</div>
+                                    <div className="bg-black/50 border border-white/10 p-2 rounded text-green-400 break-all">{pfData.server_seed_hash}</div>
+                                </div>
+                                
+                                <div className="space-y-1">
+                                    <div className="text-gray-500 uppercase font-bold flex items-center gap-1"><Key size={12}/> Client Seed (Active)</div>
+                                    <div className="bg-black/50 border border-white/10 p-2 rounded text-blue-400 break-all">{pfData.client_seed}</div>
+                                </div>
+                                
+                                <div className="space-y-1">
+                                    <div className="text-gray-500 uppercase font-bold flex items-center gap-1"><Hash size={12}/> Spin Nonce</div>
+                                    <div className="bg-black/50 border border-white/10 p-2 rounded text-white">{pfData.nonce}</div>
+                                </div>
+
+                                <div className="space-y-1">
+                                    <div className="text-gray-500 uppercase font-bold flex items-center gap-1"><CheckCircle2 size={12}/> Final Cryptographic Output</div>
+                                    <div className="bg-green-900/20 border border-green-500/30 p-2 rounded text-white break-all">{pfData.spin_hash}</div>
+                                </div>
+                                
+                                {pfData.server_seed_reveal && (
+                                    <div className="mt-4 pt-4 border-t border-white/10 space-y-1">
+                                        <div className="text-yellow-500 uppercase font-bold">Unencrypted Server Seed (Revealed)</div>
+                                        <div className="bg-yellow-900/20 border border-yellow-500/30 p-2 rounded text-yellow-300 break-all">{pfData.server_seed_reveal}</div>
+                                        <p className="text-[8px] text-gray-500 mt-1 font-sans">You can now independently hash this seed to verify it matches the pre-committed Server Seed Hash above.</p>
+                                    </div>
+                                )}
+                            </div>
                         </GlassCard>
                     </motion.div>
                 )}
