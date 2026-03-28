@@ -13,13 +13,14 @@ export const useSlotMachine = (machineId, islandId, initialSessionToken = null) 
     const [isReachEye, setIsReachEye] = useState(false);
     const [isFreeze, setIsFreeze] = useState(false);
     
-    // --- LEVIATHAN v6.0 TELEMETRY ---
+    // --- LEVIATHAN v6.8 TELEMETRY & TRUST ---
     const [freeSpins, setFreeSpins] = useState(0); 
     const [bonusMode, setBonusMode] = useState(null); 
     const [bonusSpinsLeft, setBonusSpinsLeft] = useState(0);
     const [lapsSinceBonus, setLapsSinceBonus] = useState(0);
     const [momentumMult, setMomentumMult] = useState(1.0);
     const [inZone, setInZone] = useState(false);
+    const [pfData, setPfData] = useState(null); // Provably Fair Cryptographic State
     
     const [winTier, setWinTier] = useState('NONE'); 
     const [sessionWinStreak, setSessionWinStreak] = useState(0);
@@ -33,7 +34,7 @@ export const useSlotMachine = (machineId, islandId, initialSessionToken = null) 
 
     const [lastWin, setLastWin] = useState(0);
     const [isJackpot, setIsJackpot] = useState(false); 
-    const [levelUpData, setLevelUpData] = useState(null);
+    const [levelUpData, setLevelUpData] = useState(null); // Now handles arrays of level-ups
     const [error, setError] = useState(null);
     
     // --- SMART AUTO-PLAY & AFK SYSTEM ---
@@ -51,7 +52,7 @@ export const useSlotMachine = (machineId, islandId, initialSessionToken = null) 
     const autoPlayRef = useRef(autoPlay);
     const turboModeRef = useRef(turboMode);
     const spinRef = useRef(null); 
-    const timers = useRef([]); // Store active timeouts to clear them properly
+    const timers = useRef([]); 
 
     useEffect(() => { autoPlayRef.current = autoPlay; }, [autoPlay]);
     useEffect(() => { turboModeRef.current = turboMode; }, [turboMode]);
@@ -157,6 +158,7 @@ export const useSlotMachine = (machineId, islandId, initialSessionToken = null) 
         setInZone(data.in_zone || false);
         setIsJackpot(data.is_jackpot || false);
         setLevelUpData(data.level_up || null);
+        if (data.provably_fair) setPfData(data.provably_fair);
         
         setWinTier(data.win_tier || 'NONE');
         setSessionWinStreak(data.session_win_streak || 0);
@@ -170,7 +172,7 @@ export const useSlotMachine = (machineId, islandId, initialSessionToken = null) 
         }
 
         let shouldInterruptAutoPlay = false;
-        if (data.is_freeze || data.is_jackpot || data.level_up) {
+        if (data.is_freeze || data.is_jackpot || (data.level_up && data.level_up.length > 0)) {
             shouldInterruptAutoPlay = true;
         } else if (data.bonus_mode && !bonusMode) {
             shouldInterruptAutoPlay = true;
@@ -255,14 +257,23 @@ export const useSlotMachine = (machineId, islandId, initialSessionToken = null) 
         setIsReachEye(false);
         setIsFreeze(false);
         setError(null);
-        clearTimers(); // Clear any existing timers
+        clearTimers();
 
         try {
-            const res = await api.post('/game/spin.php', {
+            // Optional: Get custom client seed if user has set one for Provably Fair
+            const customClientSeed = typeof window !== 'undefined' ? localStorage.getItem('suro_client_seed') : null;
+
+            const payload = {
                 machine_id: machineId,
                 bet_amount: betAmount,
                 session_token: sessionToken
-            });
+            };
+
+            if (customClientSeed) {
+                payload.client_seed = customClientSeed;
+            }
+
+            const res = await api.post('/game/spin.php', payload);
             
             const data = res.data;
             if (data.status !== 'success') throw new Error(data.error || "Spin Failed");
@@ -297,7 +308,6 @@ export const useSlotMachine = (machineId, islandId, initialSessionToken = null) 
                 timers.current.push(setTimeout(() => stopReel(order[2]), finalReelDelay));
             } else {
                 // --- 3 SECOND AUTO-STOP FOR MANUAL SPINS ---
-                // If the user doesn't hit the buttons, it gracefully stops them sequentially
                 timers.current.push(setTimeout(() => stopReel(0), 3000));
                 timers.current.push(setTimeout(() => stopReel(1), 3400));
                 timers.current.push(setTimeout(() => stopReel(2), data.is_teaser ? 5000 : 3800)); // Teasers get a massive suspense pause
@@ -327,6 +337,7 @@ export const useSlotMachine = (machineId, islandId, initialSessionToken = null) 
         lapsSinceBonus, momentumMult, inZone, winTier, sessionWinStreak, streakMult, volatility,
         showBonusSummary, bonusTotalWin, clearBonusTotal, levelUpData, setLevelUpData,
         autoPlay, setAutoPlay, turboMode, setTurboMode,
+        pfData, // Exported Provably Fair data for UI components
         spin, stopReel, setLastWin,
         isReady: !!sessionToken
     };

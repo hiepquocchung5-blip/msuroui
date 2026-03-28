@@ -1,0 +1,16 @@
+public/
+└── assets/
+    └── symbols/
+        ├── island1/
+        │   ├── 1.svg  (GJP)
+        │   ├── 2.svg  (LOGO)
+        │   ├── 3.svg  (7)
+        │   ├── 4.svg  (Melon)
+        │   ├── 5.svg  (Bell)
+        │   ├── 6.svg  (Cherry)
+        │   └── 7.svg  (Replay)
+        ├── island2/
+        │   ├── 1.svg ...
+        ├── island3/
+        ├── island4/
+        └── island5/
