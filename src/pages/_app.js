@@ -4,7 +4,7 @@ import { AuthProvider } from '../context/AuthContext';
 import { ToastProvider } from '../context/ToastContext';
 import ChatWidget from '../components/social/ChatWidget';
 import { useAssetPreloader } from '../hooks/useAssetPreloader';
-import { Loader2, Zap, Terminal, Cpu } from 'lucide-react';
+import { Loader2, Zap, Terminal, Cpu } from 'lucide-react'; // ZAP Explicitly Imported Here
 import '../styles/globals.css';
 
 // --- CIRCUIT CHAOS BOOT LOADER (VERSION 2) ---
@@ -125,8 +125,6 @@ function MyApp({ Component, pageProps }) {
             <meta name="apple-mobile-web-app-capable" content="yes" />
             <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
             <meta name="apple-mobile-web-app-title" content="Suropara" />
-            <link rel="manifest" href="/manifest.json" />
-            <link rel="apple-touch-icon" href="/icons/icon-192x192.png" />
         </Head>
         <main className="font-sans antialiased text-gray-100 bg-[#050505] min-h-screen selection:bg-cyan-500 selection:text-black">
             <AppContent Component={Component} pageProps={pageProps} />
