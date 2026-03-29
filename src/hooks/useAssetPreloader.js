@@ -32,11 +32,9 @@ export const useAssetPreloader = () => {
             setLoaded(true);
             setProgress(100);
             
-            // Silently refresh the cache in the background without blocking UI
-            HEAVY_ASSETS.forEach(src => {
-                const img = new Image();
-                img.src = src;
-            });
+            // FIX: Removed the aggressive HEAVY_ASSETS.forEach() loop here. 
+            // It was creating 50+ concurrent requests instantly, triggering net::ERR_HTTP2_PROTOCOL_ERROR.
+            // The browser's native disk cache will handle keeping these assets warm.
             return;
         }
 
@@ -54,15 +52,20 @@ export const useAssetPreloader = () => {
         };
 
         const loadAll = async () => {
-            // Process in chunks to prevent freezing the main thread
-            const chunkSize = 5;
+            // FIX: Process in smaller chunks with a micro-delay to prevent HTTP/2 stream exhaustion
+            const chunkSize = 3; 
+            
             for (let i = 0; i < total; i += chunkSize) {
                 const chunk = HEAVY_ASSETS.slice(i, i + chunkSize);
+                
                 await Promise.all(chunk.map(async (src) => {
                     await loadImage(src);
                     loadedCount++;
                     setProgress(Math.round((loadedCount / total) * 100));
                 }));
+
+                // Micro-delay gives the local Next.js dev server breathing room
+                await new Promise(resolve => setTimeout(resolve, 20));
             }
 
             // Mark as cached for future visits
