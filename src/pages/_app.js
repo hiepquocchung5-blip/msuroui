@@ -11,12 +11,12 @@ import '../styles/globals.css';
 const BootSequence = ({ progress }) => {
     const [logIndex, setLogIndex] = useState(0);
     const logs = [
-        "INITIALIZING LEVIATHAN KERNEL...",
-        "DECRYPTING SECURE CHANNELS...",
-        "LOADING VIRTUAL REEL TAPES...",
-        "MOUNTING 3D ASSETS...",
-        "ESTABLISHING PROVABLY FAIR LINK...",
-        "SYSTEM OPTIMAL. READY."
+        "WELCOME TO SUROPARA - THE #1 SLOT PARADISE...",
+        "မြန်မာနိုင်ငံ၏ အကောင်းဆုံး 3D ကာစီနို (BEST 3D CASINO)...",
+        "100% PROVABLY FAIR & SECURE (လုံခြုံစိတ်ချရသော စနစ်)...",
+        "LOADING MASSIVE JACKPOTS (Grand Jackpot များ ပြင်ဆင်နေသည်)...",
+        "CONNECTING TO VIP SERVERS...",
+        "GJP ကောင်းကောင်းအနိုင်ရပါ။ GOOD LUCK & HAVE FUN!"
     ];
 
     useEffect(() => {
