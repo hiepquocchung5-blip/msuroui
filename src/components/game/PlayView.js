@@ -5,7 +5,8 @@ import {
     ChevronLeft, Minus, Plus, Zap, StopCircle, Gamepad2, 
     Trophy, Flame, MessageCircle, TrendingUp, 
     ShieldAlert, X, Coins, Repeat, Target, Activity, Cpu, MapPin, 
-    HelpCircle, AlertOctagon, Settings, LogOut, Menu, Loader2, Heart, Clock, LifeBuoy
+    HelpCircle, AlertOctagon, ShieldCheck, Terminal, Hash, Key, CheckCircle2,
+    Settings, LogOut, Menu, Loader2, Heart, Clock, LifeBuoy
 } from 'lucide-react';
 import { useRouter } from 'next/router';
 
@@ -84,10 +85,12 @@ const getIslandPaylineStyle = () => {
 
 // --- VIRTUALIZED REEL COMPONENT ---
 const ReelColumn = ({ isSpinning, finalSymbols, locked, isWinning, isTeaser, isReachEye, colIdx, isFreeze, islandId }) => {
+    
+    // VISUAL FIX: Spin noise is purely random. It decouples the visual blur from the final API result.
+    // This stops the reels from flickering or changing symbols right as the animation ends.
     const spinStrip = useMemo(() => {
-        const randomFill = Array.from({length: 3}, () => Math.floor(Math.random() * 7) + 1);
-        return [...finalSymbols, ...randomFill];
-    }, [isSpinning, finalSymbols]);
+        return Array.from({length: 6}, () => Math.floor(Math.random() * 7) + 1);
+    }, [isSpinning]); // Re-rolls purely on spin start
 
     const displaySymbols = isSpinning ? spinStrip : finalSymbols;
     const isReachReel = isReachEye && isSpinning && colIdx === 2;
@@ -168,7 +171,7 @@ const PlayView = ({ machine, island, onLeave }) => {
         showBonusSummary, bonusTotalWin, clearBonusTotal, levelUpData, setLevelUpData,
         isJackpot, setIsJackpot, lapsSinceBonus, momentumMult, inZone, error, 
         showIdleWarning, isIdleKicked, resetIdleTimer, isReady,
-        autoPlay, spin, stopReel, setAutoPlay, setLastWin, turboMode, setTurboMode
+        autoPlay, spin, stopReel, setAutoPlay, setLastWin, turboMode, setTurboMode, pfData
     } = slotLogic;
     
     // --- AAA CINEMATIC LOADING & PLAYER CARE STATE ---
@@ -181,17 +184,20 @@ const PlayView = ({ machine, island, onLeave }) => {
     const [charInteraction, setCharInteraction] = useState(null);
     const [coinParticles, setCoinParticles] = useState([]); 
     
-    // Modals
+    // UI State
     const [showPaytable, setShowPaytable] = useState(false);
     const [showSettings, setShowSettings] = useState(false);
     
-    // Responsive & Physics
+    // Hardware & Physics
     const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
     const [isMobile, setIsMobile] = useState(false);
-    
     const [reelThud, setReelThud] = useState([false, false, false]);
     const [currentJackpot, setCurrentJackpot] = useState(3000000);
     
+    // --- LATENCY MASKING QUEUE ---
+    const [apiReady, setApiReady] = useState(true);
+    const [queuedStops, setQueuedStops] = useState(new Set());
+
     const activeBetAmounts = useMemo(() => ISLAND_BET_AMOUNTS[island?.id] || ISLAND_BET_AMOUNTS.default, [island?.id]);
     
     useEffect(() => {
@@ -199,10 +205,10 @@ const PlayView = ({ machine, island, onLeave }) => {
     }, [activeBetAmounts, betIndex]);
 
     const currentBet = activeBetAmounts[betIndex] || activeBetAmounts[0];
-
     const isProcessing = useRef(false);
     const winHandled = useRef(false); 
     const winTimeoutRef = useRef(null);
+    
     const isCurrentlySpinning = isSpinning.some(s => s);
     const isReachWaitState = isReachEye && isCurrentlySpinning && !isSpinning[0] && !isSpinning[1] && isSpinning[2];
 
@@ -211,7 +217,7 @@ const PlayView = ({ machine, island, onLeave }) => {
     const relativeNum = (((machine?.machine_number || 1) - 1) % MACHINES_PER_FLOOR) + 1;
     const displayId = `${currentFloor}-${relativeNum.toString().padStart(2, '0')}`;
 
-    // --- LOCALIZED ASSET PRELOADING & SESSION TRACKER ---
+    // --- LOCALIZED ASSET PRELOADING ---
     useEffect(() => {
         setIsCinematicReady(false);
         setLocalLoadProgress(0);
@@ -238,7 +244,6 @@ const PlayView = ({ machine, island, onLeave }) => {
             };
         });
 
-        // Player Care: Track session time
         const sessionTimer = setInterval(() => {
             setSessionMinutes(prev => prev + 1);
         }, 60000);
@@ -253,7 +258,7 @@ const PlayView = ({ machine, island, onLeave }) => {
         };
     }, [island?.id, user?.active_pet_id, island?.hostess_char_id, user?.username, addToast]);
 
-    // --- GYROSCOPE & MOUSE PARALLAX (Heavier Physics) ---
+    // --- GYROSCOPE & MOUSE PARALLAX ---
     useEffect(() => {
         if (!isCinematicReady) return;
         const handleOrientation = (e) => {
@@ -301,6 +306,7 @@ const PlayView = ({ machine, island, onLeave }) => {
             addToast(`SYSTEM: ${error}`, 'error');
             setAutoPlay(false);
             isProcessing.current = false;
+            setApiReady(true);
             if (isIdleKicked && onLeave) setTimeout(() => onLeave(), 2500);
         }
     }, [error, addToast, setAutoPlay, isIdleKicked, onLeave]);
@@ -349,7 +355,9 @@ const PlayView = ({ machine, island, onLeave }) => {
                 }, isJackpot ? 6000 : (winTier === 'EPIC' ? 4000 : 2500));
             }
         } 
-        if (!isCurrentlySpinning) isProcessing.current = false;
+        if (!isCurrentlySpinning) {
+            isProcessing.current = false;
+        }
         return () => { if (winTimeoutRef.current) clearTimeout(winTimeoutRef.current); };
     }, [lastWin, autoPlay, playSound, bonusMode, winStage, isCurrentlySpinning, winTier, isJackpot, setLastWin]);
 
@@ -371,7 +379,8 @@ const PlayView = ({ machine, island, onLeave }) => {
         }
     };
 
-    const handleSpin = useCallback(() => {
+    // --- ZERO-LATENCY SPIN ENGINE ---
+    const handleSpin = useCallback(async () => {
         if (!isReady || isProcessing.current || isCurrentlySpinning || winStage !== 'idle' || isFreeze || (levelUpData && levelUpData.length > 0)) return; 
         if (parseFloat(user?.balance || 0) < currentBet && freeSpins === 0 && !bonusMode) {
             addToast("Insufficient Balance", "error"); 
@@ -382,42 +391,84 @@ const PlayView = ({ machine, island, onLeave }) => {
         isProcessing.current = true;
         winHandled.current = false; 
         setCharInteraction(null);
+        setApiReady(false); // Lock manual stops behind the network queue
+        
         playSound('spin');
         
         if (freeSpins === 0 && !bonusMode) setCurrentJackpot(prev => prev + (currentBet * 0.05));
-        spin(currentBet);
+        
+        // Wait for the server to reply with the RTP resolved stops
+        await spin(currentBet);
+        
+        // Unlock stops the absolute millisecond the payload arrives
+        setApiReady(true);
+        
     }, [user, currentBet, winStage, playSound, spin, freeSpins, bonusMode, isCurrentlySpinning, isFreeze, levelUpData, addToast, isReady, setAutoPlay]);
 
-    const handleManualStop = (idx) => {
-        if (isSpinning[idx] && !autoPlay) {
-            if (atSequence && atSequence.length > 0 && atSequence[atCurrentStep] !== idx) return; 
-            playSound('stop');
-            if (navigator.vibrate) navigator.vibrate(20);
-            
-            setReelThud(prev => { const n = [...prev]; n[idx] = true; return n; });
-            setTimeout(() => { setReelThud(prev => { const n = [...prev]; n[idx] = false; return n; }); }, 150);
-            
-            stopReel(idx);
-        }
-    };
-
-    const handleQuickStop = useCallback(() => {
-        if (!isCurrentlySpinning || isFreeze) return;
+    // Unified Stop Executor (Triggers exact physics logic)
+    const executeStop = useCallback((idx) => {
         playSound('stop');
         if (navigator.vibrate) navigator.vibrate(20);
         
+        setReelThud(prev => { const n = [...prev]; n[idx] = true; return n; });
+        setTimeout(() => { setReelThud(prev => { const n = [...prev]; n[idx] = false; return n; }); }, 150);
+        
+        stopReel(idx); // Locks the specific reel array
+    }, [playSound, stopReel]);
+
+    // UI Handle Manual Button Clicks
+    const handleManualStop = useCallback((idx) => {
+        if (isSpinning[idx] && !autoPlay) {
+            if (atSequence && atSequence.length > 0 && atSequence[atCurrentStep] !== idx) return; 
+            
+            // If the server hasn't responded yet, queue the action and play a click to satisfy the user
+            if (!apiReady) {
+                setQueuedStops(prev => new Set(prev).add(idx));
+                playSound('click'); 
+                return;
+            }
+            
+            executeStop(idx);
+        }
+    }, [isSpinning, autoPlay, atSequence, atCurrentStep, apiReady, executeStop, playSound]);
+
+    const handleQuickStop = useCallback(() => {
+        if (!isCurrentlySpinning || isFreeze) return;
+        
         if (autoPlay) setAutoPlay(false);
+
+        // Network latency masking for hitting stop-all during spin request
+        if (!apiReady) {
+            setQueuedStops(prev => new Set([0, 1, 2]));
+            playSound('click');
+            return;
+        }
+
+        playSound('stop');
+        if (navigator.vibrate) navigator.vibrate(20);
 
         const order = (atSequence && atSequence.length === 3) ? atSequence : [0, 1, 2];
         let delay = 0;
         order.forEach((reelIdx) => {
             if (isSpinning[reelIdx]) {
-                setTimeout(() => stopReel(reelIdx), delay);
+                setTimeout(() => executeStop(reelIdx), delay);
                 if (isReachEye && reelIdx === 2) delay += 1200; 
                 else delay += 100; 
             }
         });
-    }, [isCurrentlySpinning, isFreeze, playSound, autoPlay, setAutoPlay, atSequence, isSpinning, stopReel, isReachEye]);
+    }, [isCurrentlySpinning, isFreeze, playSound, autoPlay, setAutoPlay, atSequence, isSpinning, isReachEye, apiReady, executeStop]);
+
+    // Unspool the Queue the millisecond the API responds
+    useEffect(() => {
+        if (apiReady && queuedStops.size > 0) {
+            const stops = Array.from(queuedStops);
+            stops.forEach((idx, i) => {
+                // Slam them down in rapid succession
+                setTimeout(() => executeStop(idx), i * 150);
+            });
+            setQueuedStops(new Set());
+        }
+    }, [apiReady, queuedStops, executeStop]);
 
     const toggleAutoPlay = () => {
         playSound('click');
@@ -606,7 +657,6 @@ const PlayView = ({ machine, island, onLeave }) => {
                                  <span className={`text-[7px] md:text-[9px] font-black uppercase tracking-widest ${volatility === 'extreme' ? 'text-red-500' : volatility === 'high' ? 'text-orange-500' : volatility === 'low' ? 'text-green-400' : 'text-cyan-400'}`}>{volatility}</span>
                             </div>
                             
-                            {/* PLAYER CARE BADGE (Replaced PF Check) */}
                             <div className="flex items-center gap-1 px-1.5 py-1 bg-pink-900/20 rounded border border-pink-500/30 w-fit shadow-[0_0_10px_rgba(236,72,153,0.15)] cursor-default group">
                                  <Heart size={8} className="md:w-3 md:h-3 text-pink-400 group-hover:scale-110 transition-transform animate-pulse" />
                                  <span className="text-[6px] md:text-[8px] text-pink-400 font-bold uppercase tracking-widest">Safe Play</span>
