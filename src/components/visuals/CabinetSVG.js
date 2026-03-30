@@ -10,7 +10,7 @@ const CabinetSVG = ({
     stats = { laps: 0, wins: 0 }, 
     machineNumber = 0,
     serialNumber = null,
-    currentJackpot = 0 // NEW: Pass the live jackpot down to the SVG
+    currentJackpot = 0 
 }) => {
     
     // --- STATE & PROPS BINDING ---
@@ -25,11 +25,6 @@ const CabinetSVG = ({
     const displayWins = machine?.total_payout || stats.wins || 0;
     const displayNum = machine?.machine_number || machineNumber || 0;
     const displaySerial = machine?.serial_number || serialNumber || `SRO-${safeIslandId}-${displayNum.toString().padStart(3,'0')}`;
-    const paintSkin = machine?.paint_skin || 'default';
-    const jackpotSeed = machine?.jackpot_seed || 0;
-
-    // We keep belly art, but header art is removed in favor of Live LEDs
-    const getBellyImg = (id) => `/assets/machines/belly_${id}.png`;
 
     // --- 1. MATERIALS, SHADERS & TEXTURES ---
     const renderDefs = () => (
@@ -45,6 +40,9 @@ const CabinetSVG = ({
             <pattern id="speakerMesh" width="3" height="3" patternUnits="userSpaceOnUse">
                 <rect width="3" height="3" fill="#000"/><circle cx="1.5" cy="1.5" r="1" fill="#222" />
             </pattern>
+            <pattern id="scanline" width="4" height="4" patternUnits="userSpaceOnUse">
+                <line x1="0" y1="0" x2="4" y2="0" stroke="rgba(0, 243, 255, 0.25)" strokeWidth="1" />
+            </pattern>
 
             {/* V3 ISLAND SKINS (STRICTLY 5) */}
             <linearGradient id="skin1" x1="0" y1="0" x2="1" y2="0"><stop offset="0%" stopColor="#300"/><stop offset="50%" stopColor="#800"/><stop offset="100%" stopColor="#300"/></linearGradient>
@@ -56,14 +54,15 @@ const CabinetSVG = ({
             <filter id="glowLight"><feGaussianBlur stdDeviation="2" result="blur"/><feMerge><feMergeNode in="blur"/><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
             <filter id="hotGlow"><feGaussianBlur stdDeviation="4" result="blur"/><feMerge><feMergeNode in="blur"/><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
 
-            <clipPath id="bellyClipLocal"><path d="M10,0 L170,0 L160,70 L20,70 Z" /></clipPath>
+            {/* Perfectly inset clip path for the new Character LCD Screen */}
+            <clipPath id="screenClipLocal"><path d="M 2 2 L 188 2 L 178 78 L 12 78 Z" /></clipPath>
         </defs>
     );
 
     // --- 2. THEMATIC JAPANESE MOTIFS (STRICTLY 5) ---
     const renderJapaneseMotifs = () => {
         switch(safeIslandId) {
-            case 1: // Kyoto Zen
+            case 1: 
                 return (
                     <g className="theme-motifs">
                         <path d="M 5 35 L 235 35 L 235 40 L 5 40 Z" fill="#8B0000" stroke="#400" strokeWidth="1"/>
@@ -72,7 +71,7 @@ const CabinetSVG = ({
                         {isHot && <text x="210" y="150" fill="#FFD700" fontSize="30" filter="url(#hotGlow)" opacity="0.4" className="animate-pulse font-serif">運</text>}
                     </g>
                 );
-            case 2: // Neon Arcade
+            case 2: 
                 return (
                     <g className="theme-motifs">
                         <rect x="15" y="60" width="10" height="280" fill="url(#dotMatrix)" opacity="0.8" />
@@ -80,7 +79,7 @@ const CabinetSVG = ({
                         <path d="M 20 100 L 30 110 L 30 150 M 220 100 L 210 110 L 210 150" fill="none" stroke="#00f3ff" strokeWidth="2" opacity="0.5" filter="url(#glowLight)"/>
                     </g>
                 );
-            case 3: // Edo Castle
+            case 3: 
                 return (
                     <g className="theme-motifs">
                         <path d="M 15 100 L 25 110 M 15 110 L 25 100 M 15 120 L 25 130 M 15 130 L 25 120" stroke="#FFD700" strokeWidth="2" opacity="0.7" />
@@ -89,7 +88,7 @@ const CabinetSVG = ({
                         <circle cx="220" cy="80" r="6" fill="#111" stroke="#FFD700" strokeWidth="1.5" />
                     </g>
                 );
-            case 4: // Hanami Fest
+            case 4: 
                 return (
                     <g className="theme-motifs">
                         <path d="M 10 40 Q 30 60 40 100 Q 35 120 20 130" fill="none" stroke="#3E2723" strokeWidth="4" strokeLinecap="round" />
@@ -98,7 +97,7 @@ const CabinetSVG = ({
                         <circle cx="205" cy="80" r="4" fill="#FFB6C1" filter="url(#glowLight)"/>
                     </g>
                 );
-            case 5: // Yokai
+            case 5: 
                 return (
                     <g className="theme-motifs">
                         <path d="M 10 70 Q 20 75 30 70 T 50 70 T 70 70" fill="none" stroke="#F5DEB3" strokeWidth="6" strokeDasharray="8 4" opacity="0.6"/>
@@ -147,29 +146,24 @@ const CabinetSVG = ({
         );
     };
 
-    // --- 4. LIVE HOLOGRAPHIC TOPPER (REPLACES STATIC PNG) ---
+    // --- 4. LIVE HOLOGRAPHIC TOPPER ---
     const renderTopper = () => {
-        // Theme configs for the 5 LED Boards
         const ledThemes = {
-            1: { bg: '#3a0000', text: '#FFD700', glow: '#ff0000', border: '#FFD700' }, // Kyoto: Red/Gold
-            2: { bg: '#001a33', text: '#00f3ff', glow: '#0066ff', border: '#00f3ff' }, // Neon: Dark Blue/Cyan
-            3: { bg: '#331100', text: '#ff4500', glow: '#ff0000', border: '#ff4500' }, // Edo: Magma/Orange
-            4: { bg: '#33001a', text: '#ffb3c6', glow: '#ff0066', border: '#ff6699' }, // Hanami: Dark Pink
-            5: { bg: '#1a0033', text: '#8a2be2', glow: '#9900ff', border: '#9D00FF' }, // Yokai: Dark Purple
+            1: { bg: '#3a0000', text: '#FFD700', glow: '#ff0000', border: '#FFD700' }, 
+            2: { bg: '#001a33', text: '#00f3ff', glow: '#0066ff', border: '#00f3ff' }, 
+            3: { bg: '#331100', text: '#ff4500', glow: '#ff0000', border: '#ff4500' }, 
+            4: { bg: '#33001a', text: '#ffb3c6', glow: '#ff0066', border: '#ff6699' }, 
+            5: { bg: '#1a0033', text: '#8a2be2', glow: '#9900ff', border: '#9D00FF' }, 
         };
         const led = ledThemes[safeIslandId];
 
         return (
             <g transform="translate(60, -5)">
-                {/* Header Chrome Frame */}
                 <path d="M -5 5 L 125 5 L 120 40 L 0 40 Z" fill="#050505" stroke="url(#chrome)" strokeWidth="2" />
-                
-                {/* Inner LED Glass Screen */}
                 <path d="M 2 10 L 118 10 L 114 36 L 6 36 Z" fill={led.bg} stroke={led.border} strokeWidth="1" />
                 <path d="M 2 10 L 118 10 L 114 36 L 6 36 Z" fill="url(#dotMatrix)" opacity="0.4" pointerEvents="none" />
                 <path d="M 2 10 L 118 10 L 114 36 L 6 36 Z" fill="url(#glassGlare)" opacity="0.5" pointerEvents="none" />
 
-                {/* GJP DIGITAL DISPLAY */}
                 <g transform="translate(60, 19)" className={isHot ? "animate-pulse" : ""}>
                     <text x="0" y="0" textAnchor="middle" fill={led.text} fontSize="7" fontWeight="900" fontStyle="italic" letterSpacing="1" style={{ filter: `drop-shadow(0 0 3px ${led.glow})` }}>
                         GRAND JACKPOT
@@ -179,7 +173,6 @@ const CabinetSVG = ({
                     </text>
                 </g>
 
-                {/* Holographic Data Matrix (Pachislo Style Data Counter) */}
                 <g transform="translate(0, -15)">
                     <rect x="20" y="0" width="80" height="22" rx="2" fill="url(#dotMatrix)" stroke="#333" strokeWidth="2" />
                     <rect x="22" y="2" width="76" height="18" fill="#f00" opacity="0.1" />
@@ -187,12 +180,8 @@ const CabinetSVG = ({
                     <text x="50" y="18" fill="#ff0000" fontSize="12" fontFamily="monospace" fontWeight="black" filter="url(#glowLight)" letterSpacing="1">
                         {displayLaps.toString().padStart(4, '0')}
                     </text>
-                    {jackpotSeed > 0 && (
-                        <text x="80" y="10" fill="#fbbf24" fontSize="4" fontFamily="monospace" fontWeight="bold">JP</text>
-                    )}
                 </g>
 
-                {/* Warning / Status Beacons */}
                 <g transform="translate(100, -10)">
                     <path d="M 0 0 L 10 0 L 12 12 L -2 12 Z" fill={isBroken ? '#F00' : '#300'} filter={isBroken ? 'url(#glowLight)' : ''} className={isBroken ? "animate-pulse" : ""} />
                     <path d="M 12 0 L 22 0 L 24 12 L 10 12 Z" fill={isHot ? '#FFD700' : '#330'} filter={isHot ? 'url(#hotGlow)' : ''} className={isHot ? 'animate-pulse' : ''} />
@@ -267,31 +256,68 @@ const CabinetSVG = ({
         </g>
     );
 
-    // --- 7. BELLY GLASS ---
-    const renderBellyGlass = () => (
-        <g transform="translate(25, 295)">
-             <path d="M 0 0 L 190 0 L 180 80 L 10 80 Z" fill="#000" stroke="url(#chrome)" strokeWidth="3" />
-             
-             <g clipPath="url(#bellyClipLocal)" transform="scale(1.12) translate(-5, 0)">
-                 <rect x="0" y="0" width="180" height="70" fill={safeIslandId===3 ? '#300' : '#101'} />
-                 <image href={getBellyImg(safeIslandId)} x="0" y="-20" width="180" height="110" preserveAspectRatio="xMidYMid slice" onError={(e) => { e.target.style.display = 'none'; }} />
+    // --- 7. LIVE CHARACTER DISPLAY SCREEN (Replaces Belly Glass) ---
+    const renderCharacterDisplay = () => {
+        // Dynamic screen background reflecting the engine state
+        let screenBg = '#0a0a14';
+        if (isHot) screenBg = '#330000';
+        else if (isBroken) screenBg = '#000033';
+        else if (isBusy) screenBg = '#001a1a';
+
+        return (
+            <g transform="translate(25, 295)">
+                 {/* Bezel */}
+                 <path d="M 0 0 L 190 0 L 180 80 L 10 80 Z" fill="#050505" stroke="url(#chrome)" strokeWidth="3" />
                  
-                 <g transform="translate(130, 35) scale(0.25)">
-                    <CharacterSVG type={charId} stickerMode={true} />
+                 <g clipPath="url(#screenClipLocal)">
+                     {/* Screen Base */}
+                     <rect x="0" y="0" width="190" height="80" fill={screenBg} className="transition-all duration-1000" />
+                     
+                     {/* Cyberpunk Grid / Scanlines */}
+                     <rect x="0" y="0" width="190" height="80" fill="url(#dotMatrix)" opacity="0.4" />
+                     <rect x="0" y="0" width="190" height="80" fill="url(#scanline)" className="opacity-50" />
+
+                     {/* Live Animated Character Feed */}
+                     {/* Scaled precisely to fit as a portrait inside the LCD */}
+                     <g transform="translate(55, -20) scale(0.18)">
+                        <CharacterSVG type={charId} mood={isHot ? 'win' : (isBroken ? 'sad' : 'idle')} />
+                     </g>
+                     
+                     {/* Screen HUD Overlay: LIVE RECORDING INDICATOR */}
+                     <g transform="translate(10, 5)">
+                        <rect width="35" height="12" fill="#000" opacity="0.8" rx="2" stroke="#00f3ff" strokeWidth="0.5" />
+                        <circle cx="8" cy="6" r="2" fill={isBroken ? "#f00" : "#0f0"} className="animate-pulse" />
+                        <text x="14" y="8" fill={isBroken ? "#f00" : "#00f3ff"} fontSize="6" fontFamily="monospace" fontWeight="bold">
+                            {isBroken ? 'ERR' : 'LIVE'}
+                        </text>
+                     </g>
+
+                     {/* Screen HUD Overlay: WIN COUNTER */}
+                     <g transform="translate(10, 60)">
+                         <rect width="65" height="14" fill="rgba(0,0,0,0.9)" rx="2" stroke="#FFD700" strokeWidth="0.5" />
+                         <text x="5" y="10" fill="#FFD700" fontSize="7" fontFamily="monospace" fontWeight="bold">
+                             WIN: {(displayWins / 1000).toFixed(1)}k
+                         </text>
+                     </g>
+
+                     {/* Screen HUD Overlay: SYSTEM ID */}
+                     <g transform="translate(140, 5)">
+                        <rect width="40" height="12" fill="#000" opacity="0.8" rx="2" stroke="#ff00ff" strokeWidth="0.5" />
+                        <text x="20" y="8" textAnchor="middle" fill="#ff00ff" fontSize="5" fontFamily="monospace" fontWeight="bold">
+                            SYS: 0{safeIslandId}
+                        </text>
+                     </g>
                  </g>
                  
-                 <rect x="5" y="50" width="70" height="15" fill="rgba(0,0,0,0.7)" rx="2" />
-                 <text x="10" y="61" fill="#FFD700" fontSize="8" fontFamily="monospace" fontWeight="bold">
-                     WIN: {(displayWins / 1000).toFixed(1)}k
-                 </text>
-             </g>
-             
-             <path d="M 0 0 L 190 0 L 180 80 L 10 80 Z" fill="url(#glassGlare)" opacity="0.5" pointerEvents="none" />
-             
-             <rect x="65" y="70" width="60" height="8" fill="#ccc" stroke="#333" rx="1" />
-             <text x="95" y="76" textAnchor="middle" fill="#000" fontSize="5" fontFamily="monospace" fontWeight="bold">{displaySerial}</text>
-        </g>
-    );
+                 {/* Thick Gloss / Glare over the entire LCD screen */}
+                 <path d="M 0 0 L 190 0 L 180 80 L 10 80 Z" fill="url(#glassGlare)" opacity="0.6" pointerEvents="none" style={{mixBlendMode: 'screen'}} />
+                 
+                 {/* Physical Serial Plate moved to bottom edge of bezel */}
+                 <rect x="65" y="75" width="60" height="7" fill="#ccc" stroke="#333" rx="1" />
+                 <text x="95" y="81" textAnchor="middle" fill="#000" fontSize="4.5" fontFamily="monospace" fontWeight="bold">{displaySerial}</text>
+            </g>
+        );
+    };
 
     // --- 8. COIN TRAY (Hopper) ---
     const renderCoinTray = () => (
@@ -327,7 +353,8 @@ const CabinetSVG = ({
             {renderTopper()}
             {renderScreenArea()} 
             {renderButtonDeck()}
-            {renderBellyGlass()}
+            {/* INJECTED NEW LIVE CHARACTER DISPLAY */}
+            {renderCharacterDisplay()}
             {renderCoinTray()}
             
             <path d="M 15 40 L 225 40 L 230 395 L 10 395 Z" fill="url(#glassGlare)" opacity="0.2" pointerEvents="none" style={{mixBlendMode:'screen'}} />
