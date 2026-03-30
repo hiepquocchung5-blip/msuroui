@@ -1,12 +1,10 @@
 import React, { memo, useMemo } from 'react';
 import { motion } from 'framer-motion';
-import CharacterSVG from './CharacterSVG';
 
 const CabinetSVG = ({ 
     islandId, 
     visualState = 'FREE', 
     mode = 'hall', 
-    charId, 
     machine = {}, 
     stats = { laps: 0, wins: 0 }, 
     machineNumber = 0,
@@ -39,8 +37,9 @@ const CabinetSVG = ({
     const bellySparklinePoints = useMemo(() => {
         let pts = [];
         let y = 40; // Vertical center of the 80px high belly screen
-        for(let x = -10; x <= 200; x += 10) {
-            y = Math.max(10, Math.min(70, y + (Math.sin((displayNum * x) + x) * 18)));
+        for(let x = -10; x <= 200; x += 5) {
+            // Advanced heartbeat waveform math
+            y = Math.max(10, Math.min(70, 40 + (Math.sin((displayNum * x) + x) * 15) + (Math.cos(x * 3) * 5)));
             pts.push(`${x},${y.toFixed(1)}`);
         }
         return pts.join(' ');
@@ -236,12 +235,12 @@ const CabinetSVG = ({
                 <path d="M 2 10 L 118 10 L 114 36 L 6 36 Z" fill="url(#dotMatrix)" opacity="0.4" pointerEvents="none" />
                 <path d="M 2 10 L 118 10 L 114 36 L 6 36 Z" fill="url(#glassGlare)" opacity="0.5" pointerEvents="none" />
 
-                {/* Dominated Live GJP Digital Display */}
+                {/* Dominated Live GJP Digital Display (Now full width without clutter) */}
                 <g transform="translate(60, 20)" className={isHot ? "animate-pulse" : ""}>
-                    <text x="0" y="-4" textAnchor="middle" fill={led.text} fontSize="9" fontWeight="900" fontStyle="italic" letterSpacing="2" style={{ filter: `drop-shadow(0 0 4px ${led.glow})` }}>
+                    <text x="0" y="-2" textAnchor="middle" fill={led.text} fontSize="9" fontWeight="900" fontStyle="italic" letterSpacing="3" style={{ filter: `drop-shadow(0 0 5px ${led.glow})` }}>
                         GRAND JACKPOT
                     </text>
-                    <text x="0" y="12" textAnchor="middle" fill="#ffffff" fontSize="16" fontFamily="monospace" fontWeight="900" letterSpacing="1" style={{ filter: `drop-shadow(0 0 6px ${led.text})` }}>
+                    <text x="0" y="14" textAnchor="middle" fill="#ffffff" fontSize="18" fontFamily="monospace" fontWeight="900" letterSpacing="2" style={{ filter: `drop-shadow(0 0 8px ${led.text})` }}>
                         {currentJackpot > 0 ? Number(currentJackpot).toLocaleString() : 'PULLING...'}
                     </text>
                 </g>
@@ -321,8 +320,8 @@ const CabinetSVG = ({
         </g>
     );
 
-    // --- 7. AAA RENDER LAYERED LCD SCREEN (WITH TELEMETRY HUD) ---
-    const renderCharacterDisplay = () => {
+    // --- 7. AAA RENDER LAYERED LCD SCREEN (DEDICATED TELEMETRY DASHBOARD) ---
+    const renderTelemetryDashboard = () => {
         let screenBg = '#0a0a14';
         if (isHot) screenBg = '#330000';
         else if (isBroken) screenBg = '#000033';
@@ -342,31 +341,29 @@ const CabinetSVG = ({
                      <rect x="0" y="0" width="190" height="80" fill="url(#scanline)" className={isBroken ? 'animate-[pulse_0.1s_infinite]' : 'opacity-40'} />
 
                      {/* Layer 3: Circuit Chaos Background Waveform (VOL Sparkline) */}
-                     <g opacity="0.4">
+                     <g opacity="0.6">
                          <polyline points={bellySparklinePoints} fill="none" stroke={accent} strokeWidth="1.5" filter="url(#glowLight)" className="transition-all duration-300" />
                      </g>
 
-                     {/* Layer 4: Rotating Cyber Rings */}
-                     <g transform="translate(95, 40)" opacity={isBroken ? 0 : 0.3}>
+                     {/* Layer 4: Central Cyber Rings & Volatility */}
+                     <g transform="translate(95, 45)" opacity={isBroken ? 0 : 1}>
+                         <circle cx="0" cy="0" r="25" fill="rgba(0,0,0,0.5)" stroke={accent} strokeWidth="0.5" />
                          <circle cx="0" cy="0" r="30" fill="none" stroke="url(#ledFlow)" strokeWidth="1" strokeDasharray="10 5" className="animate-[spin_10s_linear_infinite]" />
                          <circle cx="0" cy="0" r="35" fill="none" stroke={accent} strokeWidth="0.5" strokeDasharray="2 8" className="animate-[spin_15s_linear_infinite_reverse]" />
+                         
+                         <text x="0" y="-3" textAnchor="middle" fill={accent} fontSize="5" fontWeight="bold" letterSpacing="1">VOLATILITY</text>
+                         <text x="0" y="5" textAnchor="middle" fill="#FFF" fontSize="7" fontFamily="monospace" fontWeight="900" style={{ filter: `drop-shadow(0 0 2px #fff)` }}>{visualState}</text>
                      </g>
 
-                     {/* Layer 5: Character Content (With Glitch Logic) */}
-                     <g filter={isBroken ? "url(#glitchRGB)" : ""} className={isBroken ? "animate-[pulse_0.2s_linear_infinite]" : ""}>
-                         <g transform="translate(55, -15) scale(0.17)">
-                            <CharacterSVG type={charId} mood={isHot ? 'win' : (isBroken ? 'sad' : 'idle')} />
+                     {/* Signal Loss Overlay */}
+                     {isBroken && (
+                         <g opacity="0.6" filter="url(#glitchRGB)" className="animate-[pulse_0.2s_linear_infinite]">
+                             <rect x="0" y="20" width="190" height="5" fill="#FFF" />
+                             <rect x="0" y="40" width="190" height="2" fill="#FFF" />
+                             <rect x="0" y="60" width="190" height="10" fill="#FFF" />
+                             <text x="95" y="45" textAnchor="middle" fill="#F00" fontSize="12" fontWeight="900" fontStyle="italic" letterSpacing="2">SYSTEM FAILURE</text>
                          </g>
-                         
-                         {/* Signal Loss Overlay */}
-                         {isBroken && (
-                             <g opacity="0.6">
-                                 <rect x="0" y="20" width="190" height="5" fill="#FFF" />
-                                 <rect x="0" y="40" width="190" height="2" fill="#FFF" />
-                                 <rect x="0" y="60" width="190" height="10" fill="#FFF" />
-                             </g>
-                         )}
-                     </g>
+                     )}
                      
                      {/* --- CYBER HUD OVERLAYS --- */}
                      
@@ -387,32 +384,25 @@ const CabinetSVG = ({
                         </text>
                      </g>
 
-                     {/* Bottom Left: Telemetry (WIN & LAPS) */}
-                     <g transform="translate(5, 50)">
-                         <rect width="60" height="25" fill="rgba(0,0,0,0.85)" rx="2" stroke={accent} strokeWidth="0.5" />
-                         
-                         <text x="4" y="10" fill={accent} fontSize="5" fontFamily="monospace" fontWeight="bold">WIN</text>
-                         <text x="24" y="10" fill="#FFF" fontSize="6" fontFamily="monospace" fontWeight="900">
-                             {(displayWins / 1000).toFixed(1)}k
-                         </text>
-                         
-                         <path d="M 4 14 L 56 14" stroke="rgba(255,255,255,0.2)" strokeWidth="0.5" />
-                         
-                         <text x="4" y="20" fill={accent} fontSize="5" fontFamily="monospace" fontWeight="bold">LAPS</text>
-                         <text x="24" y="20" fill="#FFF" fontSize="6" fontFamily="monospace" fontWeight="900">
+                     {/* Left: Laps Odometer */}
+                     <g transform="translate(5, 30)">
+                         <rect width="45" height="35" fill="rgba(0,0,0,0.85)" rx="4" stroke={accent} strokeWidth="0.5" />
+                         <text x="22.5" y="12" textAnchor="middle" fill={accent} fontSize="6" fontFamily="monospace" fontWeight="bold">LAPS</text>
+                         <path d="M 5 16 L 40 16" stroke="rgba(255,255,255,0.2)" strokeWidth="0.5" />
+                         <text x="22.5" y="28" textAnchor="middle" fill="#FFF" fontSize="11" fontFamily="monospace" fontWeight="900" style={{ filter: `drop-shadow(0 0 2px #fff)` }}>
                              {displayLaps.toString().padStart(4, '0')}
                          </text>
                      </g>
 
-                     {/* Bottom Right: Volatility Readout */}
-                     <g transform="translate(145, 60)">
-                         <rect width="40" height="15" fill="rgba(0,0,0,0.85)" rx="2" stroke={accent} strokeWidth="0.5" />
-                         <text x="20" y="6" textAnchor="middle" fill={accent} fontSize="4" fontStyle="italic" fontWeight="bold" letterSpacing="1">VOLATILITY</text>
-                         <text x="20" y="12" textAnchor="middle" fill="#FFF" fontSize="5" fontFamily="monospace" fontWeight="bold">
-                             {visualState}
+                     {/* Right: Win Counter */}
+                     <g transform="translate(140, 30)">
+                         <rect width="45" height="35" fill="rgba(0,0,0,0.85)" rx="4" stroke={accent} strokeWidth="0.5" />
+                         <text x="22.5" y="12" textAnchor="middle" fill={accent} fontSize="6" fontFamily="monospace" fontWeight="bold">TOTAL WINS</text>
+                         <path d="M 5 16 L 40 16" stroke="rgba(255,255,255,0.2)" strokeWidth="0.5" />
+                         <text x="22.5" y="28" textAnchor="middle" fill="#FFF" fontSize="10" fontFamily="monospace" fontWeight="900" style={{ filter: `drop-shadow(0 0 2px #fff)` }}>
+                             {(displayWins / 1000).toFixed(1)}k
                          </text>
                      </g>
-
                  </g>
                  
                  {/* Layer 4: Glass Glare Reflection */}
@@ -460,7 +450,8 @@ const CabinetSVG = ({
             {renderTopper()}
             {renderScreenArea()} 
             {renderButtonDeck()}
-            {renderCharacterDisplay()}
+            {/* INJECTED NEW DEDICATED TELEMETRY DASHBOARD */}
+            {renderTelemetryDashboard()}
             {renderCoinTray()}
             
             <path d="M 15 40 L 225 40 L 230 395 L 10 395 Z" fill="url(#glassGlare)" opacity="0.2" pointerEvents="none" style={{mixBlendMode:'screen'}} />
