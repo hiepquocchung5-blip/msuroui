@@ -79,18 +79,16 @@ const RollupNumber = ({ value, duration = 1000 }) => {
     return <>{count.toLocaleString()}</>;
 };
 
-const getIslandPaylineStyle = () => {
-    return { color: '#00f3ff', shadow: 'rgba(0, 243, 255, 0.8)' };
-};
-
 // --- VIRTUALIZED REEL COMPONENT ---
 const ReelColumn = ({ isSpinning, finalSymbols, locked, isWinning, isTeaser, isReachEye, colIdx, isFreeze, islandId }) => {
     
-    // VISUAL FIX: Spin noise is purely random. It decouples the visual blur from the final API result.
-    // This stops the reels from flickering or changing symbols right as the animation ends.
+    // VISUAL FIX: Seamless Loop Integration
+    // By placing `finalSymbols` at the top of the strip, the CSS animation (which ends at translateY 0%)
+    // seamlessly lands exactly on the final API result without flickering or swapping symbols.
     const spinStrip = useMemo(() => {
-        return Array.from({length: 6}, () => Math.floor(Math.random() * 7) + 1);
-    }, [isSpinning]); // Re-rolls purely on spin start
+        const randomFill = Array.from({length: 3}, () => Math.floor(Math.random() * 7) + 1);
+        return [...finalSymbols, ...randomFill];
+    }, [isSpinning, finalSymbols]);
 
     const displaySymbols = isSpinning ? spinStrip : finalSymbols;
     const isReachReel = isReachEye && isSpinning && colIdx === 2;
@@ -112,7 +110,8 @@ const ReelColumn = ({ isSpinning, finalSymbols, locked, isWinning, isTeaser, isR
                 >
                     {displaySymbols.map((symId, idx) => (
                         <div key={idx} className="relative flex items-center justify-center w-full" style={{ height: isSpinning ? '16.66%' : '33.33%' }}>
-                            <div className={`w-[85%] aspect-square flex items-center justify-center bg-black/20 backdrop-blur-[2px] border border-white/5 rounded-xl shadow-inner transition-colors duration-500
+                            {/* 16:9 Cinematic Symbol Card */}
+                            <div className={`w-[90%] aspect-[16/9] flex items-center justify-center bg-black/40 backdrop-blur-[2px] border border-white/10 rounded-lg shadow-inner transition-colors duration-500
                                 ${isTeaser && !isReachEye && !isSpinning && idx === 1 && colIdx === 1 ? 'ring-2 ring-red-500/50 animate-pulse shadow-[0_0_40px_rgba(239,68,68,0.6)] bg-red-900/20' : ''}
                                 ${isWinning && !isSpinning && idx < 3 ? 'z-10 shadow-[0_0_40px_rgba(255,215,0,0.4)] bg-yellow-900/20 ring-1 ring-yellow-400/80 scale-105' : ''}
                             `}>
@@ -502,8 +501,6 @@ const PlayView = ({ machine, island, onLeave }) => {
         return PAYTABLE_DATA.find(p => p.id === symId) || PAYTABLE_DATA[6];
     }, [winningLines, reels]);
 
-    const lineStyle = getIslandPaylineStyle();
-    const strokeWidths = { 'NONE': 4, 'SMALL': 5, 'BIG': 8, 'MEGA': 12, 'EPIC': 18 };
     const jpProgressPercent = Math.min(100, Math.max(0, ((currentJackpot - 3000000) / (7200000 - 3000000)) * 100));
 
     return (
@@ -772,22 +769,30 @@ const PlayView = ({ machine, island, onLeave }) => {
                                     />
                                 ))}
 
+                                {/* Solid Red Win Lines */}
                                 {winningLines.length > 0 && winStage !== 'gambling' && !isJackpot && (
-                                    <svg className="absolute inset-0 w-full h-full pointer-events-none z-40" preserveAspectRatio="none">
-                                        <defs><filter id="winlineGlow"><feGaussianBlur stdDeviation={winTier === 'EPIC' ? "8" : "4"} result="blur"/><feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge></filter></defs>
+                                    <div className="absolute inset-0 pointer-events-none z-40">
                                         {winningLines.map(lineIdx => {
                                             if (lineIdx === 99) return null; 
-                                            const paths = { 0: "M 0 16.6% L 100% 16.6%", 1: "M 0 50% L 100% 50%", 2: "M 0 83.3% L 100% 83.3%", 3: "M 0 0 L 100% 100%", 4: "M 0 100% L 100% 0" };
-                                            const nodes = { 0: [{x: '0', y: '16.6%'}, {x: '100%', y: '16.6%'}], 1: [{x: '0', y: '50%'}, {x: '100%', y: '50%'}], 2: [{x: '0', y: '83.3%'}, {x: '100%', y: '83.3%'}], 3: [{x: '0', y: '0'}, {x: '100%', y: '100%'}], 4: [{x: '0', y: '100%'}, {x: '100%', y: '0'}] };
+                                            // Precise line mapping for a 3x3 aspect-[16/9] grid
+                                            const lineStyles = {
+                                                0: "top-[16.66%] left-0 w-full h-2 -translate-y-1/2",
+                                                1: "top-[50%] left-0 w-full h-2 -translate-y-1/2",
+                                                2: "top-[83.33%] left-0 w-full h-2 -translate-y-1/2",
+                                                3: "top-[50%] left-[-10%] w-[120%] h-2 -translate-y-1/2 rotate-[35deg]",
+                                                4: "top-[50%] left-[-10%] w-[120%] h-2 -translate-y-1/2 -rotate-[35deg]"
+                                            };
                                             return (
-                                                <g key={lineIdx} filter="url(#winlineGlow)">
-                                                    <motion.path d={paths[lineIdx]} stroke={lineStyle.color} strokeWidth={strokeWidths[winTier] || 4} fill="none" strokeLinecap="round" style={{ filter: `drop-shadow(0 0 10px ${lineStyle.shadow})` }} initial={{ pathLength: 0, opacity: 1 }} animate={{ pathLength: 1, opacity: [1, 0.5, 1] }} transition={{ duration: 0.4, ease: "easeOut", opacity: { repeat: Infinity, duration: 0.2 } }} />
-                                                    <circle cx={nodes[lineIdx][0].x} cy={nodes[lineIdx][0].y} r="6" fill="#fff" className="animate-pulse" />
-                                                    <circle cx={nodes[lineIdx][1].x} cy={nodes[lineIdx][1].y} r="6" fill="#fff" className="animate-pulse" />
-                                                </g>
+                                                <motion.div 
+                                                    key={lineIdx} 
+                                                    initial={{ scaleX: 0 }} 
+                                                    animate={{ scaleX: 1 }} 
+                                                    transition={{ duration: 0.3, ease: "easeOut" }}
+                                                    className={`absolute bg-red-600 shadow-[0_0_15px_red,0_0_5px_white_inset] origin-center z-50 ${lineStyles[lineIdx]}`}
+                                                />
                                             );
                                         })}
-                                    </svg>
+                                    </div>
                                 )}
                             </div>
                         </div>
