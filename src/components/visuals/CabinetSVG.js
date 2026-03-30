@@ -48,8 +48,8 @@ const CabinetSVG = ({
             <linearGradient id="skin1" x1="0" y1="0" x2="1" y2="0"><stop offset="0%" stopColor="#300"/><stop offset="50%" stopColor="#800"/><stop offset="100%" stopColor="#300"/></linearGradient>
             <linearGradient id="skin2" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stopColor="#1a0033"/><stop offset="50%" stopColor="#001a33"/><stop offset="100%" stopColor="#1a0033"/></linearGradient>
             <linearGradient id="skin3" x1="0" y1="1" x2="0" y2="0"><stop offset="0%" stopColor="#111"/><stop offset="50%" stopColor="#400"/><stop offset="100%" stopColor="#820"/></linearGradient>
-            <linearGradient id="skin4" x1="0" y1="0" x2="1" y2="0"><stop offset="0%" stopColor="#33001a"/><stop offset="50%" stopColor="#660033"/><stop offset="100%" stopColor="#33001a"/></linearGradient>
-            <linearGradient id="skin5" x1="0" y1="0" x2="1" y2="0"><stop offset="0%" stopColor="#0B001A"/><stop offset="50%" stopColor="#2A0066"/><stop offset="100%" stopColor="#0B001A"/></linearGradient>
+            <linearGradient id="skin4" x1="0" y1="0" x2="1" y2="0"><stop offset="0%" stopColor="#1A0033"/><stop offset="50%" stopColor="#4B0082"/><stop offset="100%" stopColor="#1A0033"/></linearGradient>
+            <linearGradient id="skin5" x1="0" y1="0" x2="1" y2="0"><stop offset="0%" stopColor="#332000"/><stop offset="50%" stopColor="#805500"/><stop offset="100%" stopColor="#332000"/></linearGradient>
 
             <filter id="glowLight"><feGaussianBlur stdDeviation="2" result="blur"/><feMerge><feMergeNode in="blur"/><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
             <filter id="hotGlow"><feGaussianBlur stdDeviation="4" result="blur"/><feMerge><feMergeNode in="blur"/><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
@@ -91,19 +91,18 @@ const CabinetSVG = ({
             case 4: 
                 return (
                     <g className="theme-motifs">
-                        <path d="M 10 40 Q 30 60 40 100 Q 35 120 20 130" fill="none" stroke="#3E2723" strokeWidth="4" strokeLinecap="round" />
-                        <path d="M 230 40 Q 210 60 200 100 Q 205 120 220 130" fill="none" stroke="#3E2723" strokeWidth="4" strokeLinecap="round" />
-                        <circle cx="35" cy="80" r="4" fill="#FFB6C1" filter="url(#glowLight)"/>
-                        <circle cx="205" cy="80" r="4" fill="#FFB6C1" filter="url(#glowLight)"/>
+                        <path d="M 15 100 L 30 85 L 30 140 M 225 100 L 210 85 L 210 140" fill="none" stroke="#A855F7" strokeWidth="2" opacity="0.6" filter="url(#glowLight)"/>
+                        <circle cx="22" cy="115" r="3" fill="#A855F7" filter="url(#glowLight)"/>
+                        <circle cx="218" cy="115" r="3" fill="#A855F7" filter="url(#glowLight)"/>
                     </g>
                 );
             case 5: 
                 return (
                     <g className="theme-motifs">
-                        <path d="M 10 70 Q 20 75 30 70 T 50 70 T 70 70" fill="none" stroke="#F5DEB3" strokeWidth="6" strokeDasharray="8 4" opacity="0.6"/>
-                        <path d="M 170 70 Q 180 75 190 70 T 210 70 T 230 70" fill="none" stroke="#F5DEB3" strokeWidth="6" strokeDasharray="8 4" opacity="0.6"/>
-                        <path d="M 30 70 L 35 80 L 30 90 L 35 100" fill="none" stroke="#FFF" strokeWidth="3" />
-                        <path d="M 210 70 L 205 80 L 210 90 L 205 100" fill="none" stroke="#FFF" strokeWidth="3" />
+                        <path d="M 20 80 L 30 70 L 40 80 L 30 90 Z" fill="none" stroke="url(#gold)" strokeWidth="2" opacity="0.8"/>
+                        <path d="M 200 80 L 210 70 L 220 80 L 210 90 Z" fill="none" stroke="url(#gold)" strokeWidth="2" opacity="0.8"/>
+                        <path d="M 20 100 L 30 90 L 40 100 L 30 110 Z" fill="url(#gold)" opacity="0.4"/>
+                        <path d="M 200 100 L 210 90 L 220 100 L 210 110 Z" fill="url(#gold)" opacity="0.4"/>
                     </g>
                 );
             default: return null;
@@ -113,14 +112,27 @@ const CabinetSVG = ({
     // --- 3. CHASSIS GEOMETRY ---
     const renderChassis = () => {
         let path, fill, stroke;
-        const accent = isHot ? '#FFD700' : (safeIslandId === 2 ? '#00F3FF' : '#FF0055');
+        
+        const getAccentColor = () => {
+            if (isHot) return '#FFD700';
+            switch(safeIslandId) {
+                case 1: return '#FF0055'; // Kyoto Red
+                case 2: return '#00F3FF'; // Tropic/Neon Cyan
+                case 3: return '#FF4500'; // Osaka Magma
+                case 4: return '#A855F7'; // Tokyo Purple
+                case 5: return '#FFD700'; // Ginza Gold
+                default: return '#FF0055';
+            }
+        };
+        
+        const accent = getAccentColor();
 
         switch(safeIslandId) {
             case 1: fill="url(#skin1)"; stroke="url(#gold)"; path = "M10,35 Q120,15 230,35 L235,395 L5,395 Z"; break;
             case 2: fill="url(#skin2)"; stroke="#00f3ff"; path = "M10,30 H50 V45 H190 V30 H230 V395 H10 Z"; break;
             case 3: fill="url(#skin3)"; stroke="#F00"; path = "M10,50 L40,30 L80,50 L120,30 L160,50 L200,30 L230,50 L235,395 L5,395 Z"; break;
-            case 4: fill="url(#skin4)"; stroke="#ff6699"; path = "M15,40 L35,20 L205,20 L225,40 L225,395 L15,395 Z"; break;
-            case 5: fill="url(#skin5)"; stroke="#9D00FF"; path = "M20,60 L120,20 L220,60 L225,395 L15,395 Z"; break;
+            case 4: fill="url(#skin4)"; stroke="#A855F7"; path = "M15,40 L35,20 L205,20 L225,40 L225,395 L15,395 Z"; break;
+            case 5: fill="url(#skin5)"; stroke="url(#gold)"; path = "M20,60 L120,20 L220,60 L225,395 L15,395 Z"; break;
             default: fill="url(#skin1)"; stroke="url(#gold)"; path = "M10,35 Q120,15 230,35 L235,395 L5,395 Z"; break;
         }
 
@@ -152,8 +164,8 @@ const CabinetSVG = ({
             1: { bg: '#3a0000', text: '#FFD700', glow: '#ff0000', border: '#FFD700' }, 
             2: { bg: '#001a33', text: '#00f3ff', glow: '#0066ff', border: '#00f3ff' }, 
             3: { bg: '#331100', text: '#ff4500', glow: '#ff0000', border: '#ff4500' }, 
-            4: { bg: '#33001a', text: '#ffb3c6', glow: '#ff0066', border: '#ff6699' }, 
-            5: { bg: '#1a0033', text: '#8a2be2', glow: '#9900ff', border: '#9D00FF' }, 
+            4: { bg: '#1a0033', text: '#d8b4fe', glow: '#a855f7', border: '#a855f7' }, 
+            5: { bg: '#2a1a00', text: '#fef08a', glow: '#eab308', border: '#eab308' }, 
         };
         const led = ledThemes[safeIslandId];
 
