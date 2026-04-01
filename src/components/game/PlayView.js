@@ -5,8 +5,7 @@ import {
     ChevronLeft, Minus, Plus, Zap, StopCircle, Gamepad2, 
     Trophy, Flame, MessageCircle, TrendingUp, 
     ShieldAlert, X, Coins, Repeat, Target, Activity, Cpu, MapPin, 
-    HelpCircle, AlertOctagon, ShieldCheck, Terminal, Hash, Key, CheckCircle2,
-    Settings, LogOut, Menu, Loader2, Heart, Clock, LifeBuoy
+    HelpCircle, AlertOctagon, Settings, LogOut, Menu, Loader2, Heart, Clock, LifeBuoy
 } from 'lucide-react';
 import { useRouter } from 'next/router';
 
@@ -168,7 +167,7 @@ const PlayView = ({ machine, island, onLeave }) => {
         showBonusSummary, bonusTotalWin, clearBonusTotal, levelUpData, setLevelUpData,
         isJackpot, setIsJackpot, lapsSinceBonus, momentumMult, inZone, error, 
         showIdleWarning, isIdleKicked, resetIdleTimer, isReady,
-        autoPlay, spin, stopReel, setAutoPlay, setLastWin, turboMode, setTurboMode, pfData
+        autoPlay, spin, stopReel, setAutoPlay, setLastWin, turboMode, setTurboMode
     } = slotLogic;
     
     // --- AAA CINEMATIC LOADING & PLAYER CARE STATE ---
@@ -491,6 +490,20 @@ const PlayView = ({ machine, island, onLeave }) => {
         return () => window.removeEventListener('keydown', handleKeyDown);
     }, [handleSpin, handleQuickStop, handleManualStop, isCurrentlySpinning, resetIdleTimer, winStage]);
 
+    // --- BULLETPROOF WINDETAILS FIX ---
+    // Protects against ReferenceError and missing payline crashes during external Jackpot triggers.
+    const winDetails = useMemo(() => {
+        const defaultWin = PAYTABLE_DATA[6]; // Fallback to Replay symbol logic to prevent crash
+        if (isJackpot) return PAYTABLE_DATA[0]; // Force GJP
+        if (!winningLines || winningLines.length === 0) return defaultWin;
+        
+        const firstLine = winningLines[0];
+        if (firstLine === 99) return PAYTABLE_DATA.find(p => p.id === reels[0]) || defaultWin;
+        
+        const symId = reels[PAYLINES[firstLine][0]];
+        return PAYTABLE_DATA.find(p => p.id === symId) || defaultWin;
+    }, [winningLines, reels, isJackpot]);
+
     const jpProgressPercent = Math.min(100, Math.max(0, ((currentJackpot - 3000000) / (7200000 - 3000000)) * 100));
 
     return (
@@ -520,7 +533,7 @@ const PlayView = ({ machine, island, onLeave }) => {
                     )}
                 </AnimatePresence>
 
-                {/* --- CINEMATIC FLOOR LIGHTING (JACKPOT/EPIC WIN) --- */}
+                {/* --- CINEMATIC FLOOR LIGHTING (JACKPOT/EPIC WIN/FREEZE) --- */}
                 <AnimatePresence>
                     {(isJackpot || winTier === 'EPIC' || winTier === 'MEGA' || isFreeze) && (
                         <motion.div 
@@ -552,6 +565,7 @@ const PlayView = ({ machine, island, onLeave }) => {
                     )}
                 </AnimatePresence>
 
+                {/* --- ELEGANT SYSTEM FREEZE OVERLAY --- */}
                 <AnimatePresence>
                     {isFreeze && isCurrentlySpinning && (
                         <motion.div 
@@ -745,7 +759,7 @@ const PlayView = ({ machine, island, onLeave }) => {
                     <motion.div 
                         className="relative w-full max-w-[350px] md:max-w-[400px] aspect-[0.6] flex items-center justify-center z-10 will-change-transform"
                         animate={{ rotateX: mousePos.y, rotateY: mousePos.x }}
-                        transition={{ type: 'spring', stiffness: isMobile ? 80 : 100, damping: 25 }}
+                        transition={{ type: 'spring', stiffness: isMobile ? 80 : 100, damping: 25 }} // Heavier feel
                         style={{ transformStyle: 'preserve-3d', transform: 'translateZ(0)' }}
                     >
                         {/* Cabinet Graphic */}
@@ -892,7 +906,7 @@ const PlayView = ({ machine, island, onLeave }) => {
                     </div>
                 ))}
 
-                {/* --- PLAYER HUB --- */}
+                {/* --- PLAYER HUB (Replaces Quick Settings) --- */}
                 <AnimatePresence>
                     {showSettings && (
                         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[100] bg-black/80 backdrop-blur-sm flex items-center justify-center p-6 pointer-events-auto" onClick={() => setShowSettings(false)}>
@@ -979,7 +993,7 @@ const PlayView = ({ machine, island, onLeave }) => {
                                      winTier === 'MEGA' ? <h1 className="text-4xl md:text-5xl font-black italic text-transparent bg-clip-text bg-gradient-to-b from-cyan-200 to-blue-600 drop-shadow-lg mb-4">MEGA WIN</h1> : null}
                                     
                                     <motion.div animate={{ rotate: [0, -5, 5, -5, 0], scale: [1, 1.15, 1] }} transition={{ duration: 0.6, repeat: Infinity, ease: "easeInOut" }} className="w-24 h-24 md:w-32 md:h-32 mb-4 md:mb-6">
-                                        <SymbolSVG id={isJackpot ? 1 : winDetails.id} islandId={parseInt(island?.id || 1)} isWinning={true} />
+                                        <SymbolSVG id={isJackpot ? 1 : (winDetails?.id || 7)} islandId={parseInt(island?.id || 1)} isWinning={true} />
                                     </motion.div>
                                     
                                     <h2 className={`text-2xl md:text-4xl font-black italic tracking-tighter uppercase drop-shadow-2xl ${isJackpot ? 'text-red-500' : winDetails?.color}`}>
