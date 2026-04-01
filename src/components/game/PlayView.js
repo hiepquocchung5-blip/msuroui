@@ -83,8 +83,6 @@ const RollupNumber = ({ value, duration = 1000 }) => {
 const ReelColumn = ({ isSpinning, finalSymbols, locked, isWinning, isTeaser, isReachEye, colIdx, isFreeze, islandId }) => {
     
     // VISUAL FIX: Seamless Loop Integration
-    // By placing `finalSymbols` at the top of the strip, the CSS animation (which ends at translateY 0%)
-    // seamlessly lands exactly on the final API result without flickering or swapping symbols.
     const spinStrip = useMemo(() => {
         const randomFill = Array.from({length: 3}, () => Math.floor(Math.random() * 7) + 1);
         return [...finalSymbols, ...randomFill];
@@ -112,7 +110,7 @@ const ReelColumn = ({ isSpinning, finalSymbols, locked, isWinning, isTeaser, isR
                         <div key={idx} className="relative flex items-center justify-center w-full" style={{ height: isSpinning ? '16.66%' : '33.33%' }}>
                             {/* 16:9 Cinematic Symbol Card */}
                             <div className={`w-[90%] aspect-[16/9] flex items-center justify-center bg-black/40 backdrop-blur-[2px] border border-white/10 rounded-lg shadow-inner transition-colors duration-500
-                                ${isTeaser && !isReachEye && !isSpinning && idx === 1 && colIdx === 1 ? 'ring-2 ring-red-500/50 animate-pulse shadow-[0_0_40px_rgba(239,68,68,0.6)] bg-red-900/20' : ''}
+                                ${isTeaser && !isReachEye && !isSpinning && idx === 1 && colIdx === 1 ? 'ring-2 ring-red-500/50 animate-[pulse_1s_ease-in-out_infinite] shadow-[0_0_40px_rgba(239,68,68,0.6)] bg-red-900/20' : ''}
                                 ${isWinning && !isSpinning && idx < 3 ? 'z-10 shadow-[0_0_40px_rgba(255,215,0,0.4)] bg-yellow-900/20 ring-1 ring-yellow-400/80 scale-105' : ''}
                             `}>
                                 <SymbolSVG id={symId} isWinning={isWinning && !isSpinning && idx < 3} islandId={islandId} />
@@ -122,7 +120,7 @@ const ReelColumn = ({ isSpinning, finalSymbols, locked, isWinning, isTeaser, isR
                 </div>
             </div>
             
-            {isReachReel && <div className="absolute inset-0 bg-gradient-to-t from-red-600/30 to-transparent mix-blend-overlay animate-pulse z-30 pointer-events-none"></div>}
+            {isReachReel && <div className="absolute inset-0 bg-gradient-to-t from-red-600/30 to-transparent mix-blend-overlay animate-[pulse_0.5s_ease-in-out_infinite] z-30 pointer-events-none"></div>}
             <div className="absolute inset-0 bg-gradient-to-b from-black/80 via-transparent to-black/80 z-20 pointer-events-none shadow-[inset_0_15px_15px_-10px_rgba(0,0,0,0.6),inset_0_-15px_15px_-10px_rgba(0,0,0,0.6)]"></div>
         </div>
     );
@@ -140,7 +138,7 @@ const SectorLoader = ({ progress, islandName }) => (
             <div className="w-20 h-20 relative flex items-center justify-center mb-6">
                 <div className="absolute inset-0 rounded-full border-t-2 border-r-2 border-cyan-500 animate-spin shadow-[0_0_15px_cyan]"></div>
                 <div className="absolute inset-2 rounded-full border-b-2 border-l-2 border-purple-500 animate-[spin_1.5s_linear_infinite_reverse]"></div>
-                <Cpu size={24} className="text-cyan-400 animate-pulse drop-shadow-[0_0_10px_cyan]" />
+                <Cpu size={24} className="text-cyan-400 animate-[pulse_2s_ease-in-out_infinite] drop-shadow-[0_0_10px_cyan]" />
             </div>
             
             <h2 className="text-xl font-black italic tracking-[0.3em] text-white mb-2 uppercase">
@@ -493,14 +491,6 @@ const PlayView = ({ machine, island, onLeave }) => {
         return () => window.removeEventListener('keydown', handleKeyDown);
     }, [handleSpin, handleQuickStop, handleManualStop, isCurrentlySpinning, resetIdleTimer, winStage]);
 
-    const winDetails = useMemo(() => {
-        if (!winningLines || winningLines.length === 0) return null;
-        const firstLine = winningLines[0];
-        if (firstLine === 99) return PAYTABLE_DATA.find(p => p.id === reels[0]) || PAYTABLE_DATA[6]; 
-        const symId = reels[PAYLINES[firstLine][0]];
-        return PAYTABLE_DATA.find(p => p.id === symId) || PAYTABLE_DATA[6];
-    }, [winningLines, reels]);
-
     const jpProgressPercent = Math.min(100, Math.max(0, ((currentJackpot - 3000000) / (7200000 - 3000000)) * 100));
 
     return (
@@ -510,7 +500,7 @@ const PlayView = ({ machine, island, onLeave }) => {
             </AnimatePresence>
 
             <div 
-                className={`min-h-[100dvh] bg-[#050505] relative flex flex-col overflow-hidden transition-colors duration-1000 ${bonusMode === 'HEAVEN' ? 'bg-purple-950' : (bonusMode ? 'bg-red-950' : '')} ${inZone && !isCurrentlySpinning ? 'border-2 border-yellow-500/50 shadow-[inset_0_0_50px_rgba(234,179,8,0.2)]' : ''}`}
+                className={`min-h-[100dvh] bg-[#050505] relative flex flex-col overflow-hidden transition-colors duration-1000 ${bonusMode === 'HEAVEN' ? 'bg-purple-950' : (bonusMode ? 'bg-red-950' : '')}`}
                 onPointerMove={handlePointerMove} 
                 onPointerDown={resetIdleTimer}
             >
@@ -518,8 +508,6 @@ const PlayView = ({ machine, island, onLeave }) => {
                 <style dangerouslySetInnerHTML={{__html: `
                     @keyframes reel-spin-fast { 0% { transform: translateY(-50%); } 100% { transform: translateY(0%); } }
                     @keyframes snap-bounce-soft { 0% { transform: translateY(-5%); } 40% { transform: translateY(2%); } 75% { transform: translateY(-1%); } 100% { transform: translateY(0%); } }
-                    @keyframes shake-epic { 0%, 100% { transform: translate(0,0) rotate(0deg); } 10%, 30%, 50%, 70%, 90% { transform: translate(-8px, 8px) rotate(-2deg); } 20%, 40%, 60%, 80% { transform: translate(8px, -8px) rotate(2deg); } }
-                    .animate-shake-epic { animation: shake-epic 0.4s infinite; }
                 `}} />
 
                 {/* --- CINEMATIC OVERLAYS & LETTERBOXING --- */}
@@ -532,17 +520,49 @@ const PlayView = ({ machine, island, onLeave }) => {
                     )}
                 </AnimatePresence>
 
+                {/* --- CINEMATIC FLOOR LIGHTING (JACKPOT/EPIC WIN) --- */}
+                <AnimatePresence>
+                    {(isJackpot || winTier === 'EPIC' || winTier === 'MEGA' || isFreeze) && (
+                        <motion.div 
+                            initial={{ opacity: 0, scaleY: 0 }}
+                            animate={{ opacity: 1, scaleY: 1 }}
+                            exit={{ opacity: 0 }}
+                            transition={{ duration: 1, ease: "easeOut" }}
+                            className="absolute bottom-0 left-1/2 -translate-x-1/2 w-[150%] h-[150%] pointer-events-none z-0 flex justify-around items-end"
+                            style={{ transformOrigin: 'bottom center', transform: 'translateZ(-50px)' }}
+                        >
+                            {/* Left Floor Lamp */}
+                            <div className="relative w-32 h-full flex flex-col justify-end items-center origin-bottom -rotate-[25deg]">
+                                <div className="w-full h-[80%] bg-gradient-to-t from-cyan-300/40 via-cyan-500/10 to-transparent blur-2xl"></div>
+                                <div className="w-8 h-4 bg-white rounded-full shadow-[0_0_30px_#fff,0_0_60px_#00f3ff]"></div>
+                            </div>
+
+                            {/* Center Floor Lamp */}
+                            <div className="relative w-48 h-full flex flex-col justify-end items-center origin-bottom">
+                                <div className="w-full h-[90%] bg-gradient-to-t from-white/50 via-yellow-200/20 to-transparent blur-3xl"></div>
+                                <div className="w-12 h-6 bg-white rounded-full shadow-[0_0_40px_#fff,0_0_80px_#eab308]"></div>
+                            </div>
+
+                            {/* Right Floor Lamp */}
+                            <div className="relative w-32 h-full flex flex-col justify-end items-center origin-bottom rotate-[25deg]">
+                                <div className="w-full h-[80%] bg-gradient-to-t from-purple-300/40 via-purple-500/10 to-transparent blur-2xl"></div>
+                                <div className="w-8 h-4 bg-white rounded-full shadow-[0_0_30px_#fff,0_0_60px_#a855f7]"></div>
+                            </div>
+                        </motion.div>
+                    )}
+                </AnimatePresence>
+
                 <AnimatePresence>
                     {isFreeze && isCurrentlySpinning && (
                         <motion.div 
                             initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} 
-                            className="fixed inset-0 z-[200] bg-black pointer-events-none flex flex-col items-center justify-center mix-blend-difference"
+                            className="fixed inset-0 z-[200] bg-black/95 backdrop-blur-md pointer-events-none flex flex-col items-center justify-center"
                         >
-                            <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/black-scales.png')] opacity-50 animate-pulse"></div>
-                            <h1 className="text-white text-4xl md:text-8xl font-black italic tracking-tighter animate-[pulse_0.1s_infinite] relative">
+                            <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/stardust.png')] opacity-30 animate-[pulse_4s_infinite]"></div>
+                            <h1 className="text-white text-4xl md:text-8xl font-black italic tracking-widest animate-[pulse_2s_ease-in-out_infinite] relative drop-shadow-[0_0_30px_rgba(255,255,255,0.5)]">
                                 SYSTEM FREEZE
                             </h1>
-                            <p className="text-red-500 mt-4 font-mono tracking-[0.5em] animate-pulse text-xs md:text-base">AWAITING MIRACLE...</p>
+                            <p className="text-cyan-400 mt-4 font-mono tracking-[0.5em] text-xs md:text-base animate-pulse">INITIATING OVERRIDE...</p>
                         </motion.div>
                     )}
                 </AnimatePresence>
@@ -570,8 +590,8 @@ const PlayView = ({ machine, island, onLeave }) => {
                         </div>
                         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_bottom,_var(--tw-gradient-stops))] from-cyan-900/10 via-black to-black opacity-90"></div>
                         <div className="absolute inset-0 bg-[linear-gradient(rgba(0,243,255,0.03)_1px,transparent_1px),linear-gradient(90deg,rgba(0,243,255,0.03)_1px,transparent_1px)] bg-[size:40px_40px]"></div>
-                        {inZone && <div className="absolute inset-0 bg-yellow-500/10 mix-blend-overlay animate-pulse"></div>}
-                        {bonusMode === 'HEAVEN' && <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/circuit-board.png')] opacity-40 mix-blend-color-dodge animate-pulse hue-rotate-180"></div>}
+                        {inZone && <div className="absolute inset-0 bg-yellow-500/10 mix-blend-overlay animate-[pulse_2s_ease-in-out_infinite]"></div>}
+                        {bonusMode === 'HEAVEN' && <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/circuit-board.png')] opacity-40 mix-blend-color-dodge animate-[pulse_4s_ease-in-out_infinite] hue-rotate-180"></div>}
                     </div>
                 )}
 
@@ -601,7 +621,7 @@ const PlayView = ({ machine, island, onLeave }) => {
                         {currentJackpot >= 7000000 ? (
                             <div className="text-[8px] md:text-[10px] bg-purple-600 text-white font-bold px-1.5 py-0.5 rounded animate-pulse shadow-[0_0_15px_purple]">CRITICAL</div>
                         ) : currentJackpot >= 3600000 ? (
-                            <div className="text-[8px] md:text-[10px] bg-red-600 text-white font-bold px-1.5 py-0.5 rounded animate-pulse shadow-[0_0_10px_red]">HOT</div>
+                            <div className="text-[8px] md:text-[10px] bg-red-600 text-white font-bold px-1.5 py-0.5 rounded animate-[pulse_2s_ease-in-out_infinite] shadow-[0_0_10px_red]">HOT</div>
                         ) : (
                             <div className="text-[8px] md:text-[10px] text-gray-500 font-bold px-1.5 py-0.5 uppercase tracking-widest">BUILDING</div>
                         )}
@@ -655,7 +675,7 @@ const PlayView = ({ machine, island, onLeave }) => {
                             </div>
                             
                             <div className="flex items-center gap-1 px-1.5 py-1 bg-pink-900/20 rounded border border-pink-500/30 w-fit shadow-[0_0_10px_rgba(236,72,153,0.15)] cursor-default group">
-                                 <Heart size={8} className="md:w-3 md:h-3 text-pink-400 group-hover:scale-110 transition-transform animate-pulse" />
+                                 <Heart size={8} className="md:w-3 md:h-3 text-pink-400 group-hover:scale-110 transition-transform animate-[pulse_2s_ease-in-out_infinite]" />
                                  <span className="text-[6px] md:text-[8px] text-pink-400 font-bold uppercase tracking-widest">Safe Play</span>
                             </div>
                         </div>
@@ -693,7 +713,7 @@ const PlayView = ({ machine, island, onLeave }) => {
                 </div>
 
                 {/* --- MAIN GAME STAGE --- */}
-                <div className={`flex-1 flex items-center justify-center relative z-10 px-2 pt-28 pb-12 md:pb-6 will-change-transform ${isFreeze || winTier === 'EPIC' || isJackpot ? 'animate-shake-epic' : ''}`} style={{ perspective: isMobile ? '800px' : '1200px', transform: 'translateZ(0)' }}>
+                <div className="flex-1 flex items-center justify-center relative z-10 px-2 pt-28 pb-12 md:pb-6 will-change-transform" style={{ perspective: isMobile ? '800px' : '1200px', transform: 'translateZ(0)' }}>
                     
                     {/* DYNAMIC CHARACTER LAYER */}
                     {isCinematicReady && (
@@ -725,7 +745,7 @@ const PlayView = ({ machine, island, onLeave }) => {
                     <motion.div 
                         className="relative w-full max-w-[350px] md:max-w-[400px] aspect-[0.6] flex items-center justify-center z-10 will-change-transform"
                         animate={{ rotateX: mousePos.y, rotateY: mousePos.x }}
-                        transition={{ type: 'spring', stiffness: isMobile ? 80 : 100, damping: 25 }} // Heavier feel
+                        transition={{ type: 'spring', stiffness: isMobile ? 80 : 100, damping: 25 }}
                         style={{ transformStyle: 'preserve-3d', transform: 'translateZ(0)' }}
                     >
                         {/* Cabinet Graphic */}
@@ -774,7 +794,6 @@ const PlayView = ({ machine, island, onLeave }) => {
                                     <div className="absolute inset-0 pointer-events-none z-40">
                                         {winningLines.map(lineIdx => {
                                             if (lineIdx === 99) return null; 
-                                            // Precise line mapping for a 3x3 aspect-[16/9] grid
                                             const lineStyles = {
                                                 0: "top-[16.66%] left-0 w-full h-2 -translate-y-1/2",
                                                 1: "top-[50%] left-0 w-full h-2 -translate-y-1/2",
@@ -827,9 +846,9 @@ const PlayView = ({ machine, island, onLeave }) => {
                                         const showNavi = atSequence && atSequence.length > 0 && naviOrder >= atCurrentStep && isSpinning[idx];
 
                                         return (
-                                            <motion.button key={idx} whileTap={{ scale: 0.9 }} onClick={() => handleManualStop(idx)} disabled={!isSpinning[idx] || autoPlay} className={`relative w-10 h-10 md:w-12 md:h-12 rounded-full border-[3px] md:border-4 flex items-center justify-center shadow-xl z-50 ${isSpinning[idx] && !autoPlay ? 'bg-gradient-to-b from-red-500 to-red-700 border-red-400 text-white cursor-pointer shadow-[0_0_20px_rgba(239,68,68,0.5)] hover:brightness-110' : 'bg-black/40 border-gray-800 text-gray-700 cursor-default opacity-50'} ${isCurrentNavi && !autoPlay ? 'animate-pulse ring-4 ring-yellow-400 border-white' : ''} ${reelThud[idx] ? 'scale-75 border-0 bg-red-900' : 'scale-100'}`}>
+                                            <motion.button key={idx} whileTap={{ scale: 0.9 }} onClick={() => handleManualStop(idx)} disabled={!isSpinning[idx] || autoPlay} className={`relative w-10 h-10 md:w-12 md:h-12 rounded-full border-[3px] md:border-4 flex items-center justify-center shadow-xl z-50 ${isSpinning[idx] && !autoPlay ? 'bg-gradient-to-b from-red-500 to-red-700 border-red-400 text-white cursor-pointer shadow-[0_0_20px_rgba(239,68,68,0.5)] hover:brightness-110' : 'bg-black/40 border-gray-800 text-gray-700 cursor-default opacity-50'} ${isCurrentNavi && !autoPlay ? 'animate-[pulse_1s_ease-in-out_infinite] ring-4 ring-yellow-400 border-white' : ''} ${reelThud[idx] ? 'scale-75 border-0 bg-red-900' : 'scale-100'}`}>
                                                 <StopCircle size={isMobile ? 16 : 20} fill={isSpinning[idx] ? "currentColor" : "none"}/>
-                                                {showNavi && <div className={`absolute -top-8 md:-top-10 w-8 h-8 md:w-10 md:h-10 rounded-full border-2 font-black text-sm md:text-lg flex items-center justify-center z-50 pointer-events-none transition-all ${isCurrentNavi ? 'bg-yellow-400 text-black border-white animate-bounce shadow-[0_0_20px_gold] scale-125' : 'bg-black/90 text-yellow-500 border-yellow-500 opacity-80'}`}>{naviOrder + 1}</div>}
+                                                {showNavi && <div className={`absolute -top-8 md:-top-10 w-8 h-8 md:w-10 md:h-10 rounded-full border-2 font-black text-sm md:text-lg flex items-center justify-center z-50 pointer-events-none transition-all ${isCurrentNavi ? 'bg-yellow-400 text-black border-white animate-[bounce_1s_ease-in-out_infinite] shadow-[0_0_20px_gold] scale-125' : 'bg-black/90 text-yellow-500 border-yellow-500 opacity-80'}`}>{naviOrder + 1}</div>}
                                             </motion.button>
                                         );
                                     })}
@@ -873,7 +892,7 @@ const PlayView = ({ machine, island, onLeave }) => {
                     </div>
                 ))}
 
-                {/* --- PLAYER HUB (Replaces Quick Settings) --- */}
+                {/* --- PLAYER HUB --- */}
                 <AnimatePresence>
                     {showSettings && (
                         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[100] bg-black/80 backdrop-blur-sm flex items-center justify-center p-6 pointer-events-auto" onClick={() => setShowSettings(false)}>
@@ -949,7 +968,7 @@ const PlayView = ({ machine, island, onLeave }) => {
                         >
                             {isJackpot && <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/circuit-board.png')] opacity-30 mix-blend-color-dodge animate-pulse hue-rotate-90 pointer-events-none"></div>}
                             
-                            <div className="absolute top-10 text-white/50 text-xs tracking-widest uppercase animate-pulse flex items-center gap-2">
+                            <div className="absolute top-10 text-white/50 text-xs tracking-widest uppercase animate-[pulse_2s_ease-in-out_infinite] flex items-center gap-2">
                                 Tap to skip <span className="animate-bounce">↓</span>
                             </div>
 
