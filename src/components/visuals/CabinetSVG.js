@@ -1,10 +1,12 @@
 import React, { memo, useMemo } from 'react';
 import { motion } from 'framer-motion';
+import CharacterSVG from './CharacterSVG';
 
 const CabinetSVG = ({ 
     islandId, 
     visualState = 'FREE', 
     mode = 'hall', 
+    charId, 
     machine = {}, 
     stats = { laps: 0, wins: 0 }, 
     machineNumber = 0,
@@ -12,20 +14,19 @@ const CabinetSVG = ({
     currentJackpot = 0 
 }) => {
     
-    // --- STATE MACHINE & ANIMATION PROFILES ---
+    // --- STATE MACHINE & ANIMATION PROFILES (GLITCH REMOVED) ---
     const isBusy = visualState === 'BUSY';
     const isHot = visualState === 'JACKPOT_HOT';
     const isBroken = visualState === 'BROKEN';
     
-    // AAA State-Driven Animation Engine (Cleaned up: No more glitch filters)
+    // Smooth, deliberate physics. No more jitter or shake.
     const animProfile = {
-        FREE: { ledSpeed: '3s', lightAngle: 45, physics: { y: 0 } },
-        BUSY: { ledSpeed: '1s', lightAngle: 90, physics: { y: [-1, 1, -1], transition: { repeat: Infinity, duration: 2, ease: "easeInOut" } } },
-        JACKPOT_HOT: { ledSpeed: '0.3s', lightAngle: 180, physics: { y: [-2, 2, -1, 3, -2], rotate: [0, 0.5, -0.5, 0], transition: { repeat: Infinity, duration: 0.4 } } },
-        BROKEN: { ledSpeed: '0s', lightAngle: 0, physics: { y: 0, opacity: 0.6, filter: 'grayscale(0.8)' } }
-    }[visualState] || { ledSpeed: '3s', lightAngle: 45, physics: { y: 0 } };
+        FREE: { ledSpeed: '3s', physics: { y: 0 } },
+        BUSY: { ledSpeed: '1s', physics: { y: [-1, 1, -1], transition: { repeat: Infinity, duration: 3, ease: "easeInOut" } } },
+        JACKPOT_HOT: { ledSpeed: '0.3s', physics: { y: [-2, 0, -2], transition: { repeat: Infinity, duration: 1.5, ease: "easeInOut" } } },
+        BROKEN: { ledSpeed: '0s', physics: { y: 0, opacity: 0.6, filter: 'grayscale(0.5)' } }
+    }[visualState] || { ledSpeed: '3s', physics: { y: 0 } };
     
-    // STRICT V3 Enforcer
     const safeIslandId = Math.max(1, Math.min(5, parseInt(islandId) || 1));
     
     const displayLaps = machine?.total_laps || stats.laps || 0;
@@ -33,24 +34,23 @@ const CabinetSVG = ({
     const displayNum = machine?.machine_number || machineNumber || 0;
     const displaySerial = machine?.serial_number || serialNumber || `SRO-${safeIslandId}-${displayNum.toString().padStart(3,'0')}`;
 
-    // Get formatted Island Name
+    // --- CUSTOM UNICODE TYPOGRAPHY ---
     const getIslandName = () => {
         switch(safeIslandId) {
-            case 1: return 'KYOTO ZEN';
-            case 2: return 'OKINAWA TROPIC';
-            case 3: return 'OSAKA NEON';
-            case 4: return 'TOKYO CYBER';
-            case 5: return 'GINZA GOLD';
+            case 1: return '𝓚𝔂𝓸𝓽𝓸 𝓩𝓮𝓷';
+            case 2: return '𝙾𝚔𝚒𝚗𝚊𝚠𝚊 𝚃𝚛𝚘𝚙𝚒𝚌';
+            case 3: return 'ＯＳＡＫＡ ＮＥＯＮ';
+            case 4: return '𝕿𝖔𝖐𝖞𝖔 𝕮𝖞𝖇𝖊𝖗';
+            case 5: return '𝐆𝐢𝐧𝐳𝐚 𝐆𝐨𝐥𝐝';
             default: return 'UNKNOWN SECTOR';
         }
     };
 
-    // Generate deterministic full-width sparkline data for the Belly Screen (0 Latency Memoization)
+    // Smooth Sparkline Data (0 Latency)
     const bellySparklinePoints = useMemo(() => {
         let pts = [];
-        let y = 40; // Vertical center of the 80px high belly screen
+        let y = 40; 
         for(let x = -10; x <= 200; x += 5) {
-            // Advanced heartbeat waveform math
             y = Math.max(10, Math.min(70, 40 + (Math.sin((displayNum * x) + x) * 15) + (Math.cos(x * 3) * 5)));
             pts.push(`${x},${y.toFixed(1)}`);
         }
@@ -60,11 +60,11 @@ const CabinetSVG = ({
     const getAccentColor = () => {
         if (isHot) return '#FFD700';
         switch(safeIslandId) {
-            case 1: return '#FF0055'; // Kyoto Red
-            case 2: return '#00F3FF'; // Tropic/Neon Cyan
-            case 3: return '#FF4500'; // Osaka Magma
-            case 4: return '#A855F7'; // Tokyo Purple
-            case 5: return '#FFD700'; // Ginza Gold
+            case 1: return '#FF0055'; 
+            case 2: return '#00F3FF'; 
+            case 3: return '#FF4500'; 
+            case 4: return '#A855F7'; 
+            case 5: return '#FFD700'; 
             default: return '#FF0055';
         }
     };
@@ -74,11 +74,9 @@ const CabinetSVG = ({
     // --- 1. ADVANCED MATERIALS, SHADERS & TEXTURES ---
     const renderDefs = () => (
         <defs>
-            {/* Base Materials */}
             <linearGradient id="chrome" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stopColor="#222" /><stop offset="30%" stopColor="#aaa" /><stop offset="50%" stopColor="#fff" /><stop offset="70%" stopColor="#aaa" /><stop offset="100%" stopColor="#222" /></linearGradient>
             <linearGradient id="gold" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stopColor="#5c3a00" /><stop offset="40%" stopColor="#FFD700" /><stop offset="60%" stopColor="#FFFACD" /><stop offset="100%" stopColor="#B8860B" /></linearGradient>
             
-            {/* PBR Micro-surface Plastic with Noise Overlay for a realistic chassis */}
             <filter id="pbrNoise">
                 <feTurbulence type="fractalNoise" baseFrequency="0.9" numOctaves="2" result="noise" />
                 <feColorMatrix type="matrix" values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 0.1 0" />
@@ -87,11 +85,8 @@ const CabinetSVG = ({
             </filter>
 
             <linearGradient id="darkPlast" x1="0" y1="0" x2="1" y2="0"><stop offset="0%" stopColor="#050505"/><stop offset="50%" stopColor="#1a1a1a"/><stop offset="100%" stopColor="#050505"/></linearGradient>
-            
-            {/* Glass & Reflection */}
             <linearGradient id="glassGlare" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stopColor="rgba(255,255,255,0.02)" /><stop offset="45%" stopColor="rgba(255,255,255,0.2)" /><stop offset="50%" stopColor="rgba(255,255,255,0)" /><stop offset="100%" stopColor="rgba(255,255,255,0.05)" /></linearGradient>
 
-            {/* Hardware Meshes */}
             <pattern id="dotMatrix" width="4" height="4" patternUnits="userSpaceOnUse">
                 <rect width="4" height="4" fill="#050508"/><circle cx="2" cy="2" r="1.5" fill="#1a1a24" />
             </pattern>
@@ -102,14 +97,19 @@ const CabinetSVG = ({
                 <line x1="0" y1="0" x2="4" y2="0" stroke="rgba(0, 243, 255, 0.15)" strokeWidth="1" />
             </pattern>
 
-            {/* Flowing LED Chaser Gradient */}
+            {/* Typography Gradients for the specific Unicode Island Fonts */}
+            <linearGradient id="textGrad1" x1="0" y1="0" x2="1" y2="0"><stop offset="0%" stopColor="#FF0055"/><stop offset="100%" stopColor="#FFD700"/></linearGradient>
+            <linearGradient id="textGrad2" x1="0" y1="0" x2="1" y2="0"><stop offset="0%" stopColor="#00F3FF"/><stop offset="100%" stopColor="#0066FF"/></linearGradient>
+            <linearGradient id="textGrad3" x1="0" y1="0" x2="1" y2="0"><stop offset="0%" stopColor="#FF4500"/><stop offset="100%" stopColor="#FF0000"/></linearGradient>
+            <linearGradient id="textGrad4" x1="0" y1="0" x2="1" y2="0"><stop offset="0%" stopColor="#A855F7"/><stop offset="100%" stopColor="#FF00FF"/></linearGradient>
+            <linearGradient id="textGrad5" x1="0" y1="0" x2="1" y2="0"><stop offset="0%" stopColor="#FFFACD"/><stop offset="100%" stopColor="#FFD700"/></linearGradient>
+
             <linearGradient id="ledFlow" x1="0" y1="0" x2="0" y2="1">
                 <stop offset="0%" stopColor={accent} stopOpacity="0.2"/>
                 <stop offset="50%" stopColor="#FFF" stopOpacity="1"/>
                 <stop offset="100%" stopColor={accent} stopOpacity="0.2"/>
             </linearGradient>
 
-            {/* V3 ISLAND SKINS (STRICTLY 5) */}
             <linearGradient id="skin1" x1="0" y1="0" x2="1" y2="0"><stop offset="0%" stopColor="#300"/><stop offset="50%" stopColor="#800"/><stop offset="100%" stopColor="#300"/></linearGradient>
             <linearGradient id="skin2" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stopColor="#1a0033"/><stop offset="50%" stopColor="#001a33"/><stop offset="100%" stopColor="#1a0033"/></linearGradient>
             <linearGradient id="skin3" x1="0" y1="1" x2="0" y2="0"><stop offset="0%" stopColor="#111"/><stop offset="50%" stopColor="#400"/><stop offset="100%" stopColor="#820"/></linearGradient>
@@ -123,7 +123,7 @@ const CabinetSVG = ({
         </defs>
     );
 
-    // --- 2. THEMATIC JAPANESE MOTIFS ---
+    // --- 2. THEMATIC MOTIFS ---
     const renderJapaneseMotifs = () => {
         switch(safeIslandId) {
             case 1: 
@@ -173,7 +173,7 @@ const CabinetSVG = ({
         }
     };
 
-    // --- 3. CHASSIS GEOMETRY (With Flowing LEDs) ---
+    // --- 3. CHASSIS GEOMETRY ---
     const renderChassis = () => {
         let path, fill, stroke;
 
@@ -188,7 +188,6 @@ const CabinetSVG = ({
 
         return (
             <g>
-                {/* Apply PBR Noise to Chassis for realism */}
                 <path d={path} fill={fill} stroke={stroke} strokeWidth="3" filter="url(#pbrNoise)" />
                 
                 <g transform="translate(0, 50)">
@@ -198,7 +197,6 @@ const CabinetSVG = ({
                     <circle cx="225" cy="40" r="6" fill="#111" stroke={accent} strokeWidth="1" filter="url(#glowLight)" className={isHot ? 'animate-pulse' : ''} />
                 </g>
 
-                {/* FLOWING LED STRIPS */}
                 <g opacity={isBroken ? 0 : (isBusy || isHot ? 1 : 0.4)}>
                     <rect x="18" y="140" width="6" height="180" rx="3" fill="#111" stroke="#333" />
                     <rect x="20" y="145" width="2" height="170" fill={isBroken ? '#333' : 'url(#ledFlow)'} filter="url(#glowLight)">
@@ -217,7 +215,6 @@ const CabinetSVG = ({
     };
 
     // --- 4. MASSIVE GRAND JACKPOT TOPPER ---
-    // Cleaned out the LAPS and VOL to give GJP the spotlight
     const renderTopper = () => {
         const ledThemes = {
             1: { bg: '#3a0000', text: '#FFD700', glow: '#ff0000', border: '#FFD700' }, 
@@ -230,25 +227,21 @@ const CabinetSVG = ({
 
         return (
             <g transform="translate(60, -5)">
-                {/* Header Chrome Frame */}
                 <path d="M -5 5 L 125 5 L 120 40 L 0 40 Z" fill="#050505" stroke="url(#chrome)" strokeWidth="2" />
                 
-                {/* Inner LED Glass Screen */}
                 <path d="M 2 10 L 118 10 L 114 36 L 6 36 Z" fill={led.bg} stroke={led.border} strokeWidth="1" />
                 <path d="M 2 10 L 118 10 L 114 36 L 6 36 Z" fill="url(#dotMatrix)" opacity="0.4" pointerEvents="none" />
                 <path d="M 2 10 L 118 10 L 114 36 L 6 36 Z" fill="url(#glassGlare)" opacity="0.5" pointerEvents="none" />
 
-                {/* Massive, Centered Live GJP Digital Display */}
                 <g transform="translate(60, 20)" className={isHot ? "animate-pulse" : ""}>
-                    <text x="0" y="-3" textAnchor="middle" fill={led.text} fontSize="9" fontWeight="900" fontStyle="italic" letterSpacing="2" style={{ filter: `drop-shadow(0 0 5px ${led.glow})` }}>
+                    <text x="0" y="-2" textAnchor="middle" fill={led.text} fontSize="9" fontWeight="900" fontStyle="italic" letterSpacing="3" style={{ filter: `drop-shadow(0 0 5px ${led.glow})` }}>
                         GRAND JACKPOT
                     </text>
-                    <text x="0" y="13" textAnchor="middle" fill="#ffffff" fontSize="16" fontFamily="monospace" fontWeight="900" letterSpacing="1" style={{ filter: `drop-shadow(0 0 8px ${led.text})` }}>
+                    <text x="0" y="14" textAnchor="middle" fill="#ffffff" fontSize="18" fontFamily="monospace" fontWeight="900" letterSpacing="2" style={{ filter: `drop-shadow(0 0 8px ${led.text})` }}>
                         {currentJackpot > 0 ? Number(currentJackpot).toLocaleString() : 'PULLING...'}
                     </text>
                 </g>
 
-                {/* Warning / Status Beacons */}
                 <g transform="translate(100, -10)">
                     <path d="M 0 0 L 10 0 L 12 12 L -2 12 Z" fill={isBroken ? '#F00' : '#300'} filter={isBroken ? 'url(#glowLight)' : ''} className={isBroken ? "animate-pulse" : ""} />
                     <path d="M 12 0 L 22 0 L 24 12 L 10 12 Z" fill={isHot ? '#FFD700' : '#330'} filter={isHot ? 'url(#hotGlow)' : ''} className={isHot ? 'animate-pulse' : ''} />
@@ -257,7 +250,7 @@ const CabinetSVG = ({
         );
     };
 
-    // --- 5. SCREEN BEZEL (Reels Area) ---
+    // --- 5. SCREEN BEZEL ---
     const renderScreenArea = () => {
         return (
             <g transform="translate(0, 80)">
@@ -266,7 +259,6 @@ const CabinetSVG = ({
                 <path d="M 35 5 H 205 L 195 20 H 45 Z" fill="#111" opacity="0.8" />
                 <path d="M 35 5 L 45 20 V 110 L 40 125 Z" fill="#111" opacity="0.5" />
                 
-                {/* Physical Bezel Machine SYS ID (Moved from LCD) */}
                 <g transform="translate(160, 9)">
                     <rect width="35" height="10" fill="#000" opacity="0.8" rx="2" stroke={accent} strokeWidth="0.5" />
                     <text x="17.5" y="7.5" textAnchor="middle" fill={accent} fontSize="5" fontFamily="monospace" fontWeight="bold">
@@ -275,7 +267,7 @@ const CabinetSVG = ({
                 </g>
                 
                 {isHot && mode !== 'game' && (
-                    <g opacity="0.8" className="animate-pulse">
+                    <g opacity="0.8" className="animate-[pulse_1s_ease-in-out_infinite]">
                         <text x="120" y="75" textAnchor="middle" fill="#FF0000" fontSize="32" fontWeight="900" fontStyle="italic" stroke="#FFF" strokeWidth="2" filter="url(#hotGlow)">激熱</text>
                     </g>
                 )}
@@ -285,8 +277,8 @@ const CabinetSVG = ({
                         <rect x="45" y="10" width="33" height="110" fill="#222" opacity="0.5" rx="2" />
                         <rect x="83" y="10" width="34" height="110" fill="#222" opacity="0.5" rx="2" />
                         <rect x="122" y="10" width="33" height="110" fill="#222" opacity="0.5" rx="2" />
-                        <text x="120" y="70" textAnchor="middle" fill={isBusy ? '#00F3FF' : '#0F0'} fontWeight="bold" fontSize="16" letterSpacing="2" className={!isBusy ? 'animate-pulse' : ''} filter="url(#glowLight)">
-                            {isBroken ? 'ERROR' : (isBusy ? 'LINKED' : 'INSERT COIN')}
+                        <text x="120" y="70" textAnchor="middle" fill={isBusy ? '#00F3FF' : '#0F0'} fontWeight="bold" fontSize="16" letterSpacing="2" className={!isBusy ? 'animate-[pulse_3s_ease-in-out_infinite]' : ''} filter="url(#glowLight)">
+                            {isBroken ? 'OFFLINE' : (isBusy ? 'LINKED' : 'INSERT COIN')}
                         </text>
                     </g>
                 )}
@@ -303,7 +295,7 @@ const CabinetSVG = ({
              <g transform="translate(195, 10)">
                  <rect x="0" y="0" width="16" height="30" rx="3" fill="#111" stroke="url(#chrome)" strokeWidth="1.5" />
                  <rect x="6" y="5" width="4" height="20" rx="2" fill="#000" />
-                 <polygon points="8,35 4,40 12,40" fill="#0F0" filter="url(#glowLight)" className={isBusy ? 'opacity-50' : 'animate-pulse'} />
+                 <polygon points="8,35 4,40 12,40" fill="#0F0" filter="url(#glowLight)" className={isBusy ? 'opacity-50' : 'animate-[pulse_2s_ease-in-out_infinite]'} />
              </g>
 
              <g transform="translate(5, 15)">
@@ -315,7 +307,7 @@ const CabinetSVG = ({
              <g transform="translate(17, 45)">
                  <circle cx="0" cy="0" r="14" fill="#111" stroke="#333" />
                  <circle cx="0" cy="0" r="10" fill="url(#chrome)" />
-                 <circle cx="0" cy="-6" r="10" fill={isBusy ? "#00F3FF" : "red"} filter="url(#glowLight)" className={!isBusy ? "animate-pulse" : ""} />
+                 <circle cx="0" cy="-6" r="10" fill={isBusy ? "#00F3FF" : "red"} filter="url(#glowLight)" className={!isBusy ? "animate-[pulse_1s_ease-in-out_infinite]" : ""} />
              </g>
 
              {mode !== 'game' && (
@@ -331,12 +323,11 @@ const CabinetSVG = ({
         </g>
     );
 
-    // --- 7. AAA RENDER LAYERED LCD SCREEN (DEDICATED TELEMETRY DASHBOARD) ---
-    // Clean, Japanese Pachislo Style: Focus on Islands Name, Status, Laps and Volatility
+    // --- 7. AAA RENDER LAYERED LCD SCREEN ---
     const renderTelemetryDashboard = () => {
         let screenBg = '#0a0a14';
         if (isHot) screenBg = '#330000';
-        else if (isBroken) screenBg = '#050505'; // Darker error state without ugly glitch
+        else if (isBroken) screenBg = '#1a0505'; 
         else if (isBusy) screenBg = '#001a1a';
 
         return (
@@ -345,29 +336,27 @@ const CabinetSVG = ({
                  <path d="M 0 0 L 190 0 L 180 80 L 10 80 Z" fill="#050505" stroke="url(#chrome)" strokeWidth="3" filter="url(#pbrNoise)" />
                  
                  <g clipPath="url(#screenClipLocal)">
-                     {/* Layer 1: Backlight Base */}
                      <rect x="0" y="0" width="190" height="80" fill={screenBg} className="transition-all duration-1000" />
-                     
-                     {/* Layer 2: CRT Scanlines & Dot Matrix */}
                      <rect x="0" y="0" width="190" height="80" fill="url(#dotMatrix)" opacity="0.6" />
-                     <rect x="0" y="0" width="190" height="80" fill="url(#scanline)" className={isBroken ? 'opacity-20' : 'opacity-40'} />
+                     <rect x="0" y="0" width="190" height="80" fill="url(#scanline)" opacity="0.3" />
 
-                     {/* Layer 3: Circuit Chaos Background Waveform (Zero Latency) */}
+                     {/* Circuit Chaos Background Waveform (Zero Latency) */}
                      {!isBroken && (
-                         <g opacity="0.5">
-                             <polyline points={bellySparklinePoints} fill="none" stroke={accent} strokeWidth="1.5" filter="url(#glowLight)" />
+                         <g opacity="0.4">
+                             <polyline points={bellySparklinePoints} fill="none" stroke={accent} strokeWidth="1.5" filter="url(#glowLight)" className="transition-all duration-300" />
                          </g>
                      )}
 
-                     {/* Layer 4: Central Branding & Island Name */}
+                     {/* Central Branding & Unicode Island Name */}
                      {isBroken ? (
-                         <g opacity="0.8">
-                             <text x="95" y="45" textAnchor="middle" fill="#F00" fontSize="12" fontWeight="900" fontStyle="italic" letterSpacing="2">SYSTEM OFFLINE</text>
+                         <g opacity="0.9">
+                             <text x="95" y="45" textAnchor="middle" fill="#F00" fontSize="14" fontWeight="900" fontStyle="italic" letterSpacing="2">SYSTEM OFFLINE</text>
                          </g>
                      ) : (
                          <>
-                             <g transform="translate(95, 40)">
-                                 <text x="0" y="5" textAnchor="middle" fill="#FFF" fontSize="16" fontStyle="italic" fontWeight="900" letterSpacing="1" style={{ filter: `drop-shadow(0 0 5px ${accent})` }}>
+                             <g transform="translate(95, 45)">
+                                 {/* Custom Unicode Typography rendered using Gradient Maps */}
+                                 <text x="0" y="0" textAnchor="middle" fill={`url(#textGrad${safeIslandId})`} fontSize="18" style={{ filter: `drop-shadow(0 0 5px ${accent})` }}>
                                      {getIslandName()}
                                  </text>
                                  <text x="0" y="16" textAnchor="middle" fill={accent} fontSize="6" fontWeight="bold" letterSpacing="4" opacity="0.8">
@@ -377,12 +366,10 @@ const CabinetSVG = ({
                          </>
                      )}
                      
-                     {/* --- CYBER HUD OVERLAYS --- */}
-                     
                      {/* Top Left: Status */}
                      <g transform="translate(5, 5)">
                         <rect width="35" height="12" fill="rgba(0,0,0,0.8)" rx="2" stroke={accent} strokeWidth="0.5" />
-                        <circle cx="8" cy="6" r="2" fill={isBroken ? "#f00" : "#0f0"} className={isBroken ? "" : "animate-pulse"} />
+                        <circle cx="8" cy="6" r="2" fill={isBroken ? "#f00" : "#0f0"} className={isBroken ? "" : "animate-[pulse_1s_ease-in-out_infinite]"} />
                         <text x="14" y="8" fill={isBroken ? "#f00" : accent} fontSize="5" fontFamily="monospace" fontWeight="bold" style={{ filter: `drop-shadow(0 0 2px ${accent})` }}>
                             {isBroken ? 'ERR' : 'LIVE'}
                         </text>
@@ -413,12 +400,7 @@ const CabinetSVG = ({
                      </g>
                  </g>
                  
-                 {/* Layer 4: Glass Glare Reflection */}
                  <path d="M 0 0 L 190 0 L 180 80 L 10 80 Z" fill="url(#glassGlare)" opacity="0.6" pointerEvents="none" style={{mixBlendMode: 'screen'}} />
-                 
-                 {/* Serial Plate (Moved down off screen to pure bezel) */}
-                 <rect x="65" y="82" width="60" height="5" fill="#ccc" stroke="#333" rx="1" />
-                 <text x="95" y="86.5" textAnchor="middle" fill="#000" fontSize="4" fontFamily="monospace" fontWeight="bold">{displaySerial}</text>
             </g>
         );
     };
@@ -437,7 +419,7 @@ const CabinetSVG = ({
                     <ellipse cx="30" cy="2" rx="8" ry="3" fill="url(#gold)" stroke="#B8860B" strokeWidth="0.5" />
                     <ellipse cx="50" cy="5" rx="8" ry="3" fill="url(#gold)" stroke="#B8860B" strokeWidth="0.5" />
                     <ellipse cx="45" cy="1" rx="8" ry="3" fill="url(#gold)" stroke="#B8860B" strokeWidth="0.5" />
-                    {isHot && <circle cx="35" cy="4" r="15" fill="#FFD700" opacity="0.3" filter="url(#glowLight)" className="animate-pulse" />}
+                    {isHot && <circle cx="35" cy="4" r="15" fill="#FFD700" opacity="0.3" filter="url(#glowLight)" className="animate-[pulse_1s_ease-in-out_infinite]" />}
                  </g>
              )}
         </g>
@@ -458,7 +440,6 @@ const CabinetSVG = ({
             {renderTopper()}
             {renderScreenArea()} 
             {renderButtonDeck()}
-            {/* INJECTED NEW DEDICATED TELEMETRY DASHBOARD */}
             {renderTelemetryDashboard()}
             {renderCoinTray()}
             
