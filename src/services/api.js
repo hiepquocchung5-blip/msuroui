@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 // CHANGED: Point to the Next.js relative proxy to hide the real backend from the network tab
-const API_URL = '/api/proxy';
+const API_URL = '/api';
 
 const api = axios.create({
     baseURL: API_URL,

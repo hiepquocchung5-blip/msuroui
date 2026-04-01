@@ -9,7 +9,7 @@ export default async function handler(req, res) {
     const { path } = req.query;
     
  
-    const backendUrl = process.env.PHP_BACKEND_URL || 'http://localhost:8005/api';
+    const backendUrl = process.env.PHP_BACKEND_URL ;
     const targetUrl = `${backendUrl}/${path.join('/')}.php`;
 
     try {
