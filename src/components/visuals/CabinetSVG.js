@@ -17,12 +17,12 @@ const CabinetSVG = ({
     const isHot = visualState === 'JACKPOT_HOT';
     const isBroken = visualState === 'BROKEN';
     
-    // AAA State-Driven Animation Engine
+    // AAA State-Driven Animation Engine (Cleaned up: No more glitch filters)
     const animProfile = {
         FREE: { ledSpeed: '3s', lightAngle: 45, physics: { y: 0 } },
         BUSY: { ledSpeed: '1s', lightAngle: 90, physics: { y: [-1, 1, -1], transition: { repeat: Infinity, duration: 2, ease: "easeInOut" } } },
         JACKPOT_HOT: { ledSpeed: '0.3s', lightAngle: 180, physics: { y: [-2, 2, -1, 3, -2], rotate: [0, 0.5, -0.5, 0], transition: { repeat: Infinity, duration: 0.4 } } },
-        BROKEN: { ledSpeed: '0s', lightAngle: 0, physics: { y: 0, opacity: 0.8, filter: 'grayscale(0.5)' } }
+        BROKEN: { ledSpeed: '0s', lightAngle: 0, physics: { y: 0, opacity: 0.6, filter: 'grayscale(0.8)' } }
     }[visualState] || { ledSpeed: '3s', lightAngle: 45, physics: { y: 0 } };
     
     // STRICT V3 Enforcer
@@ -32,6 +32,18 @@ const CabinetSVG = ({
     const displayWins = machine?.total_payout || stats.wins || 0;
     const displayNum = machine?.machine_number || machineNumber || 0;
     const displaySerial = machine?.serial_number || serialNumber || `SRO-${safeIslandId}-${displayNum.toString().padStart(3,'0')}`;
+
+    // Get formatted Island Name
+    const getIslandName = () => {
+        switch(safeIslandId) {
+            case 1: return 'KYOTO ZEN';
+            case 2: return 'OKINAWA TROPIC';
+            case 3: return 'OSAKA NEON';
+            case 4: return 'TOKYO CYBER';
+            case 5: return 'GINZA GOLD';
+            default: return 'UNKNOWN SECTOR';
+        }
+    };
 
     // Generate deterministic full-width sparkline data for the Belly Screen (0 Latency Memoization)
     const bellySparklinePoints = useMemo(() => {
@@ -66,7 +78,7 @@ const CabinetSVG = ({
             <linearGradient id="chrome" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stopColor="#222" /><stop offset="30%" stopColor="#aaa" /><stop offset="50%" stopColor="#fff" /><stop offset="70%" stopColor="#aaa" /><stop offset="100%" stopColor="#222" /></linearGradient>
             <linearGradient id="gold" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stopColor="#5c3a00" /><stop offset="40%" stopColor="#FFD700" /><stop offset="60%" stopColor="#FFFACD" /><stop offset="100%" stopColor="#B8860B" /></linearGradient>
             
-            {/* PBR Micro-surface Plastic with Noise Overlay */}
+            {/* PBR Micro-surface Plastic with Noise Overlay for a realistic chassis */}
             <filter id="pbrNoise">
                 <feTurbulence type="fractalNoise" baseFrequency="0.9" numOctaves="2" result="noise" />
                 <feColorMatrix type="matrix" values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 0.1 0" />
@@ -89,16 +101,6 @@ const CabinetSVG = ({
             <pattern id="scanline" width="4" height="4" patternUnits="userSpaceOnUse">
                 <line x1="0" y1="0" x2="4" y2="0" stroke="rgba(0, 243, 255, 0.15)" strokeWidth="1" />
             </pattern>
-
-            {/* RGB Glitch Filter for BROKEN state */}
-            <filter id="glitchRGB">
-                <feOffset dx="3" dy="0" in="SourceGraphic" result="red-shift"/>
-                <feOffset dx="-3" dy="0" in="SourceGraphic" result="blue-shift"/>
-                <feColorMatrix in="red-shift" type="matrix" values="1 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 0.8 0" result="red"/>
-                <feColorMatrix in="blue-shift" type="matrix" values="0 0 0 0 0  0 0 0 0 0  0 0 1 0 0  0 0 0 0.8 0" result="blue"/>
-                <feBlend mode="screen" in="red" in2="blue" result="rgb-glitch"/>
-                <feBlend mode="screen" in="rgb-glitch" in2="SourceGraphic"/>
-            </filter>
 
             {/* Flowing LED Chaser Gradient */}
             <linearGradient id="ledFlow" x1="0" y1="0" x2="0" y2="1">
@@ -186,7 +188,7 @@ const CabinetSVG = ({
 
         return (
             <g>
-                {/* Apply PBR Noise to Chassis */}
+                {/* Apply PBR Noise to Chassis for realism */}
                 <path d={path} fill={fill} stroke={stroke} strokeWidth="3" filter="url(#pbrNoise)" />
                 
                 <g transform="translate(0, 50)">
@@ -215,6 +217,7 @@ const CabinetSVG = ({
     };
 
     // --- 4. MASSIVE GRAND JACKPOT TOPPER ---
+    // Cleaned out the LAPS and VOL to give GJP the spotlight
     const renderTopper = () => {
         const ledThemes = {
             1: { bg: '#3a0000', text: '#FFD700', glow: '#ff0000', border: '#FFD700' }, 
@@ -235,12 +238,12 @@ const CabinetSVG = ({
                 <path d="M 2 10 L 118 10 L 114 36 L 6 36 Z" fill="url(#dotMatrix)" opacity="0.4" pointerEvents="none" />
                 <path d="M 2 10 L 118 10 L 114 36 L 6 36 Z" fill="url(#glassGlare)" opacity="0.5" pointerEvents="none" />
 
-                {/* Dominated Live GJP Digital Display (Now full width without clutter) */}
+                {/* Massive, Centered Live GJP Digital Display */}
                 <g transform="translate(60, 20)" className={isHot ? "animate-pulse" : ""}>
-                    <text x="0" y="-2" textAnchor="middle" fill={led.text} fontSize="9" fontWeight="900" fontStyle="italic" letterSpacing="3" style={{ filter: `drop-shadow(0 0 5px ${led.glow})` }}>
+                    <text x="0" y="-3" textAnchor="middle" fill={led.text} fontSize="9" fontWeight="900" fontStyle="italic" letterSpacing="2" style={{ filter: `drop-shadow(0 0 5px ${led.glow})` }}>
                         GRAND JACKPOT
                     </text>
-                    <text x="0" y="14" textAnchor="middle" fill="#ffffff" fontSize="18" fontFamily="monospace" fontWeight="900" letterSpacing="2" style={{ filter: `drop-shadow(0 0 8px ${led.text})` }}>
+                    <text x="0" y="13" textAnchor="middle" fill="#ffffff" fontSize="16" fontFamily="monospace" fontWeight="900" letterSpacing="1" style={{ filter: `drop-shadow(0 0 8px ${led.text})` }}>
                         {currentJackpot > 0 ? Number(currentJackpot).toLocaleString() : 'PULLING...'}
                     </text>
                 </g>
@@ -254,7 +257,7 @@ const CabinetSVG = ({
         );
     };
 
-    // --- 5. SCREEN BEZEL ---
+    // --- 5. SCREEN BEZEL (Reels Area) ---
     const renderScreenArea = () => {
         return (
             <g transform="translate(0, 80)">
@@ -262,6 +265,14 @@ const CabinetSVG = ({
                 <path d="M 35 5 H 205 L 200 125 H 40 Z" fill="#000" />
                 <path d="M 35 5 H 205 L 195 20 H 45 Z" fill="#111" opacity="0.8" />
                 <path d="M 35 5 L 45 20 V 110 L 40 125 Z" fill="#111" opacity="0.5" />
+                
+                {/* Physical Bezel Machine SYS ID (Moved from LCD) */}
+                <g transform="translate(160, 9)">
+                    <rect width="35" height="10" fill="#000" opacity="0.8" rx="2" stroke={accent} strokeWidth="0.5" />
+                    <text x="17.5" y="7.5" textAnchor="middle" fill={accent} fontSize="5" fontFamily="monospace" fontWeight="bold">
+                        SYS: 0{safeIslandId}
+                    </text>
+                </g>
                 
                 {isHot && mode !== 'game' && (
                     <g opacity="0.8" className="animate-pulse">
@@ -321,10 +332,11 @@ const CabinetSVG = ({
     );
 
     // --- 7. AAA RENDER LAYERED LCD SCREEN (DEDICATED TELEMETRY DASHBOARD) ---
+    // Clean, Japanese Pachislo Style: Focus on Islands Name, Status, Laps and Volatility
     const renderTelemetryDashboard = () => {
         let screenBg = '#0a0a14';
         if (isHot) screenBg = '#330000';
-        else if (isBroken) screenBg = '#000033';
+        else if (isBroken) screenBg = '#050505'; // Darker error state without ugly glitch
         else if (isBusy) screenBg = '#001a1a';
 
         return (
@@ -338,31 +350,31 @@ const CabinetSVG = ({
                      
                      {/* Layer 2: CRT Scanlines & Dot Matrix */}
                      <rect x="0" y="0" width="190" height="80" fill="url(#dotMatrix)" opacity="0.6" />
-                     <rect x="0" y="0" width="190" height="80" fill="url(#scanline)" className={isBroken ? 'animate-[pulse_0.1s_infinite]' : 'opacity-40'} />
+                     <rect x="0" y="0" width="190" height="80" fill="url(#scanline)" className={isBroken ? 'opacity-20' : 'opacity-40'} />
 
-                     {/* Layer 3: Circuit Chaos Background Waveform (VOL Sparkline) */}
-                     <g opacity="0.6">
-                         <polyline points={bellySparklinePoints} fill="none" stroke={accent} strokeWidth="1.5" filter="url(#glowLight)" className="transition-all duration-300" />
-                     </g>
-
-                     {/* Layer 4: Central Cyber Rings & Volatility */}
-                     <g transform="translate(95, 45)" opacity={isBroken ? 0 : 1}>
-                         <circle cx="0" cy="0" r="25" fill="rgba(0,0,0,0.5)" stroke={accent} strokeWidth="0.5" />
-                         <circle cx="0" cy="0" r="30" fill="none" stroke="url(#ledFlow)" strokeWidth="1" strokeDasharray="10 5" className="animate-[spin_10s_linear_infinite]" />
-                         <circle cx="0" cy="0" r="35" fill="none" stroke={accent} strokeWidth="0.5" strokeDasharray="2 8" className="animate-[spin_15s_linear_infinite_reverse]" />
-                         
-                         <text x="0" y="-3" textAnchor="middle" fill={accent} fontSize="5" fontWeight="bold" letterSpacing="1">VOLATILITY</text>
-                         <text x="0" y="5" textAnchor="middle" fill="#FFF" fontSize="7" fontFamily="monospace" fontWeight="900" style={{ filter: `drop-shadow(0 0 2px #fff)` }}>{visualState}</text>
-                     </g>
-
-                     {/* Signal Loss Overlay */}
-                     {isBroken && (
-                         <g opacity="0.6" filter="url(#glitchRGB)" className="animate-[pulse_0.2s_linear_infinite]">
-                             <rect x="0" y="20" width="190" height="5" fill="#FFF" />
-                             <rect x="0" y="40" width="190" height="2" fill="#FFF" />
-                             <rect x="0" y="60" width="190" height="10" fill="#FFF" />
-                             <text x="95" y="45" textAnchor="middle" fill="#F00" fontSize="12" fontWeight="900" fontStyle="italic" letterSpacing="2">SYSTEM FAILURE</text>
+                     {/* Layer 3: Circuit Chaos Background Waveform (Zero Latency) */}
+                     {!isBroken && (
+                         <g opacity="0.5">
+                             <polyline points={bellySparklinePoints} fill="none" stroke={accent} strokeWidth="1.5" filter="url(#glowLight)" />
                          </g>
+                     )}
+
+                     {/* Layer 4: Central Branding & Island Name */}
+                     {isBroken ? (
+                         <g opacity="0.8">
+                             <text x="95" y="45" textAnchor="middle" fill="#F00" fontSize="12" fontWeight="900" fontStyle="italic" letterSpacing="2">SYSTEM OFFLINE</text>
+                         </g>
+                     ) : (
+                         <>
+                             <g transform="translate(95, 40)">
+                                 <text x="0" y="5" textAnchor="middle" fill="#FFF" fontSize="16" fontStyle="italic" fontWeight="900" letterSpacing="1" style={{ filter: `drop-shadow(0 0 5px ${accent})` }}>
+                                     {getIslandName()}
+                                 </text>
+                                 <text x="0" y="16" textAnchor="middle" fill={accent} fontSize="6" fontWeight="bold" letterSpacing="4" opacity="0.8">
+                                     SECTOR ENGAGED
+                                 </text>
+                             </g>
+                         </>
                      )}
                      
                      {/* --- CYBER HUD OVERLAYS --- */}
@@ -376,31 +388,27 @@ const CabinetSVG = ({
                         </text>
                      </g>
 
-                     {/* Top Right: System ID */}
+                     {/* Top Right: Win Counter */}
                      <g transform="translate(145, 5)">
-                        <rect width="40" height="12" fill="rgba(0,0,0,0.8)" rx="2" stroke={accent} strokeWidth="0.5" />
-                        <text x="20" y="8" textAnchor="middle" fill={accent} fontSize="5" fontFamily="monospace" fontWeight="bold">
-                            SYS: 0{safeIslandId}
-                        </text>
-                     </g>
-
-                     {/* Left: Laps Odometer */}
-                     <g transform="translate(5, 30)">
-                         <rect width="45" height="35" fill="rgba(0,0,0,0.85)" rx="4" stroke={accent} strokeWidth="0.5" />
-                         <text x="22.5" y="12" textAnchor="middle" fill={accent} fontSize="6" fontFamily="monospace" fontWeight="bold">LAPS</text>
-                         <path d="M 5 16 L 40 16" stroke="rgba(255,255,255,0.2)" strokeWidth="0.5" />
-                         <text x="22.5" y="28" textAnchor="middle" fill="#FFF" fontSize="11" fontFamily="monospace" fontWeight="900" style={{ filter: `drop-shadow(0 0 2px #fff)` }}>
-                             {displayLaps.toString().padStart(4, '0')}
+                         <rect width="40" height="12" fill="rgba(0,0,0,0.8)" rx="2" stroke={accent} strokeWidth="0.5" />
+                         <text x="20" y="8.5" textAnchor="middle" fill="#FFF" fontSize="6" fontFamily="monospace" fontWeight="900" style={{ filter: `drop-shadow(0 0 2px #fff)` }}>
+                             W: {(displayWins / 1000).toFixed(1)}k
                          </text>
                      </g>
 
-                     {/* Right: Win Counter */}
-                     <g transform="translate(140, 30)">
-                         <rect width="45" height="35" fill="rgba(0,0,0,0.85)" rx="4" stroke={accent} strokeWidth="0.5" />
-                         <text x="22.5" y="12" textAnchor="middle" fill={accent} fontSize="6" fontFamily="monospace" fontWeight="bold">TOTAL WINS</text>
-                         <path d="M 5 16 L 40 16" stroke="rgba(255,255,255,0.2)" strokeWidth="0.5" />
-                         <text x="22.5" y="28" textAnchor="middle" fill="#FFF" fontSize="10" fontFamily="monospace" fontWeight="900" style={{ filter: `drop-shadow(0 0 2px #fff)` }}>
-                             {(displayWins / 1000).toFixed(1)}k
+                     {/* Bottom Left: Volatility Readout */}
+                     <g transform="translate(5, 63)">
+                         <rect width="45" height="12" fill="rgba(0,0,0,0.8)" rx="2" stroke={accent} strokeWidth="0.5" />
+                         <text x="22.5" y="8.5" textAnchor="middle" fill={accent} fontSize="5" fontFamily="monospace" fontWeight="bold">
+                             VOL: {visualState}
+                         </text>
+                     </g>
+
+                     {/* Bottom Right: Laps Odometer */}
+                     <g transform="translate(140, 63)">
+                         <rect width="45" height="12" fill="rgba(0,0,0,0.8)" rx="2" stroke={accent} strokeWidth="0.5" />
+                         <text x="22.5" y="8.5" textAnchor="middle" fill="#FFF" fontSize="6" fontFamily="monospace" fontWeight="900" style={{ filter: `drop-shadow(0 0 2px #fff)` }}>
+                             LAPS: {displayLaps.toString().padStart(4, '0')}
                          </text>
                      </g>
                  </g>
