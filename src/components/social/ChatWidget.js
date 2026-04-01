@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { MessageSquare, X, Send, User, Trophy, Zap, Pin, AlertCircle, Info, Loader2 } from 'lucide-react';
+import { MessageSquare, X, Send, User, Trophy, Pin, Info, Loader2 } from 'lucide-react';
 import api from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
 import CharacterSVG from '../visuals/CharacterSVG';
@@ -26,22 +26,25 @@ export default function ChatWidget() {
     const eventSourceRef = useRef(null);
     const reconnectTimeoutRef = useRef(null);
 
-    // --- REAL-TIME SSE CONNECTION ---
+    // --- REAL-TIME SSE CONNECTION (SECURED) ---
     useEffect(() => {
-        // We wrap the connection logic in a function so we can call it recursively for reconnections
         const connectSSE = () => {
             if (eventSourceRef.current) {
                 eventSourceRef.current.close();
             }
 
-            const baseUrl = process.env.NEXT_PUBLIC_API_URL;
-            // Dynamically inject the latest ID so we don't fetch duplicate history on reconnect
-            const streamUrl = `${baseUrl}/social/chat_stream.php?last_id=${lastIdRef.current}`;
+            // Grab the token manually since EventSource ignores Axios interceptors
+            const token = typeof window !== 'undefined' ? localStorage.getItem('suro_token') : '';
+            if (!token) return; // Prevent unauthenticated ghost connections
+
+            const baseUrl = process.env.NEXT_PUBLIC_API_URL || '/api';
+            
+            // Pass the token in the query string so PHP can authenticate the stream
+            const streamUrl = `${baseUrl}/social/chat_stream.php?last_id=${lastIdRef.current}&token=${token}`;
             
             const sse = new EventSource(streamUrl);
             eventSourceRef.current = sse;
 
-            // Handle standard data messages
             sse.onmessage = (event) => {
                 try {
                     const res = JSON.parse(event.data);
@@ -53,10 +56,8 @@ export default function ChatWidget() {
                             const uniqueNew = newMsgs.filter(m => !existingIds.has(m.id));
                             
                             if (uniqueNew.length > 0) {
-                                // Update the last known ID
                                 lastIdRef.current = Math.max(...uniqueNew.map(m => m.id));
                                 
-                                // Update unread count if the chat is closed
                                 setIsOpen(currentIsOpen => {
                                     if (!currentIsOpen) {
                                         setUnreadCount(prevCount => prevCount + uniqueNew.length);
@@ -75,7 +76,6 @@ export default function ChatWidget() {
                 }
             };
 
-            // Listen for custom server-sent errors (like DB drops from our PHP script)
             sse.addEventListener('error', (event) => {
                 if (event.data) {
                     try {
@@ -85,12 +85,10 @@ export default function ChatWidget() {
                 }
             });
 
-            // Handle actual connection drops
             sse.onerror = () => {
-                console.warn("SSE Connection lost. Reconnecting with latest ID...");
-                sse.close(); // Prevent native auto-reconnect which uses the old URL
+                console.warn("SSE Connection lost. Reconnecting...");
+                sse.close(); 
                 
-                // Exponential backoff or standard 3-second delay
                 clearTimeout(reconnectTimeoutRef.current);
                 reconnectTimeoutRef.current = setTimeout(() => {
                     connectSSE();
@@ -98,19 +96,19 @@ export default function ChatWidget() {
             };
         };
 
-        // Start initial connection
-        connectSSE();
+        if (user) {
+            connectSSE();
+        }
 
-        // Cleanup on unmount
         return () => {
             clearTimeout(reconnectTimeoutRef.current);
             if (eventSourceRef.current) {
                 eventSourceRef.current.close();
             }
         };
-    }, []); // Empty dependency array: run once and keep alive in background
+    }, [user]);
 
-    // Auto-scroll logic
+    // --- SCROLL MANAGEMENT ---
     useEffect(() => {
         if (isOpen) {
             setUnreadCount(0);
@@ -137,7 +135,6 @@ export default function ChatWidget() {
 
         try {
             await api.post('/social/chat.php', { message: msgToSend });
-            // The SSE stream will automatically pick up the new message and push it
         } catch (e) {
             console.error("Chat Error", e);
         } finally {
@@ -158,34 +155,33 @@ export default function ChatWidget() {
             <button 
                 onClick={() => setIsOpen(!isOpen)} 
                 className={`fixed bottom-24 right-4 z-50 w-12 h-12 rounded-full flex items-center justify-center text-white shadow-lg active:scale-95 transition-all duration-300
-                ${isOpen ? 'bg-gray-800 rotate-90' : 'bg-black/80 backdrop-blur-md border border-white/20 hover:bg-black shadow-purple-500/20'}`}
+                ${isOpen ? 'bg-gray-800 rotate-90' : 'bg-black/80 backdrop-blur-md border border-cyan-500/20 hover:bg-black shadow-[0_0_15px_rgba(0,243,255,0.2)]'}`}
             >
                 {isOpen ? <X size={20} /> : <MessageSquare size={20} />}
                 
-                {/* Unread Badge */}
                 {!isOpen && unreadCount > 0 && (
                     <div className="absolute -top-1 -right-1 bg-red-600 text-white text-[9px] font-black w-5 h-5 flex items-center justify-center rounded-full border-2 border-black animate-bounce">
                         {unreadCount > 9 ? '9+' : unreadCount}
                     </div>
                 )}
                 
-                {/* Online Indicator */}
                 {!isOpen && unreadCount === 0 && (
-                    <div className="absolute top-0 right-0 w-3 h-3 bg-green-500 rounded-full border border-black animate-pulse"></div>
+                    <div className="absolute top-0 right-0 w-3 h-3 bg-cyan-500 rounded-full border border-black shadow-[0_0_10px_rgba(0,243,255,0.8)] animate-pulse"></div>
                 )}
             </button>
 
-            {/* CHAT WINDOW */}
-            <div className={`fixed bottom-40 right-4 w-80 h-96 bg-black/95 backdrop-blur-xl border border-white/10 rounded-2xl shadow-2xl z-50 flex flex-col transition-all duration-300 origin-bottom-right ${isOpen ? 'scale-100 opacity-100' : 'scale-0 opacity-0 pointer-events-none translate-y-10'}`}>
+            {/* CHAT WINDOW (CIRCUIT CHAOS THEME) */}
+            <div className={`fixed bottom-40 right-4 w-80 h-96 bg-[#050505]/95 backdrop-blur-xl border border-cyan-500/20 rounded-2xl shadow-[0_10px_40px_rgba(0,0,0,0.8)] z-50 flex flex-col transition-all duration-300 origin-bottom-right ${isOpen ? 'scale-100 opacity-100' : 'scale-0 opacity-0 pointer-events-none translate-y-10'}`}>
                 
                 {/* Header */}
-                <div className="p-3 border-b border-white/10 flex justify-between items-center bg-white/5 rounded-t-2xl">
-                    <div className="flex items-center gap-2">
-                        <MessageSquare size={16} className="text-purple-400"/>
-                        <span className="text-xs font-bold text-white tracking-widest">GLOBAL CHAT</span>
+                <div className="p-3 border-b border-cyan-500/20 flex justify-between items-center bg-gradient-to-r from-cyan-900/20 to-transparent rounded-t-2xl relative overflow-hidden">
+                    <div className="absolute inset-0 bg-[linear-gradient(rgba(0,243,255,0.05)_1px,transparent_1px),linear-gradient(90deg,rgba(0,243,255,0.05)_1px,transparent_1px)] bg-[size:10px_10px] pointer-events-none" />
+                    <div className="flex items-center gap-2 relative z-10">
+                        <MessageSquare size={16} className="text-cyan-400"/>
+                        <span className="text-xs font-black text-white tracking-widest italic">GLOBAL COMM</span>
                     </div>
-                    <div className="flex items-center gap-1 text-[10px] text-green-400">
-                        <span className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse"></span> LIVE
+                    <div className="flex items-center gap-1 text-[10px] text-cyan-400 font-mono relative z-10">
+                        <span className="w-1.5 h-1.5 bg-cyan-500 rounded-full shadow-[0_0_5px_rgba(0,243,255,1)] animate-pulse"></span> LIVE
                     </div>
                 </div>
 
@@ -193,11 +189,11 @@ export default function ChatWidget() {
                 <div 
                     ref={scrollRef} 
                     onScroll={handleScroll}
-                    className="flex-1 overflow-y-auto p-3 space-y-3 hide-scrollbar"
+                    className="flex-1 overflow-y-auto p-3 space-y-3 hide-scrollbar relative"
                 >
                     {messages.length === 0 && (
-                        <div className="text-center text-gray-600 text-xs mt-10">
-                            No messages yet. Say hi! 👋
+                        <div className="text-center text-cyan-500/50 text-xs mt-10 font-mono uppercase tracking-widest">
+                            Establishing secure connection...
                         </div>
                     )}
 
@@ -210,8 +206,8 @@ export default function ChatWidget() {
                         if (isPinned) {
                             return (
                                 <div key={msg.id} className="sticky top-0 z-10 bg-yellow-900/90 border-l-4 border-yellow-500 p-2 rounded-r-lg text-xs shadow-md mb-2 backdrop-blur-sm">
-                                    <div className="flex items-center gap-1 text-yellow-400 font-bold mb-0.5 text-[10px]">
-                                        <Pin size={10} fill="currentColor" /> PINNED ANNOUNCEMENT
+                                    <div className="flex items-center gap-1 text-yellow-400 font-black mb-0.5 text-[10px] uppercase tracking-widest">
+                                        <Pin size={10} fill="currentColor" /> System Broadcast
                                     </div>
                                     <div className="text-white font-medium">{msg.message}</div>
                                 </div>
@@ -221,7 +217,7 @@ export default function ChatWidget() {
                         if (isSystem) {
                             return (
                                 <div key={msg.id} className="text-center my-2 opacity-80">
-                                    <span className="text-[9px] bg-white/10 px-2 py-1 rounded-full text-gray-400 flex items-center justify-center gap-1 mx-auto w-fit">
+                                    <span className="text-[9px] bg-cyan-900/20 border border-cyan-500/30 px-2 py-1 rounded-full text-cyan-400 font-mono flex items-center justify-center gap-1 mx-auto w-fit">
                                         <Info size={8} /> {msg.message}
                                     </span>
                                 </div>
@@ -231,8 +227,8 @@ export default function ChatWidget() {
                         if (isWin) {
                             return (
                                 <div key={msg.id} className="bg-gradient-to-r from-yellow-900/50 to-transparent p-2 rounded-lg border-l-2 border-yellow-500 text-xs animate-in slide-in-from-left-2">
-                                    <div className="flex items-center gap-2 text-yellow-400 font-bold mb-1">
-                                        <Trophy size={12}/> BIG WINNER!
+                                    <div className="flex items-center gap-2 text-yellow-400 font-black mb-1 uppercase tracking-widest">
+                                        <Trophy size={12}/> High Roller
                                     </div>
                                     <div className="text-white">{msg.message}</div>
                                 </div>
@@ -242,7 +238,7 @@ export default function ChatWidget() {
                         return (
                             <div key={msg.id} className={`flex gap-2 ${isMe ? 'flex-row-reverse' : ''} animate-in fade-in duration-300`}>
                                 {/* Avatar */}
-                                <div className="w-6 h-6 rounded-full bg-gray-800 overflow-hidden border border-white/10 flex-shrink-0 relative mt-1">
+                                <div className={`w-6 h-6 rounded-full overflow-hidden border flex-shrink-0 relative mt-1 bg-black ${isMe ? 'border-cyan-500/50 shadow-[0_0_10px_rgba(0,243,255,0.3)]' : 'border-white/10'}`}>
                                     {msg.active_pet_id ? (
                                         <div className="scale-125 pt-1"><CharacterSVG type={msg.active_pet_id} mood="idle" /></div>
                                     ) : (
@@ -252,10 +248,10 @@ export default function ChatWidget() {
                                 
                                 {/* Bubble */}
                                 <div className={`flex flex-col max-w-[75%]`}>
-                                    {!isMe && <div className={`text-[9px] ml-1 mb-0.5 ${msg.level > 10 ? 'text-yellow-500 font-bold' : 'text-gray-400'}`}>{msg.username}</div>}
-                                    <div className={`p-2 rounded-2xl text-xs break-words relative group ${isMe ? 'bg-purple-600 text-white rounded-tr-none' : 'bg-white/10 text-gray-200 rounded-tl-none'}`}>
+                                    {!isMe && <div className={`text-[9px] ml-1 mb-0.5 font-bold uppercase tracking-widest ${msg.level > 10 ? 'text-yellow-500' : 'text-gray-500'}`}>{msg.username}</div>}
+                                    <div className={`p-2 rounded-2xl text-xs break-words relative group ${isMe ? 'bg-gradient-to-br from-cyan-600 to-blue-600 text-white rounded-tr-none' : 'bg-white/5 border border-white/5 text-gray-200 rounded-tl-none'}`}>
                                         {msg.message}
-                                        <div className={`text-[8px] opacity-50 text-right mt-1 ${isMe ? 'text-purple-200' : 'text-gray-500'}`}>
+                                        <div className={`text-[8px] opacity-50 text-right mt-1 font-mono ${isMe ? 'text-cyan-200' : 'text-gray-500'}`}>
                                             {formatTime(msg.created_at)}
                                         </div>
                                     </div>
@@ -265,23 +261,23 @@ export default function ChatWidget() {
                     })}
                 </div>
 
-                {/* Input */}
-                <form onSubmit={handleSend} className="p-3 border-t border-white/10 flex gap-2 bg-black/50 rounded-b-2xl">
+                {/* Input Area */}
+                <form onSubmit={handleSend} className="p-3 border-t border-cyan-500/20 flex gap-2 bg-black/50 rounded-b-2xl">
                     <input 
                         type="text" 
                         value={inputText}
                         onChange={(e) => setInputText(e.target.value)}
-                        placeholder={user.is_muted ? "You are muted." : "Say something..."}
-                        className="flex-1 bg-white/5 border border-white/10 rounded-full px-3 py-2 text-xs text-white outline-none focus:border-purple-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                        placeholder={user.is_muted ? "COMMUNICATIONS DISABLED." : "Transmit message..."}
+                        className="flex-1 bg-black/50 border border-white/10 rounded-full px-4 py-2 text-xs text-white font-mono outline-none focus:border-cyan-500 focus:shadow-[0_0_10px_rgba(0,243,255,0.2)] transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                         maxLength={200}
                         disabled={isSending || user.is_muted == 1}
                     />
                     <button 
                         type="submit" 
                         disabled={!inputText.trim() || isSending || user.is_muted == 1}
-                        className="w-8 h-8 bg-purple-600 rounded-full flex items-center justify-center text-white shadow-lg active:scale-95 disabled:opacity-50 disabled:grayscale transition-all hover:bg-purple-500"
+                        className="w-8 h-8 bg-cyan-500 rounded-full flex items-center justify-center text-black shadow-[0_0_10px_rgba(0,243,255,0.5)] active:scale-95 disabled:opacity-50 disabled:grayscale transition-all hover:bg-cyan-400"
                     >
-                        {isSending ? <Loader2 size={14} className="animate-spin"/> : <Send size={14} />}
+                        {isSending ? <Loader2 size={14} className="animate-spin text-black"/> : <Send size={14} className="ml-0.5" />}
                     </button>
                 </form>
 
