@@ -1,5 +1,5 @@
 import React, { createContext, useState, useEffect, useContext } from 'react';
-import { auth, user as userApi } from '../services/api';
+import api, { auth, user as userApi } from '../services/api';
 import { useRouter } from 'next/router';
 
 const AuthContext = createContext();
@@ -12,19 +12,19 @@ export const AuthProvider = ({ children }) => {
     // 1. Check Session on Load (Strict API Verification)
     useEffect(() => {
         const initAuth = async () => {
-            const token = localStorage.getItem('suro_token');
+            const token = typeof window !== 'undefined' ? localStorage.getItem('suro_token') : null;
             if (token) {
                 try {
                     // Call Backend to verify token validity & get fresh data
                     const res = await userApi.getProfile();
                     
-                    if (res.data.status === 'success') {
+                    if (res.data?.status === 'success') {
                         setUser(res.data.user);
                     } else {
                         throw new Error("Invalid Session");
                     }
                 } catch (error) {
-                    console.error("Session Validation Failed:", error);
+                    console.error("[AuthContext] Session Validation Failed:", error);
                     
                     // REAL WORLD BEHAVIOR:
                     // If the token is invalid or the server rejects it, 
@@ -39,46 +39,56 @@ export const AuthProvider = ({ children }) => {
             setLoading(false);
         };
         initAuth();
-    }, []);
+    }, [router]);
 
-    // 2. Login Action (Strict)
+    // 2. Login Action (Strict Proxy Handling)
     const login = async (phone, password) => {
         try {
-            const res = await auth.login(phone, password);
-            if (res.data.status === 'success') {
+            // Direct API call to ensure payload isn't stripped by abstract service layers
+            const res = await api.post('/auth/login.php', { phone, password });
+            
+            if (res.data?.status === 'success') {
                 localStorage.setItem('suro_token', res.data.token);
                 setUser(res.data.user);
-                router.push('/lobby');
+                // Note: Router push is handled by the component invoking this to prevent race conditions
                 return { success: true };
             }
-            return { success: false, error: 'Unexpected response format' };
+            return { success: false, error: res.data?.error || 'Unexpected response format' };
         } catch (error) {
+            console.error("[AuthContext] Login Proxy Error:", error);
             // Return exact error from server (e.g., "Invalid credentials", "Account banned")
-            const errorMsg = error.response?.data?.error || 'Connection to server failed';
+            const errorMsg = error.response?.data?.error || 'Connection to authentication server failed';
             return { success: false, error: errorMsg };
         }
     };
 
-    // 3. Register Action (Strict)
-    const register = async (phone, password) => {
+    // 3. Register Action (With Dynamic Affiliate Injection)
+    const register = async (phone, password, refCode = '') => {
         try {
-            const res = await auth.register(phone, password);
-            if (res.data.status === 'success') {
+            // Dynamically construct payload so PHP isset() doesn't fail on null values
+            const payload = { phone, password };
+            if (refCode && refCode.trim() !== '') {
+                payload.ref_code = refCode.trim();
+            }
+
+            const res = await api.post('/auth/register.php', payload);
+            
+            if (res.data?.status === 'success') {
                 localStorage.setItem('suro_token', res.data.token);
                 setUser(res.data.user);
-                router.push('/lobby');
                 return { success: true };
             }
-            return { success: false, error: 'Unexpected response format' };
+            return { success: false, error: res.data?.error || 'Unexpected response format' };
         } catch (error) {
-            const errorMsg = error.response?.data?.error || 'Registration failed';
+            console.error("[AuthContext] Register Proxy Error:", error);
+            const errorMsg = error.response?.data?.error || 'Registration sequence failed';
             return { success: false, error: errorMsg };
         }
     };
 
     // 4. Logout Action
     const logout = () => {
-        auth.logout(); // Optional: Call API to revoke token on server side
+        try { auth.logout(); } catch (e) { console.warn("Logout ping failed"); }
         localStorage.removeItem('suro_token');
         setUser(null);
         router.push('/');
@@ -91,7 +101,7 @@ export const AuthProvider = ({ children }) => {
 
     const updateActivePet = (charId) => {
         setUser(prev => prev ? ({ ...prev, active_pet_id: charId }) : null);
-    }
+    };
 
     return (
         <AuthContext.Provider value={{ user, login, register, logout, updateBalance, updateActivePet, loading }}>
