@@ -1,12 +1,10 @@
 import React, { memo, useMemo } from 'react';
 import { motion } from 'framer-motion';
-import CharacterSVG from './CharacterSVG';
 
 const CabinetSVG = ({ 
     islandId, 
     visualState = 'FREE', 
     mode = 'hall', 
-    charId, 
     machine = {}, 
     stats = { laps: 0, wins: 0 }, 
     machineNumber = 0,
@@ -27,6 +25,7 @@ const CabinetSVG = ({
         BROKEN: { ledSpeed: '0s', physics: { y: 0, opacity: 0.6, filter: 'grayscale(0.5)' } }
     }[visualState] || { ledSpeed: '3s', physics: { y: 0 } };
     
+    // STRICT V3 Enforcer
     const safeIslandId = Math.max(1, Math.min(5, parseInt(islandId) || 1));
     
     const displayLaps = machine?.total_laps || stats.laps || 0;
@@ -74,6 +73,7 @@ const CabinetSVG = ({
     // --- 1. ADVANCED MATERIALS, SHADERS & TEXTURES ---
     const renderDefs = () => (
         <defs>
+            {/* Base Materials */}
             <linearGradient id="chrome" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stopColor="#222" /><stop offset="30%" stopColor="#aaa" /><stop offset="50%" stopColor="#fff" /><stop offset="70%" stopColor="#aaa" /><stop offset="100%" stopColor="#222" /></linearGradient>
             <linearGradient id="gold" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stopColor="#5c3a00" /><stop offset="40%" stopColor="#FFD700" /><stop offset="60%" stopColor="#FFFACD" /><stop offset="100%" stopColor="#B8860B" /></linearGradient>
             
@@ -87,14 +87,17 @@ const CabinetSVG = ({
             <linearGradient id="darkPlast" x1="0" y1="0" x2="1" y2="0"><stop offset="0%" stopColor="#050505"/><stop offset="50%" stopColor="#1a1a1a"/><stop offset="100%" stopColor="#050505"/></linearGradient>
             <linearGradient id="glassGlare" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stopColor="rgba(255,255,255,0.02)" /><stop offset="45%" stopColor="rgba(255,255,255,0.2)" /><stop offset="50%" stopColor="rgba(255,255,255,0)" /><stop offset="100%" stopColor="rgba(255,255,255,0.05)" /></linearGradient>
 
-            <pattern id="dotMatrix" width="4" height="4" patternUnits="userSpaceOnUse">
-                <rect width="4" height="4" fill="#050508"/><circle cx="2" cy="2" r="1.5" fill="#1a1a24" />
+            {/* Traditional Japanese Wagara Pattern (Seigaiha / overlapping circles) replacing Cyber Matrix */}
+            <pattern id="wagara" width="20" height="20" patternUnits="userSpaceOnUse" patternTransform="scale(0.6)">
+                <circle cx="10" cy="10" r="10" fill="none" stroke="rgba(255,255,255,0.04)" strokeWidth="1"/>
+                <circle cx="0" cy="0" r="10" fill="none" stroke="rgba(255,255,255,0.04)" strokeWidth="1"/>
+                <circle cx="20" cy="0" r="10" fill="none" stroke="rgba(255,255,255,0.04)" strokeWidth="1"/>
+                <circle cx="0" cy="20" r="10" fill="none" stroke="rgba(255,255,255,0.04)" strokeWidth="1"/>
+                <circle cx="20" cy="20" r="10" fill="none" stroke="rgba(255,255,255,0.04)" strokeWidth="1"/>
             </pattern>
+            
             <pattern id="speakerMesh" width="3" height="3" patternUnits="userSpaceOnUse">
                 <rect width="3" height="3" fill="#000"/><circle cx="1.5" cy="1.5" r="1" fill="#222" />
-            </pattern>
-            <pattern id="scanline" width="4" height="4" patternUnits="userSpaceOnUse">
-                <line x1="0" y1="0" x2="4" y2="0" stroke="rgba(0, 243, 255, 0.15)" strokeWidth="1" />
             </pattern>
 
             {/* Typography Gradients for the specific Unicode Island Fonts */}
@@ -138,8 +141,8 @@ const CabinetSVG = ({
             case 2: 
                 return (
                     <g className="theme-motifs">
-                        <rect x="15" y="60" width="10" height="280" fill="url(#dotMatrix)" opacity="0.8" />
-                        <rect x="215" y="60" width="10" height="280" fill="url(#dotMatrix)" opacity="0.8" />
+                        <rect x="15" y="60" width="10" height="280" fill="url(#wagara)" opacity="0.8" />
+                        <rect x="215" y="60" width="10" height="280" fill="url(#wagara)" opacity="0.8" />
                         <path d="M 20 100 L 30 110 L 30 150 M 220 100 L 210 110 L 210 150" fill="none" stroke="#00f3ff" strokeWidth="2" opacity="0.5" filter="url(#glowLight)"/>
                     </g>
                 );
@@ -230,14 +233,16 @@ const CabinetSVG = ({
                 <path d="M -5 5 L 125 5 L 120 40 L 0 40 Z" fill="#050505" stroke="url(#chrome)" strokeWidth="2" />
                 
                 <path d="M 2 10 L 118 10 L 114 36 L 6 36 Z" fill={led.bg} stroke={led.border} strokeWidth="1" />
-                <path d="M 2 10 L 118 10 L 114 36 L 6 36 Z" fill="url(#dotMatrix)" opacity="0.4" pointerEvents="none" />
+                <path d="M 2 10 L 118 10 L 114 36 L 6 36 Z" fill="url(#wagara)" opacity="0.4" pointerEvents="none" />
                 <path d="M 2 10 L 118 10 L 114 36 L 6 36 Z" fill="url(#glassGlare)" opacity="0.5" pointerEvents="none" />
 
                 <g transform="translate(60, 20)" className={isHot ? "animate-pulse" : ""}>
-                    <text x="0" y="-2" textAnchor="middle" fill={led.text} fontSize="9" fontWeight="900" fontStyle="italic" letterSpacing="3" style={{ filter: `drop-shadow(0 0 5px ${led.glow})` }}>
+                    {/* Updated font weight to 800 per request */}
+                    <text x="0" y="-2" textAnchor="middle" fill={led.text} fontSize="9" fontWeight="800" fontStyle="italic" letterSpacing="3" style={{ filter: `drop-shadow(0 0 5px ${led.glow})` }}>
                         GRAND JACKPOT
                     </text>
-                    <text x="0" y="14" textAnchor="middle" fill="#ffffff" fontSize="18" fontFamily="monospace" fontWeight="900" letterSpacing="2" style={{ filter: `drop-shadow(0 0 8px ${led.text})` }}>
+                    {/* Updated font weight to 720 and size to 10 per request */}
+                    <text x="0" y="12" textAnchor="middle" fill="#ffffff" fontSize="10" fontFamily="monospace" style={{ fontWeight: 720, filter: `drop-shadow(0 0 8px ${led.text})`, letterSpacing: "1px" }}>
                         {currentJackpot > 0 ? Number(currentJackpot).toLocaleString() : 'PULLING...'}
                     </text>
                 </g>
@@ -250,7 +255,7 @@ const CabinetSVG = ({
         );
     };
 
-    // --- 5. SCREEN BEZEL ---
+    // --- 5. REALISTIC SCREEN BEZEL ---
     const renderScreenArea = () => {
         return (
             <g transform="translate(0, 80)">
@@ -271,17 +276,8 @@ const CabinetSVG = ({
                         <text x="120" y="75" textAnchor="middle" fill="#FF0000" fontSize="32" fontWeight="900" fontStyle="italic" stroke="#FFF" strokeWidth="2" filter="url(#hotGlow)">激熱</text>
                     </g>
                 )}
-
-                {mode !== 'game' && (
-                    <g opacity={isHot ? 0.3 : 1}>
-                        <rect x="45" y="10" width="33" height="110" fill="#222" opacity="0.5" rx="2" />
-                        <rect x="83" y="10" width="34" height="110" fill="#222" opacity="0.5" rx="2" />
-                        <rect x="122" y="10" width="33" height="110" fill="#222" opacity="0.5" rx="2" />
-                        <text x="120" y="70" textAnchor="middle" fill={isBusy ? '#00F3FF' : '#0F0'} fontWeight="bold" fontSize="16" letterSpacing="2" className={!isBusy ? 'animate-[pulse_3s_ease-in-out_infinite]' : ''} filter="url(#glowLight)">
-                            {isBroken ? 'OFFLINE' : (isBusy ? 'LINKED' : 'INSERT COIN')}
-                        </text>
-                    </g>
-                )}
+                
+                {/* Clean, dark realistic resting state when not playing */}
             </g>
         );
     };
@@ -337,8 +333,7 @@ const CabinetSVG = ({
                  
                  <g clipPath="url(#screenClipLocal)">
                      <rect x="0" y="0" width="190" height="80" fill={screenBg} className="transition-all duration-1000" />
-                     <rect x="0" y="0" width="190" height="80" fill="url(#dotMatrix)" opacity="0.6" />
-                     <rect x="0" y="0" width="190" height="80" fill="url(#scanline)" opacity="0.3" />
+                     <rect x="0" y="0" width="190" height="80" fill="url(#wagara)" opacity="0.5" />
 
                      {/* Circuit Chaos Background Waveform (Zero Latency) */}
                      {!isBroken && (
@@ -355,7 +350,6 @@ const CabinetSVG = ({
                      ) : (
                          <>
                              <g transform="translate(95, 45)">
-                                 {/* Custom Unicode Typography rendered using Gradient Maps */}
                                  <text x="0" y="0" textAnchor="middle" fill={`url(#textGrad${safeIslandId})`} fontSize="18" style={{ filter: `drop-shadow(0 0 5px ${accent})` }}>
                                      {getIslandName()}
                                  </text>
@@ -365,6 +359,8 @@ const CabinetSVG = ({
                              </g>
                          </>
                      )}
+                     
+                     {/* --- CYBER HUD OVERLAYS --- */}
                      
                      {/* Top Left: Status */}
                      <g transform="translate(5, 5)">
@@ -391,10 +387,10 @@ const CabinetSVG = ({
                          </text>
                      </g>
 
-                     {/* Bottom Right: Laps Odometer */}
+                     {/* Bottom Right: Laps Odometer (Moved Left by 2px) */}
                      <g transform="translate(140, 63)">
                          <rect width="45" height="12" fill="rgba(0,0,0,0.8)" rx="2" stroke={accent} strokeWidth="0.5" />
-                         <text x="22.5" y="8.5" textAnchor="middle" fill="#FFF" fontSize="6" fontFamily="monospace" fontWeight="900" style={{ filter: `drop-shadow(0 0 2px #fff)` }}>
+                         <text x="20.5" y="8.5" textAnchor="middle" fill="#FFF" fontSize="6" fontFamily="monospace" fontWeight="900" style={{ filter: `drop-shadow(0 0 2px #fff)` }}>
                              LAPS: {displayLaps.toString().padStart(4, '0')}
                          </text>
                      </g>
