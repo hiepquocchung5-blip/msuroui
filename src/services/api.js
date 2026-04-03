@@ -7,7 +7,7 @@ import axios from 'axios';
 // ============================================================================
 
 // Fallback directly to the live domain if the .env variable is missing.
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://apisuro.online/api'; 
+const API_URL = process.env.NEXT_PUBLIC_API_URL ; 
 
 const api = axios.create({
     baseURL: API_URL,
