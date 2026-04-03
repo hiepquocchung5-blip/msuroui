@@ -1,12 +1,13 @@
 import axios from 'axios';
 
 // ============================================================================
-// SUROPARA V6.9.5 - PRODUCTION API SERVICE (PAYLOAD FIX)
-// Architecture: Nginx Reverse Proxy (BFF Pattern)
-// Payload Security: Explicit .php extensions prevent server redirect body drops.
+// SUROPARA V6.9.6 - DIRECT API SERVICE
+// Architecture: Direct Backend Connection (Proxy Bypassed)
+// Fixes: "400 Header Too Large" caused by Next.js cookie bloat.
 // ============================================================================
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || '/api'; 
+// Fallback directly to the live domain if the .env variable is missing.
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://apisuro.online/api'; 
 
 const api = axios.create({
     baseURL: API_URL,
