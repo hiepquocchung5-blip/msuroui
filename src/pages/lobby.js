@@ -74,7 +74,7 @@ const SakuraParticles = () => (
     </div>
 );
 
-// --- FRAMER MOTION CAROUSEL CONFIG ---
+// --- FRAMER MOTION CAROUSEL CONFIG (Optimized for Zero Glitch) ---
 const swipeConfidenceThreshold = 10000;
 const swipePower = (offset, velocity) => Math.abs(offset) * velocity;
 
@@ -82,28 +82,31 @@ const slideVariants = {
     enter: (direction) => ({
         x: direction > 0 ? '100%' : '-100%',
         opacity: 0,
-        scale: 0.8,
-        rotateY: direction > 0 ? 45 : -45,
+        scale: 0.9,
+        rotateY: direction > 0 ? 30 : -30,
+        zIndex: 0
     }),
     center: {
+        zIndex: 1,
         x: 0,
         opacity: 1,
         scale: 1,
         rotateY: 0,
         transition: {
-            x: { type: "spring", stiffness: 300, damping: 30 },
-            opacity: { duration: 0.2 },
+            x: { type: "spring", stiffness: 250, damping: 25 },
+            opacity: { duration: 0.3 },
             rotateY: { duration: 0.4, ease: "easeOut" }
         }
     },
     exit: (direction) => ({
+        zIndex: 0,
         x: direction < 0 ? '100%' : '-100%',
         opacity: 0,
-        scale: 0.8,
-        rotateY: direction < 0 ? 45 : -45,
+        scale: 0.9,
+        rotateY: direction < 0 ? 30 : -30,
         transition: {
-            x: { type: "spring", stiffness: 300, damping: 30 },
-            opacity: { duration: 0.2 }
+            x: { type: "spring", stiffness: 250, damping: 25 },
+            opacity: { duration: 0.3 }
         }
     })
 };
@@ -117,14 +120,14 @@ export default function Lobby() {
     // Core State
     const [islands, setIslands] = useState([]);
     const [currentIndex, setCurrentIndex] = useState(0);
-    const [direction, setDirection] = useState(0); // 1 for next, -1 for prev
+    const [direction, setDirection] = useState(0);
     const [unreadCount, setUnreadCount] = useState(0);
     
     // App Initialization / Caching State
     const [isAppLoading, setIsAppLoading] = useState(true);
     const [cacheProgress, setCacheProgress] = useState(0);
     
-    // Live Ticker State
+    // Live Ticker State (Now tied to Island)
     const [jackpotAmount, setJackpotAmount] = useState(3000000);
     const [activePlayers, setActivePlayers] = useState(0);
     const prevJackpotRef = useRef(null);
@@ -175,8 +178,8 @@ export default function Lobby() {
         const initLobby = async () => {
             if (isAppLoading) return;
             try {
-                const [resIslands, resNotifs, resMissions, resProfile, resTicker] = await Promise.all([
-                    game.getIslands(), userApi.getNotifications(), api.get('/game/missions.php'), userApi.getProfile(), game.getTicker()
+                const [resIslands, resNotifs, resMissions, resProfile] = await Promise.all([
+                    game.getIslands(), userApi.getNotifications(), api.get('/game/missions.php'), userApi.getProfile()
                 ]);
 
                 if (resIslands.data.status === 'success') {
@@ -211,13 +214,6 @@ export default function Lobby() {
                     setUserStats({ totalDeposited: deposited });
                 }
 
-                if (resTicker.data.status === 'success') {
-                    setJackpotAmount(resTicker.data.jackpot_amount || 3000000);
-                    prevJackpotRef.current = resTicker.data.jackpot_amount || 3000000;
-                    setActivePlayers(Math.floor(Math.random() * 500) + 1200);
-                    setServerPing(true);
-                }
-
                 if (user) {
                     const lastClaimStr = localStorage.getItem(`daily_claim_time_${user.id}`);
                     const now = new Date().getTime();
@@ -234,26 +230,22 @@ export default function Lobby() {
         if (!loading && user) initLobby();
     }, [loading, user, addToast, isAppLoading]);
 
-    // --- BACKGROUND IMAGE PRE-FETCHER ---
-    useEffect(() => {
-        if (islands.length > 0) {
-            const nextIdx = (currentIndex + 1) % islands.length;
-            const prevIdx = (currentIndex - 1 + islands.length) % islands.length;
-            const preloadIds = [islands[nextIdx].id, islands[prevIdx].id];
-            preloadIds.forEach(id => {
-                const img = new Image();
-                img.src = `/assets/backgrounds/bg_${id}.jpg`;
-            });
-        }
-    }, [currentIndex, islands]);
+    // --- ISLAND-SPECIFIC JACKPOT POLLING ---
+    const selectedIsland = islands.length > 0 ? islands[currentIndex] : null;
 
-    // --- LIVE JACKPOT POLLING ---
     useEffect(() => {
-        const interval = setInterval(async () => {
+        const fetchIslandJackpot = async () => {
+            if (!selectedIsland?.id) return;
             try {
-                const res = await game.getTicker();
-                if (res.data.status === 'success' && res.data.jackpot_amount) {
-                    const newJp = res.data.jackpot_amount;
+                const res = await game.getTicker(selectedIsland.id); // Assuming getTicker accepts island_id param
+                // Or standard api.get:
+                // const res = await api.get(`/game/ticker.php?island_id=${selectedIsland.id}`);
+                
+                // For safety, let's use direct axios call to ensure island_id passes
+                const response = await api.get(`/game/ticker.php?island_id=${selectedIsland.id}`);
+                
+                if (response.data.status === 'success' && response.data.jackpot_amount) {
+                    const newJp = response.data.jackpot_amount;
                     if (prevJackpotRef.current !== null && (newJp - prevJackpotRef.current > 500000)) {
                         playSound('bigwin');
                         setShowJpCelebration(true);
@@ -263,11 +255,15 @@ export default function Lobby() {
                     setJackpotAmount(newJp);
                     prevJackpotRef.current = newJp;
                     setServerPing(true);
+                    setActivePlayers(Math.floor(Math.random() * 500) + 1200); // Simulate players
                 }
             } catch (e) { setServerPing(false); }
-        }, 10000);
+        };
+
+        fetchIslandJackpot(); // Fetch immediately on island switch
+        const interval = setInterval(fetchIslandJackpot, 10000); // Poll every 10s
         return () => clearInterval(interval);
-    }, [playSound, triggerCoinShower]);
+    }, [selectedIsland?.id, playSound, triggerCoinShower]);
 
     // --- CAROUSEL NAVIGATION WITH SWIPE ---
     const paginate = useCallback((newDirection) => {
@@ -283,8 +279,6 @@ export default function Lobby() {
         else if (swipe > swipeConfidenceThreshold) paginate(-1);
     };
 
-    const selectedIsland = islands.length > 0 ? islands[currentIndex] : null;
-    
     const checkProgressionUnlock = useCallback((island) => {
         if (!island) return false;
         if (island.id === 1 || island.reqDeposit === 0) return true; 
@@ -340,30 +334,35 @@ export default function Lobby() {
     let jpContainerClass = "w-full max-w-sm sm:max-w-md rounded-2xl p-3 sm:p-4 flex flex-col items-center text-center backdrop-blur-md relative overflow-hidden transition-all duration-1000 ";
     if (isJPCritical) jpContainerClass += "bg-gradient-to-b from-purple-900/60 to-black/90 border-2 border-purple-500 shadow-[0_0_50px_rgba(168,85,247,0.6)] animate-[shake-epic_0.5s_infinite]";
     else if (isJPHot) jpContainerClass += "bg-gradient-to-b from-red-900/60 to-black/90 border border-red-500 shadow-[0_0_40px_rgba(239,68,68,0.5)] animate-pulse";
-    else jpContainerClass += "bg-gradient-to-b from-yellow-900/30 to-black/80 border border-yellow-500/40 shadow-[0_0_30px_rgba(234,179,8,0.2)]";
+    else jpContainerClass += `bg-gradient-to-b ${selectedIsland?.theme?.bgGrad || 'from-yellow-900/30'} to-black/80 border ${selectedIsland?.theme?.border || 'border-yellow-500/40'} shadow-lg`;
 
     return (
         <div className="min-h-[100dvh] bg-[#050505] pb-[90px] relative overflow-hidden flex flex-col selection:bg-cyan-500 selection:text-black font-sans">
             <style dangerouslySetInnerHTML={{__html: `@keyframes shake-epic { 0%, 100% { transform: translate(0,0) rotate(0deg); } 10%, 30%, 50%, 70%, 90% { transform: translate(-2px, 2px) rotate(-1deg); } 20%, 40%, 60%, 80% { transform: translate(2px, -2px) rotate(1deg); } }`}} />
 
+            {/* Global Overlays */}
             <SakuraParticles />
+            <div className="absolute inset-0 bg-[linear-gradient(rgba(0,243,255,0.03)_1px,transparent_1px),linear-gradient(90deg,rgba(0,243,255,0.03)_1px,transparent_1px)] bg-[size:40px_40px] pointer-events-none z-0" />
+            
             <div className="relative z-50"><GlobalTicker /></div>
             <ActiveEvents />
 
-            {/* --- RESPONSIVE HEADER --- */}
+            {/* --- TRI-LINGUAL RESPONSIVE HEADER --- */}
             <div className="pt-3 px-4 sm:px-6 pb-2 flex flex-col sm:flex-row justify-between items-start sm:items-center z-20 bg-gradient-to-b from-black/95 to-transparent backdrop-blur-sm sticky top-8 gap-3 sm:gap-0 border-b border-white/5">
                 <div className="flex flex-col gap-1 w-full sm:w-auto">
                     <div className="flex items-center justify-between sm:justify-start gap-3">
                          <motion.div 
                             whileHover={{ scale: 1.05 }}
-                            className="flex items-center gap-2 cursor-pointer"
+                            className="flex items-center gap-2 cursor-pointer group"
                             onClick={() => router.push('/profile')}
                          >
-                             <div className="bg-gradient-to-br from-cyan-500 to-purple-600 w-8 h-8 rounded-full flex items-center justify-center border-2 border-white shadow-[0_0_10px_rgba(6,182,212,0.6)]">
+                             <div className="bg-gradient-to-br from-cyan-500 to-purple-600 w-8 h-8 rounded-full flex items-center justify-center border-2 border-white shadow-[0_0_10px_rgba(6,182,212,0.6)] group-hover:shadow-[0_0_15px_cyan] transition-all">
                                  <span className="text-white font-black text-xs italic">{user.level}</span>
                              </div>
                              <div className="flex flex-col">
-                                 <span className="text-[9px] text-cyan-300 font-bold tracking-widest uppercase">Rank / 段位</span>
+                                 <span className="text-[9px] text-cyan-300 font-bold tracking-widest uppercase flex items-center gap-1">
+                                    Rank <span className="opacity-50">|</span> အဆင့် <span className="opacity-50">|</span> 段位
+                                 </span>
                                  <div className="w-24 sm:w-32 h-1.5 bg-gray-900 rounded-full overflow-hidden border border-white/10 mt-0.5 shadow-inner">
                                     <div className="h-full bg-gradient-to-r from-cyan-400 to-purple-500 transition-all duration-1000 shadow-[0_0_5px_cyan]" style={{width: `${user.progress_percent || 0}%`}}></div>
                                 </div>
@@ -378,10 +377,16 @@ export default function Lobby() {
 
                 <div className="flex items-center justify-between w-full sm:w-auto gap-2 sm:gap-4">
                     <div className="flex gap-2">
-                        <button onClick={() => { playSound('click'); router.push('/missions'); }} className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-blue-950/50 border border-blue-500/40 flex items-center justify-center text-blue-400 hover:bg-blue-500/30 active:scale-95 transition-all shadow-[0_0_15px_rgba(59,130,246,0.2)]"><ClipboardList size={16} className="sm:w-5 sm:h-5" /></button>
-                        <button onClick={() => { playSound('click'); setShowDailyBonus(true); }} className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-green-950/50 border border-green-500/40 flex items-center justify-center text-green-400 hover:bg-green-500/30 active:scale-95 transition-all shadow-[0_0_15px_rgba(34,197,94,0.2)]"><Calendar size={16} className="sm:w-5 sm:h-5" /></button>
-                        <button onClick={() => { playSound('click'); router.push('/tournaments'); }} className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-yellow-950/50 border border-yellow-500/40 flex items-center justify-center text-yellow-400 hover:bg-yellow-500/30 active:scale-95 transition-all shadow-[0_0_15px_rgba(234,179,8,0.2)]"><Trophy size={16} className="sm:w-5 sm:h-5" /></button>
-                        <button onClick={() => { playSound('click'); router.push('/notifications'); }} className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-white/5 border border-white/20 flex items-center justify-center text-white hover:bg-white/10 active:scale-95 transition-all relative">
+                        <button onClick={() => { playSound('click'); router.push('/missions'); }} className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-blue-950/50 border border-blue-500/40 flex items-center justify-center text-blue-400 hover:bg-blue-500/30 active:scale-95 transition-all shadow-[0_0_15px_rgba(59,130,246,0.2)]" title="တာဝန်များ / Missions">
+                            <ClipboardList size={16} className="sm:w-5 sm:h-5" />
+                        </button>
+                        <button onClick={() => { playSound('click'); setShowDailyBonus(true); }} className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-green-950/50 border border-green-500/40 flex items-center justify-center text-green-400 hover:bg-green-500/30 active:scale-95 transition-all shadow-[0_0_15px_rgba(34,197,94,0.2)]" title="နေ့စဉ် ဘောနပ်စ် / Daily">
+                            <Calendar size={16} className="sm:w-5 sm:h-5" />
+                        </button>
+                        <button onClick={() => { playSound('click'); router.push('/tournaments'); }} className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-yellow-950/50 border border-yellow-500/40 flex items-center justify-center text-yellow-400 hover:bg-yellow-500/30 active:scale-95 transition-all shadow-[0_0_15px_rgba(234,179,8,0.2)]" title="ပြိုင်ပွဲများ / Events">
+                            <Trophy size={16} className="sm:w-5 sm:h-5" />
+                        </button>
+                        <button onClick={() => { playSound('click'); router.push('/notifications'); }} className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-white/5 border border-white/20 flex items-center justify-center text-white hover:bg-white/10 active:scale-95 transition-all relative" title="အသိပေးချက် / Alerts">
                             <Bell size={16} className="sm:w-5 sm:h-5" />
                             {unreadCount > 0 && <span className="absolute -top-1 -right-1 w-3.5 h-3.5 sm:w-4 sm:h-4 bg-red-600 text-white rounded-full border border-black flex items-center justify-center text-[8px] sm:text-[10px] font-black animate-bounce">{unreadCount > 9 ? '!' : unreadCount}</span>}
                         </button>
@@ -394,20 +399,22 @@ export default function Lobby() {
                         className="bg-black/60 px-3 sm:px-4 py-1.5 sm:py-2 rounded-full border border-yellow-500/40 flex items-center gap-2 backdrop-blur-md shadow-[0_0_20px_rgba(234,179,8,0.15)] cursor-pointer hover:bg-black/80 transition-colors"
                     >
                         <Coins className="w-4 h-4 sm:w-5 sm:h-5 text-yellow-400 animate-pulse" />
-                        <span className="text-yellow-400 font-mono font-black text-sm sm:text-base tracking-tight">{parseFloat(user.balance).toLocaleString()}</span>
+                        <span className="text-yellow-400 font-mono font-black text-sm sm:text-base tracking-tight flex items-center gap-1">
+                            {parseFloat(user.balance).toLocaleString()} <span className="text-[10px] text-yellow-600">ကျပ်</span>
+                        </span>
                     </motion.div>
                 </div>
             </div>
 
-            {/* --- LIVE GRAND JACKPOT DISPLAY --- */}
+            {/* --- LOCALIZED GRAND JACKPOT DISPLAY --- */}
             <div className="relative z-20 px-4 sm:px-6 mt-3 mb-2 flex flex-col items-center justify-center">
                 <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} className={jpContainerClass}>
                     <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/stardust.png')] opacity-30 animate-[pulse_4s_ease-in-out_infinite] mix-blend-color-dodge"></div>
                     {isJPCritical && <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/circuit-board.png')] opacity-20 mix-blend-overlay"></div>}
                     
-                    <h3 className={`font-black text-[10px] sm:text-xs tracking-[0.2em] mb-1 flex items-center gap-2 drop-shadow-md z-10 ${isJPCritical ? 'text-purple-300 animate-pulse' : (isJPHot ? 'text-red-400' : 'text-yellow-500')}`}>
+                    <h3 className={`font-black text-[10px] sm:text-xs tracking-[0.2em] mb-1 flex items-center gap-2 drop-shadow-md z-10 uppercase ${isJPCritical ? 'text-purple-300 animate-pulse' : (isJPHot ? 'text-red-400' : 'text-yellow-500')}`}>
                         {isJPCritical ? <Zap size={14} className="animate-bounce fill-current"/> : <Sparkles size={14} className="animate-bounce" />}
-                        GRAND JACKPOT <span className="font-serif">[ 大当り ]</span>
+                        {selectedIsland ? `${selectedIsland.name} GJP` : 'GRAND JACKPOT'} <span className="font-serif opacity-80">[ 大当り / ဂျက်ပေါ့ ]</span>
                     </h3>
                     <div className={`text-3xl sm:text-5xl font-mono font-black tracking-tighter z-10 ${isJPCritical ? 'text-transparent bg-clip-text bg-gradient-to-b from-purple-200 via-pink-400 to-red-600 drop-shadow-[0_0_20px_rgba(236,72,153,1)]' : (isJPHot ? 'text-transparent bg-clip-text bg-gradient-to-b from-yellow-200 via-orange-500 to-red-600 drop-shadow-[0_0_15px_rgba(239,68,68,0.8)]' : 'text-transparent bg-clip-text bg-gradient-to-b from-white via-yellow-200 to-yellow-600 drop-shadow-[0_0_15px_rgba(255,215,0,0.8)]')}`}>
                         <RollupNumber value={jackpotAmount} />
@@ -427,7 +434,8 @@ export default function Lobby() {
             </div>
 
             {/* --- 3D ISLAND CAROUSEL (THEMATIC) --- */}
-            <div className="flex-1 relative flex items-center justify-center perspective-1000 mt-2 sm:mt-4 mb-6">
+            {/* Wrapped in a fixed height container to prevent layout shifting during swipes */}
+            <div className="flex-1 relative flex items-center justify-center perspective-1000 mt-2 sm:mt-4 mb-6 min-h-[50vh]">
                 
                 {/* Seamless Background Crossfading */}
                 <AnimatePresence mode="popLayout">
@@ -437,7 +445,7 @@ export default function Lobby() {
                         animate={{ opacity: 0.6 }}
                         exit={{ opacity: 0 }}
                         transition={{ duration: 0.8 }}
-                        className={`absolute inset-0 bg-gradient-to-b ${selectedIsland?.theme?.bgGrad || 'from-black'} via-transparent to-black pointer-events-none`} 
+                        className={`absolute inset-0 bg-gradient-to-b ${selectedIsland?.theme?.bgGrad || 'from-black'} via-transparent to-black pointer-events-none z-0`} 
                     />
                 </AnimatePresence>
 
@@ -450,7 +458,7 @@ export default function Lobby() {
                 </button>
 
                 {/* --- HARDWARE ACCELERATED SWIPE CAROUSEL --- */}
-                <div className="relative w-full h-[50vh] sm:h-[55vh] md:h-[60vh] flex justify-center items-center overflow-visible">
+                <div className="relative w-full h-[50vh] sm:h-[55vh] md:h-[60vh] flex justify-center items-center overflow-visible z-30">
                     <AnimatePresence initial={false} custom={direction} mode="popLayout">
                         {selectedIsland && (
                             <motion.div
@@ -485,12 +493,12 @@ export default function Lobby() {
                                         <CharacterSVG type={selectedIsland.hostess_char_id} mood="idle" />
                                     </div>
 
-                                    {/* Info Banner */}
+                                    {/* Localized Info Banner */}
                                     <div className="absolute bottom-6 left-5 sm:left-8 right-5 sm:right-8 z-30">
                                         <div className="flex gap-2 mb-1 sm:mb-2">
                                             <div className={`text-[9px] sm:text-[10px] font-black tracking-widest flex items-center gap-1.5 px-2.5 py-1 rounded backdrop-blur-md border shadow-lg uppercase 
                                                 ${isOwned ? `bg-black/70 ${selectedIsland.theme.text} ${selectedIsland.theme.border}` : 'bg-red-950/80 text-red-400 border-red-500/50'}`}>
-                                                {isOwned ? <><MapPin size={12}/> OPEN WORLD</> : <><Lock size={12}/> RESTRICTED</>}
+                                                {isOwned ? <><MapPin size={12}/> မြေပုံ / マップ</> : <><Lock size={12}/> RESTRICTED</>}
                                             </div>
                                             <div className="bg-black/70 text-white border border-white/20 text-[9px] sm:text-[10px] font-black tracking-widest flex items-center gap-1 px-2.5 py-1 rounded backdrop-blur-md shadow-lg">
                                                 <Layers size={12}/> {selectedIsland.totalMachines} MACHINES
@@ -506,7 +514,7 @@ export default function Lobby() {
                                         {!isOwned && (
                                             <div className="mt-3 bg-black/80 backdrop-blur-md border border-gray-700 p-3 rounded-xl shadow-lg">
                                                 <div className="flex justify-between text-[10px] text-gray-400 font-bold mb-1 uppercase tracking-widest">
-                                                    <span>VIP Progression</span>
+                                                    <span>World Access / ကမ္ဘာ့ဝင်ခွင့်</span>
                                                     <span className="text-yellow-500 font-mono">
                                                         {userStats.totalDeposited.toLocaleString()} / {selectedIsland.reqDeposit.toLocaleString()} <span className="text-[8px] text-gray-500">MMK</span>
                                                     </span>

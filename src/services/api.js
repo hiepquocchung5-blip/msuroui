@@ -1,9 +1,9 @@
 import axios from 'axios';
 
 // ============================================================================
-// SUROPARA V6.9.6 - DIRECT API SERVICE
+// SUROPARA V6.9.7 - DIRECT API SERVICE (LEVIATHAN TIER)
 // Architecture: Direct Backend Connection (Proxy Bypassed)
-// Fixes: "400 Header Too Large" caused by Next.js cookie bloat.
+// Upgrades: Global 401 Interceptors & Secure Token Purging
 // ============================================================================
 
 // Fallback directly to the live domain if the .env variable is missing.
@@ -18,7 +18,7 @@ const api = axios.create({
     timeout: 15000, // 15s timeout for heavy cryptographic spin resolutions
 });
 
-// Auto-Inject Bearer Token
+// --- REQUEST INTERCEPTOR: AUTO-INJECT TOKEN ---
 api.interceptors.request.use((config) => {
     if (typeof window !== 'undefined') {
         const token = localStorage.getItem('suro_token');
@@ -29,7 +29,30 @@ api.interceptors.request.use((config) => {
     return config;
 });
 
-// --- CORE ENDPOINTS ---
+// --- RESPONSE INTERCEPTOR: GLOBAL ERROR HANDLING ---
+api.interceptors.response.use(
+    (response) => response,
+    (error) => {
+        // If the backend explicitly rejects the token (Expired, Invalid, or Banned)
+        if (error.response && error.response.status === 401) {
+            console.warn('[API_SECURITY] 401 Unauthorized detected. Purging session.');
+            if (typeof window !== 'undefined') {
+                localStorage.removeItem('suro_token');
+                // Avoid infinite redirect loops if already on the login/landing page
+                if (window.location.pathname !== '/' && !window.location.pathname.startsWith('/auth')) {
+                    window.location.href = '/'; 
+                }
+            }
+        }
+        return Promise.reject(error);
+    }
+);
+
+// ============================================================================
+// ENDPOINT MAPPING
+// ============================================================================
+
+// --- AUTHENTICATION ---
 export const auth = {
     login: (phone, password) => api.post('/auth/login.php', { phone, password }),
     register: (phone, password) => api.post('/auth/register.php', { phone, password }),
