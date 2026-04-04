@@ -34,7 +34,7 @@ export const useSlotMachine = (machineId, islandId, initialSessionToken = null) 
 
     const [lastWin, setLastWin] = useState(0);
     const [isJackpot, setIsJackpot] = useState(false); 
-    const [levelUpData, setLevelUpData] = useState(null); // Now handles arrays of level-ups
+    const [levelUpData, setLevelUpData] = useState(null); 
     const [error, setError] = useState(null);
     
     // --- SMART AUTO-PLAY & AFK SYSTEM ---
@@ -260,7 +260,6 @@ export const useSlotMachine = (machineId, islandId, initialSessionToken = null) 
         clearTimers();
 
         try {
-            // Optional: Get custom client seed if user has set one for Provably Fair
             const customClientSeed = typeof window !== 'undefined' ? localStorage.getItem('suro_client_seed') : null;
 
             const payload = {
@@ -307,16 +306,32 @@ export const useSlotMachine = (machineId, islandId, initialSessionToken = null) 
                 }
                 timers.current.push(setTimeout(() => stopReel(order[2]), finalReelDelay));
             } else {
-                // --- 3 SECOND AUTO-STOP FOR MANUAL SPINS ---
                 timers.current.push(setTimeout(() => stopReel(0), 3000));
                 timers.current.push(setTimeout(() => stopReel(1), 3400));
-                timers.current.push(setTimeout(() => stopReel(2), data.is_teaser ? 5000 : 3800)); // Teasers get a massive suspense pause
+                timers.current.push(setTimeout(() => stopReel(2), data.is_teaser ? 5000 : 3800)); 
             }
 
         } catch (err) {
-            const errMsg = err.response?.data?.error || err.message;
+            // V7 Error Object Parsing Fix
+            const responseError = err.response?.data?.error;
+            let errMsg = err.message;
+
+            // If the backend sends an object (e.g. {code: 'ERR_SESSION_INVALID', message: '...'})
+            if (responseError) {
+                errMsg = typeof responseError === 'object' ? responseError.message : responseError;
+            }
+
             setError(errMsg);
-            if (errMsg.includes("sync") || errMsg.includes("token")) enter(); 
+
+            // Safe string-check for auto-resync
+            if (typeof errMsg === 'string') {
+                const lowerMsg = errMsg.toLowerCase();
+                if (lowerMsg.includes("sync") || lowerMsg.includes("token") || lowerMsg.includes("mismatch")) {
+                    console.warn("[V7 ENGINE] Stale session token detected. Re-establishing link...");
+                    enter(); 
+                }
+            }
+
             setAutoPlay(false); 
             setIsSpinning([false, false, false]);
         }
@@ -337,7 +352,7 @@ export const useSlotMachine = (machineId, islandId, initialSessionToken = null) 
         lapsSinceBonus, momentumMult, inZone, winTier, sessionWinStreak, streakMult, volatility,
         showBonusSummary, bonusTotalWin, clearBonusTotal, levelUpData, setLevelUpData,
         autoPlay, setAutoPlay, turboMode, setTurboMode,
-        pfData, // Exported Provably Fair data for UI components
+        pfData, 
         spin, stopReel, setLastWin,
         isReady: !!sessionToken
     };
