@@ -43,6 +43,7 @@ const PAYTABLE_DATA = [
     { id: 7, name: 'REPLAY', mult: 'FREE SPIN', color: 'text-cyan-400', glow: 'shadow-[0_0_15px_cyan]' }
 ];
 
+// Backend matrix expects Row-Major: [0,1,2] is Top Row.
 const PAYLINES = [[0, 1, 2], [3, 4, 5], [6, 7, 8], [0, 4, 8], [6, 4, 2]];
 
 const ISLAND_BET_AMOUNTS = {
@@ -78,7 +79,7 @@ const RollupNumber = ({ value, duration = 1000 }) => {
     return <>{count.toLocaleString()}</>;
 };
 
-// --- VIRTUALIZED REEL COMPONENT ---
+// --- VIRTUALIZED REEL COMPONENT (V7 ROW/COL FIX) ---
 const ReelColumn = ({ isSpinning, finalSymbols, locked, isWinning, isTeaser, isReachEye, colIdx, isFreeze, islandId }) => {
     
     // VISUAL FIX: Seamless Loop Integration
@@ -107,7 +108,6 @@ const ReelColumn = ({ isSpinning, finalSymbols, locked, isWinning, isTeaser, isR
                 >
                     {displaySymbols.map((symId, idx) => (
                         <div key={idx} className="relative flex items-center justify-center w-full" style={{ height: isSpinning ? '16.66%' : '33.33%' }}>
-                            {/* 16:9 Cinematic Symbol Card */}
                             <div className={`w-[90%] aspect-[16/9] flex items-center justify-center bg-black/40 backdrop-blur-[2px] border border-white/10 rounded-lg shadow-inner transition-colors duration-500
                                 ${isTeaser && !isReachEye && !isSpinning && idx === 1 && colIdx === 1 ? 'ring-2 ring-red-500/50 animate-[pulse_1s_ease-in-out_infinite] shadow-[0_0_40px_rgba(239,68,68,0.6)] bg-red-900/20' : ''}
                                 ${isWinning && !isSpinning && idx < 3 ? 'z-10 shadow-[0_0_40px_rgba(255,215,0,0.4)] bg-yellow-900/20 ring-1 ring-yellow-400/80 scale-105' : ''}
@@ -167,10 +167,10 @@ const PlayView = ({ machine, island, onLeave }) => {
         showBonusSummary, bonusTotalWin, clearBonusTotal, levelUpData, setLevelUpData,
         isJackpot, setIsJackpot, lapsSinceBonus, momentumMult, inZone, error, 
         showIdleWarning, isIdleKicked, resetIdleTimer, isReady,
-        autoPlay, spin, stopReel, setAutoPlay, setLastWin, turboMode, setTurboMode
+        autoPlay, spin, stopReel, setAutoPlay, setLastWin, turboMode, setTurboMode, pfData
     } = slotLogic;
     
-    // --- AAA CINEMATIC LOADING & PLAYER CARE STATE ---
+    // --- AAA CINEMATIC LOADING & CACHING STATE ---
     const [localLoadProgress, setLocalLoadProgress] = useState(0);
     const [isCinematicReady, setIsCinematicReady] = useState(false);
     const [sessionMinutes, setSessionMinutes] = useState(0);
@@ -213,32 +213,47 @@ const PlayView = ({ machine, island, onLeave }) => {
     const relativeNum = (((machine?.machine_number || 1) - 1) % MACHINES_PER_FLOOR) + 1;
     const displayId = `${currentFloor}-${relativeNum.toString().padStart(2, '0')}`;
 
-    // --- LOCALIZED ASSET PRELOADING ---
+    // --- LOCALIZED ASSET PRELOADING (V7 Caching) ---
     useEffect(() => {
-        setIsCinematicReady(false);
-        setLocalLoadProgress(0);
+        if (!island?.id) return;
+        
+        const cacheKey = `sector_cached_${island.id}_${user?.active_pet_id || island.hostess_char_id || 'luna'}`;
+        
+        // Instant bypass if already loaded previously
+        if (localStorage.getItem(cacheKey) === 'true') {
+            setLocalLoadProgress(100);
+            setIsCinematicReady(true);
+            
+            // Background warm-up
+            const bgImg = new Image();
+            bgImg.src = `/assets/backgrounds/bg_${island.id}.jpg`;
+        } else {
+            setIsCinematicReady(false);
+            setLocalLoadProgress(0);
 
-        const localAssets = [
-            `/assets/backgrounds/bg_${island?.id || 1}.jpg`,
-            `/assets/characters/${user?.active_pet_id || island?.hostess_char_id || 'luna'}.png`,
-            `/assets/machines/belly_${island?.id || 1}.png`
-        ];
+            const localAssets = [
+                `/assets/backgrounds/bg_${island.id}.jpg`,
+                `/assets/characters/${user?.active_pet_id || island.hostess_char_id || 'luna'}.png`,
+                `/assets/machines/belly_${island.id}.png`
+            ];
 
-        let loaded = 0;
-        localAssets.forEach(src => {
-            const img = new Image();
-            img.src = src;
-            img.onload = img.onerror = () => {
-                loaded++;
-                setLocalLoadProgress(Math.round((loaded / localAssets.length) * 100));
-                if (loaded === localAssets.length) {
-                    setTimeout(() => {
-                        setIsCinematicReady(true);
-                        addToast(`Welcome back, ${user?.username}! Good luck and play safely.`, 'info');
-                    }, 600); 
-                }
-            };
-        });
+            let loaded = 0;
+            localAssets.forEach(src => {
+                const img = new Image();
+                img.src = src;
+                img.onload = img.onerror = () => {
+                    loaded++;
+                    setLocalLoadProgress(Math.round((loaded / localAssets.length) * 100));
+                    if (loaded === localAssets.length) {
+                        localStorage.setItem(cacheKey, 'true'); // Flag cache
+                        setTimeout(() => {
+                            setIsCinematicReady(true);
+                            addToast(`Welcome back, ${user?.username}! Sector mounted.`, 'info');
+                        }, 500); 
+                    }
+                };
+            });
+        }
 
         const sessionTimer = setInterval(() => {
             setSessionMinutes(prev => prev + 1);
@@ -417,7 +432,7 @@ const PlayView = ({ machine, island, onLeave }) => {
         if (isSpinning[idx] && !autoPlay) {
             if (atSequence && atSequence.length > 0 && atSequence[atCurrentStep] !== idx) return; 
             
-            // If the server hasn't responded yet, queue the action and play a click to satisfy the user
+            // If the server hasn't responded yet, queue the action
             if (!apiReady) {
                 setQueuedStops(prev => new Set(prev).add(idx));
                 playSound('click'); 
@@ -459,7 +474,6 @@ const PlayView = ({ machine, island, onLeave }) => {
         if (apiReady && queuedStops.size > 0) {
             const stops = Array.from(queuedStops);
             stops.forEach((idx, i) => {
-                // Slam them down in rapid succession
                 setTimeout(() => executeStop(idx), i * 150);
             });
             setQueuedStops(new Set());
@@ -491,13 +505,13 @@ const PlayView = ({ machine, island, onLeave }) => {
     }, [handleSpin, handleQuickStop, handleManualStop, isCurrentlySpinning, resetIdleTimer, winStage]);
 
     // --- BULLETPROOF WINDETAILS FIX ---
-    // Protects against ReferenceError and missing payline crashes during external Jackpot triggers.
     const winDetails = useMemo(() => {
-        const defaultWin = PAYTABLE_DATA[6]; // Fallback to Replay symbol logic to prevent crash
+        const defaultWin = PAYTABLE_DATA[6]; // Fallback to Replay symbol
         if (isJackpot) return PAYTABLE_DATA[0]; // Force GJP
         if (!winningLines || winningLines.length === 0) return defaultWin;
         
         const firstLine = winningLines[0];
+        // Ensure we fetch correctly mapped symbols from the flat matrix
         if (firstLine === 99) return PAYTABLE_DATA.find(p => p.id === reels[0]) || defaultWin;
         
         const symId = reels[PAYLINES[firstLine][0]];
@@ -533,30 +547,23 @@ const PlayView = ({ machine, island, onLeave }) => {
                     )}
                 </AnimatePresence>
 
-                {/* --- CINEMATIC FLOOR LIGHTING (JACKPOT/EPIC WIN/FREEZE) --- */}
+                {/* --- CINEMATIC FLOOR LIGHTING --- */}
                 <AnimatePresence>
                     {(isJackpot || winTier === 'EPIC' || winTier === 'MEGA' || isFreeze) && (
                         <motion.div 
-                            initial={{ opacity: 0, scaleY: 0 }}
-                            animate={{ opacity: 1, scaleY: 1 }}
-                            exit={{ opacity: 0 }}
+                            initial={{ opacity: 0, scaleY: 0 }} animate={{ opacity: 1, scaleY: 1 }} exit={{ opacity: 0 }}
                             transition={{ duration: 1, ease: "easeOut" }}
                             className="absolute bottom-0 left-1/2 -translate-x-1/2 w-[150%] h-[150%] pointer-events-none z-0 flex justify-around items-end"
                             style={{ transformOrigin: 'bottom center', transform: 'translateZ(-50px)' }}
                         >
-                            {/* Left Floor Lamp */}
                             <div className="relative w-32 h-full flex flex-col justify-end items-center origin-bottom -rotate-[25deg]">
                                 <div className="w-full h-[80%] bg-gradient-to-t from-cyan-300/40 via-cyan-500/10 to-transparent blur-2xl"></div>
                                 <div className="w-8 h-4 bg-white rounded-full shadow-[0_0_30px_#fff,0_0_60px_#00f3ff]"></div>
                             </div>
-
-                            {/* Center Floor Lamp */}
                             <div className="relative w-48 h-full flex flex-col justify-end items-center origin-bottom">
                                 <div className="w-full h-[90%] bg-gradient-to-t from-white/50 via-yellow-200/20 to-transparent blur-3xl"></div>
                                 <div className="w-12 h-6 bg-white rounded-full shadow-[0_0_40px_#fff,0_0_80px_#eab308]"></div>
                             </div>
-
-                            {/* Right Floor Lamp */}
                             <div className="relative w-32 h-full flex flex-col justify-end items-center origin-bottom rotate-[25deg]">
                                 <div className="w-full h-[80%] bg-gradient-to-t from-purple-300/40 via-purple-500/10 to-transparent blur-2xl"></div>
                                 <div className="w-8 h-4 bg-white rounded-full shadow-[0_0_30px_#fff,0_0_60px_#a855f7]"></div>
@@ -565,7 +572,7 @@ const PlayView = ({ machine, island, onLeave }) => {
                     )}
                 </AnimatePresence>
 
-                {/* --- ELEGANT SYSTEM FREEZE OVERLAY --- */}
+                {/* --- SYSTEM FREEZE OVERLAY --- */}
                 <AnimatePresence>
                     {isFreeze && isCurrentlySpinning && (
                         <motion.div 
@@ -646,7 +653,6 @@ const PlayView = ({ machine, island, onLeave }) => {
                 {/* --- CYBER HUD (PLAYER CARE FOCUS) --- */}
                 <div className="absolute top-16 md:top-20 left-0 w-full px-2 md:px-6 flex flex-row justify-between items-start z-40 pointer-events-none mt-1">
                     
-                    {/* Left Side: Navigation, Momentum & Player Care Badge */}
                     <div className="flex flex-col gap-1 md:gap-2">
                         <div className="flex items-start gap-2 md:gap-3 pointer-events-auto">
                             <motion.button whileTap={{ scale: 0.9 }} onClick={() => setShowSettings(true)} className="w-8 h-8 md:w-10 md:h-10 flex-shrink-0 bg-black/60 border border-white/10 flex items-center justify-center text-white hover:bg-white/10 transition-all backdrop-blur-md shadow-lg rounded-full">
@@ -759,7 +765,7 @@ const PlayView = ({ machine, island, onLeave }) => {
                     <motion.div 
                         className="relative w-full max-w-[350px] md:max-w-[400px] aspect-[0.6] flex items-center justify-center z-10 will-change-transform"
                         animate={{ rotateX: mousePos.y, rotateY: mousePos.x }}
-                        transition={{ type: 'spring', stiffness: isMobile ? 80 : 100, damping: 25 }} // Heavier feel
+                        transition={{ type: 'spring', stiffness: isMobile ? 80 : 100, damping: 25 }}
                         style={{ transformStyle: 'preserve-3d', transform: 'translateZ(0)' }}
                     >
                         {/* Cabinet Graphic */}
@@ -789,12 +795,14 @@ const PlayView = ({ machine, island, onLeave }) => {
                             </div>
 
                             <div className={`flex-1 flex gap-[1%] p-[1%] bg-[#050505] rounded-b-sm border-x-2 border-b-2 relative ${isReachWaitState ? 'border-red-600 shadow-[inset_0_0_40px_rgba(239,68,68,0.3)]' : (inZone && !bonusMode ? 'border-yellow-500/50 shadow-[inset_0_0_40px_rgba(234,179,8,0.15)]' : 'border-gray-900')}`}>
+                                
+                                {/* V7 ROW/COL FIX - Maps columns perfectly from backend flat array */}
                                 {[0, 1, 2].map(colIdx => (
                                     <ReelColumn 
                                         key={colIdx} 
                                         colIdx={colIdx}
                                         isSpinning={isSpinning[colIdx]} 
-                                        finalSymbols={reels.slice(colIdx * 3, colIdx * 3 + 3)} 
+                                        finalSymbols={[reels[colIdx], reels[colIdx + 3], reels[colIdx + 6]]} 
                                         islandId={island?.id} 
                                         isWinning={winningLines.length > 0 && winningLines.some(lId => [0,1,2,3,4].includes(lId) || (lId === 99 && colIdx === 0))} 
                                         isTeaser={isTeaser} 
@@ -906,7 +914,7 @@ const PlayView = ({ machine, island, onLeave }) => {
                     </div>
                 ))}
 
-                {/* --- PLAYER HUB (Replaces Quick Settings) --- */}
+                {/* --- PLAYER HUB --- */}
                 <AnimatePresence>
                     {showSettings && (
                         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[100] bg-black/80 backdrop-blur-sm flex items-center justify-center p-6 pointer-events-auto" onClick={() => setShowSettings(false)}>
@@ -917,7 +925,6 @@ const PlayView = ({ machine, island, onLeave }) => {
                                 </div>
                                 <div className="p-4 space-y-4 bg-black/60">
                                     
-                                    {/* Player Care: Session Tracking */}
                                     <div className="bg-pink-900/20 p-3 rounded-xl border border-pink-500/30 flex items-center justify-between mb-2">
                                         <div className="flex items-center gap-3 text-pink-400 font-bold text-sm">
                                             <Clock size={16}/> Session Time
@@ -925,17 +932,14 @@ const PlayView = ({ machine, island, onLeave }) => {
                                         <span className="text-white font-mono text-sm">{sessionMinutes} mins</span>
                                     </div>
 
-                                    {/* Safe Play & Support */}
                                     <button onClick={() => alert("Our Support Team is always here for you! ❤️\n\nPlease reach out via Telegram/Viber for assistance.")} className="w-full flex items-center justify-between bg-white/5 hover:bg-white/10 p-3 rounded-xl border border-white/5 text-white font-bold text-sm transition-colors mb-2">
                                         <span className="flex items-center gap-3"><LifeBuoy className="text-blue-400"/> 24/7 Player Support</span>
                                     </button>
 
-                                    {/* Utility */}
                                     <button onClick={() => { setShowSettings(false); setShowPaytable(true); }} className="w-full flex items-center justify-between bg-white/5 hover:bg-white/10 p-3 rounded-xl border border-white/5 text-white font-bold text-sm transition-colors">
                                         <span className="flex items-center gap-3"><HelpCircle className="text-yellow-400"/> View Paytable</span>
                                     </button>
 
-                                    {/* Safe Exit */}
                                     <button onClick={onLeave} className="w-full flex items-center justify-center gap-2 bg-red-900/30 hover:bg-red-900/50 border border-red-500/50 p-3 rounded-xl text-red-400 font-black text-sm transition-colors mt-4 shadow-[0_0_15px_rgba(239,68,68,0.2)]">
                                         <LogOut size={18}/> SECURE LEAVE
                                     </button>
