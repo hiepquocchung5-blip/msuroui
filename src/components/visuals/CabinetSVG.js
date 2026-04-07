@@ -89,6 +89,11 @@ const CabinetSVG = ({
                 <stop offset="55%" stopColor="#555" />
                 <stop offset="100%" stopColor="#111" />
             </linearGradient>
+            <linearGradient id="darkChrome" x1="0" y1="0" x2="1" y2="1">
+                <stop offset="0%" stopColor="#050505" />
+                <stop offset="50%" stopColor="#222" />
+                <stop offset="100%" stopColor="#050505" />
+            </linearGradient>
             <linearGradient id="gold" x1="0" y1="0" x2="1" y2="1">
                 <stop offset="0%" stopColor="#4a3500" />
                 <stop offset="30%" stopColor="#b8860b" />
@@ -114,7 +119,7 @@ const CabinetSVG = ({
             <filter id="pbrNoise">
                 <feTurbulence type="fractalNoise" baseFrequency="0.9" numOctaves="3" result="noise" />
                 <feColorMatrix type="saturate" values="0"/>
-                <feComponentTransfer><feFuncA type="table" tableValues="0 0.04"/></feComponentTransfer>
+                <feComponentTransfer><feFuncA type="table" tableValues="0 0.06"/></feComponentTransfer>
                 <feComposite operator="in" in2="SourceGraphic" result="texture" />
                 <feBlend mode="multiply" in="texture" in2="SourceGraphic" />
             </filter>
@@ -123,6 +128,8 @@ const CabinetSVG = ({
                 <feGaussianBlur stdDeviation="8" result="blur"/>
                 <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
             </filter>
+            
+            <filter id="grungeGlow"><feGaussianBlur stdDeviation="2" result="blur"/><feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
 
             <filter id="specular">
                 <feSpecularLighting surfaceScale="3" specularConstant="1.2" specularExponent="30" lightingColor="#fff">
@@ -142,7 +149,12 @@ const CabinetSVG = ({
                 <stop offset="100%" stopColor="rgba(255,255,255,0)" />
             </linearGradient>
 
-            {/* Micro Patterns */}
+            {/* Hardware Patterns & Decals */}
+            <pattern id="pat-hazard" width="20" height="20" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
+                <rect width="10" height="20" fill="#000" opacity="0.6"/>
+                <rect x="10" width="10" height="20" fill="#FFD700" opacity="0.6"/>
+            </pattern>
+            
             <pattern id="pat-1" width="20" height="20" patternUnits="userSpaceOnUse" patternTransform="scale(0.8)">
                 <path d="M10 0 L20 10 L10 20 L0 10 Z M0 0 L20 20 M20 0 L0 20" fill="none" stroke="rgba(255,215,0,0.06)" strokeWidth="0.5"/>
             </pattern>
@@ -182,66 +194,112 @@ const CabinetSVG = ({
         </defs>
     );
 
-    // --- 2. CULTURAL GRAFFITI & SKETCH ENGINE ---
+    // --- 2. CULTURAL GRAFFITI, GRUNGE & HARDWARE ENGINE ---
     const renderGraffitiDecals = () => {
-        // Injects street-art style textures and cultural sketches directly onto the chassis
-        switch(safeIslandId) {
-            case 1: // Kyoto Zen - Sumi-e Ink Wash & Traditional Seals
-                return (
-                    <g className="graffiti-layer" opacity="0.3" style={{mixBlendMode: 'overlay'}}>
-                        {/* Ink Wash Swoosh */}
-                        <path d="M 15 350 Q 50 300 25 250 T 35 150" fill="none" stroke="#000" strokeWidth="15" strokeLinecap="round" filter="blur(2px)"/>
-                        {/* Vertical Hanko Seal */}
-                        <g transform="translate(210, 200)">
-                            <rect x="0" y="0" width="12" height="35" fill="#a00" opacity="0.6"/>
-                            <text x="6" y="10" fill="#fff" fontSize="6" textAnchor="middle" fontWeight="bold">京</text>
-                            <text x="6" y="20" fill="#fff" fontSize="6" textAnchor="middle" fontWeight="bold">都</text>
-                            <text x="6" y="30" fill="#fff" fontSize="6" textAnchor="middle" fontWeight="bold">印</text>
+        // Hardware overlays (Coin Slots, Locks, Warning Stickers) universally applied to feel "Real"
+        const renderHardware = () => (
+            <g className="hardware-layer">
+                {/* Coin Slot Right Side */}
+                <g transform="translate(205, 180)">
+                    <rect x="0" y="0" width="16" height="45" rx="3" fill="url(#chrome)" stroke="#000" strokeWidth="1" filter="url(#pbrNoise)" />
+                    <rect x="7" y="5" width="2" height="20" fill="#000" />
+                    <text x="8" y="38" textAnchor="middle" fill="#000" fontSize="4" fontWeight="bold">100¥</text>
+                    <path d="M 4 40 L 12 40 L 8 43 Z" fill="#f00" />
+                </g>
+                
+                {/* Operator Keyhole Left Side */}
+                <g transform="translate(15, 185)">
+                    <circle cx="8" cy="8" r="6" fill="url(#chrome)" stroke="#111" strokeWidth="0.5" />
+                    <circle cx="8" cy="8" r="4" fill="#000" />
+                    <rect x="7" y="8" width="2" height="4" fill="#000" />
+                </g>
+
+                {/* Generic Hazard Tape Edge */}
+                <rect x="10" y="390" width="40" height="5" fill="url(#pat-hazard)" />
+                <rect x="190" y="390" width="40" height="5" fill="url(#pat-hazard)" />
+            </g>
+        );
+
+        // Island Specific Street Graffiti
+        const renderStreetTags = () => {
+            switch(safeIslandId) {
+                case 1: // Kyoto Zen - Sumi-e Ink Wash & Red Stamps
+                    return (
+                        <g className="graffiti-layer" style={{mixBlendMode: 'overlay'}}>
+                            <path d="M 15 350 Q 50 300 25 250 T 35 150" fill="none" stroke="#000" strokeWidth="15" strokeLinecap="round" filter="blur(2px)"/>
+                            {/* Ink Drips */}
+                            <circle cx="20" cy="280" r="3" fill="#000" filter="blur(1px)"/>
+                            <circle cx="45" cy="310" r="2" fill="#000" filter="blur(1px)"/>
+                            {/* Vertical Hanko Seal */}
+                            <g transform="translate(210, 260)" opacity="0.8">
+                                <rect x="0" y="0" width="12" height="35" fill="#a00" opacity="0.6"/>
+                                <text x="6" y="10" fill="#fff" fontSize="6" textAnchor="middle" fontWeight="bold">京</text>
+                                <text x="6" y="20" fill="#fff" fontSize="6" textAnchor="middle" fontWeight="bold">都</text>
+                                <text x="6" y="30" fill="#fff" fontSize="6" textAnchor="middle" fontWeight="bold">印</text>
+                            </g>
+                            {/* Marker Scrawl */}
+                            <text x="25" y="380" fill="#000" fontSize="8" fontWeight="bold" transform="rotate(-15)" opacity="0.6" style={{fontFamily: 'Impact'}}>DO NOT KICK</text>
                         </g>
-                    </g>
-                );
-            case 2: // Okinawa Tropic - Resort Stickers & Wave Sketches
-                return (
-                    <g className="graffiti-layer" opacity="0.4" style={{mixBlendMode: 'soft-light'}}>
-                        <path d="M 10 300 Q 30 280 50 300 T 90 300" fill="none" stroke="#0ff" strokeWidth="4"/>
-                        <path d="M 150 150 Q 170 130 190 150 T 230 150" fill="none" stroke="#0ff" strokeWidth="2"/>
-                        <text x="-150" y="215" fill="#fff" fontSize="24" fontWeight="900" fontStyle="italic" transform="rotate(-90)" letterSpacing="5" opacity="0.2">TROPIC</text>
-                    </g>
-                );
-            case 3: // Osaka Neon - Bosozoku/Yakuza Graffiti
-                return (
-                    <g className="graffiti-layer" opacity="0.5" style={{mixBlendMode: 'overlay'}}>
-                        <text x="-380" y="35" fill="#f00" fontSize="30" fontWeight="900" fontFamily="Impact, sans-serif" transform="rotate(-90)" letterSpacing="2" stroke="#000" strokeWidth="2">BOSOZOKU</text>
-                        {/* Tiger Stripe Sketches */}
-                        <path d="M 210 200 Q 230 210 210 220" fill="none" stroke="#000" strokeWidth="5" strokeLinecap="round"/>
-                        <path d="M 215 230 Q 235 240 215 250" fill="none" stroke="#000" strokeWidth="8" strokeLinecap="round"/>
-                        <path d="M 208 260 Q 228 270 208 280" fill="none" stroke="#000" strokeWidth="4" strokeLinecap="round"/>
-                    </g>
-                );
-            case 4: // Tokyo Cyber - Circuit Schematics & Barcodes
-                return (
-                    <g className="graffiti-layer" opacity="0.6" fill="#0ff" style={{mixBlendMode: 'screen'}}>
-                        {/* Barcode */}
-                        <g transform="translate(15, 150) rotate(-90)">
-                            <rect x="0" y="0" width="2" height="15" /><rect x="4" y="0" width="4" height="15" /><rect x="10" y="0" width="1" height="15" /><rect x="13" y="0" width="6" height="15" /><rect x="21" y="0" width="2" height="15" />
+                    );
+                case 2: // Okinawa Tropic - Neon Pop Stickers & Wave Scrawls
+                    return (
+                        <g className="graffiti-layer" style={{mixBlendMode: 'screen'}}>
+                            <path d="M 10 300 Q 30 280 50 300 T 90 300" fill="none" stroke="#0ff" strokeWidth="4" filter="url(#grungeGlow)" opacity="0.6"/>
+                            <path d="M 150 150 Q 170 130 190 150 T 230 150" fill="none" stroke="#f0f" strokeWidth="2" filter="url(#grungeGlow)" opacity="0.5"/>
+                            <text x="-150" y="215" fill="#fff" fontSize="24" fontWeight="900" fontStyle="italic" transform="rotate(-90)" letterSpacing="5" opacity="0.2">TROPIC</text>
+                            {/* Sticker Slap */}
+                            <g transform="translate(25, 250) rotate(-10)">
+                                <rect x="0" y="0" width="30" height="15" fill="#ffeb3b" rx="2" />
+                                <text x="15" y="10" fill="#000" fontSize="6" textAnchor="middle" fontWeight="900">100% PURE</text>
+                            </g>
                         </g>
-                        {/* Hex Grid Sketch */}
-                        <path d="M 210 320 L 215 310 L 225 310 L 230 320 L 225 330 L 215 330 Z" fill="none" stroke="#a855f7" strokeWidth="1"/>
-                        <path d="M 225 310 L 230 300 L 240 300" fill="none" stroke="#a855f7" strokeWidth="1"/>
-                        <text x="210" y="345" fontSize="4" fontFamily="monospace" letterSpacing="1" opacity="0.5">SYS.ERR.77</text>
-                    </g>
-                );
-            case 5: // Ginza Gold - Ornate Filigree Watermarks
-                return (
-                    <g className="graffiti-layer" opacity="0.3" style={{mixBlendMode: 'color-dodge'}}>
-                        <path d="M 15 300 C 30 250, 0 200, 25 150" fill="none" stroke="url(#gold)" strokeWidth="8" filter="blur(1px)"/>
-                        <path d="M 225 300 C 210 250, 240 200, 215 150" fill="none" stroke="url(#gold)" strokeWidth="8" filter="blur(1px)"/>
-                        {/* Diamond Sketch */}
-                        <path d="M 20 180 L 25 170 L 30 180 L 25 190 Z" fill="none" stroke="#fff" strokeWidth="0.5"/>
-                    </g>
-                );
-            default: return null;
-        }
+                    );
+                case 3: // Osaka Neon - Bosozoku/Yakuza Graffiti
+                    return (
+                        <g className="graffiti-layer" opacity="0.7">
+                            <text x="-380" y="35" fill="#f00" fontSize="30" fontWeight="900" fontFamily="Impact, sans-serif" transform="rotate(-90)" letterSpacing="2" stroke="#000" strokeWidth="2">BOSOZOKU</text>
+                            {/* Spray Paint Drips */}
+                            <path d="M 25 200 Q 40 210 25 220" fill="none" stroke="#fff" strokeWidth="5" strokeLinecap="round" opacity="0.5" style={{mixBlendMode: 'overlay'}}/>
+                            <circle cx="28" cy="225" r="2.5" fill="#fff" opacity="0.5" style={{mixBlendMode: 'overlay'}}/>
+                            <circle cx="25" cy="235" r="1" fill="#fff" opacity="0.5" style={{mixBlendMode: 'overlay'}}/>
+                            {/* Heavy Marker */}
+                            <text x="215" y="250" fill="#000" fontSize="12" fontWeight="900" transform="rotate(90)" style={{fontFamily: 'serif'}} opacity="0.8">神風</text>
+                        </g>
+                    );
+                case 4: // Tokyo Cyber - Circuit Schematics, Barcodes & Neon Tags
+                    return (
+                        <g className="graffiti-layer" opacity="0.8" fill="#0ff" style={{mixBlendMode: 'screen'}}>
+                            {/* Barcode */}
+                            <g transform="translate(15, 130) rotate(-90)">
+                                <rect x="0" y="0" width="2" height="15" /><rect x="4" y="0" width="4" height="15" /><rect x="10" y="0" width="1" height="15" /><rect x="13" y="0" width="6" height="15" /><rect x="21" y="0" width="2" height="15" />
+                                <text x="10" y="22" fill="#0ff" fontSize="4" fontFamily="monospace" letterSpacing="1">V-77.0X</text>
+                            </g>
+                            {/* Hex Grid Sketch */}
+                            <path d="M 200 340 L 205 330 L 215 330 L 220 340 L 215 350 L 205 350 Z" fill="none" stroke="#a855f7" strokeWidth="1" filter="url(#grungeGlow)"/>
+                            <text x="195" y="375" fontSize="4" fontFamily="monospace" letterSpacing="1" opacity="0.7">SYS.ERR.77</text>
+                            <text x="35" y="385" fill="#f0f" fontSize="8" fontWeight="bold" transform="rotate(-5)" filter="url(#grungeGlow)" style={{fontFamily: 'Impact'}}>JACKED</text>
+                        </g>
+                    );
+                case 5: // Ginza Gold - Defaced Luxury
+                    return (
+                        <g className="graffiti-layer" opacity="0.5" style={{mixBlendMode: 'color-dodge'}}>
+                            {/* Filigree Watermarks */}
+                            <path d="M 15 300 C 30 250, 0 200, 25 150" fill="none" stroke="url(#gold)" strokeWidth="8" filter="blur(1px)"/>
+                            {/* Defaced spray */}
+                            <path d="M 225 300 C 210 250, 240 200, 215 150" fill="none" stroke="#f00" strokeWidth="4" filter="url(#grungeGlow)" opacity="0.6"/>
+                            <text x="210" y="220" fill="#f00" fontSize="16" fontWeight="900" transform="rotate(15)" style={{fontFamily: 'Impact'}}>VIP ONLY</text>
+                        </g>
+                    );
+                default: return null;
+            }
+        };
+
+        return (
+            <>
+                {renderStreetTags()}
+                {renderHardware()}
+            </>
+        );
     };
 
     // --- 3. ORGANIC CHASSIS GEOMETRY (Hyper-Metallic Base) ---
@@ -268,12 +326,16 @@ const CabinetSVG = ({
                 {/* Specular Highlight for Curved Metal */}
                 <path d={path} fill="none" stroke="url(#glassGlare)" strokeWidth="6" pointerEvents="none" />
 
-                {/* Street Culture / Graffiti Layer */}
+                {/* Street Culture / Graffiti & Hardware Layer */}
                 {renderGraffitiDecals()}
                 
-                <g transform="translate(15, 305)" opacity="0.6">
-                    <rect width="22" height="8" fill={accent} rx="1" />
-                    <text x="11" y="6" textAnchor="middle" fill="#000" fontSize="4" fontFamily="monospace" fontWeight="bold">SRO-0{displayNum.toString().slice(-1)}</text>
+                {/* Serial Plate (Screwed in) */}
+                <g transform="translate(15, 305)" opacity="0.8">
+                    <rect width="26" height="10" fill="url(#darkChrome)" rx="1" stroke="#000" strokeWidth="0.5"/>
+                    {/* Tiny Screws */}
+                    <circle cx="2" cy="2" r="0.8" fill="#555" /><circle cx="24" cy="2" r="0.8" fill="#555" />
+                    <circle cx="2" cy="8" r="0.8" fill="#555" /><circle cx="24" cy="8" r="0.8" fill="#555" />
+                    <text x="13" y="7" textAnchor="middle" fill={accent} fontSize="4" fontFamily="monospace" fontWeight="bold">SRO-0{displayNum.toString().slice(-1)}</text>
                 </g>
 
                 {/* Heavy Speaker Grills */}
@@ -315,14 +377,18 @@ const CabinetSVG = ({
 
         return (
             <g transform="translate(45, -8)">
-                {/* Structural Bezel */}
+                {/* Structural Bezel with Screws */}
                 <path d="M 0 5 L 150 5 L 140 45 L 10 45 Z" fill="url(#chrome)" stroke="#111" strokeWidth="2" filter="url(#pbrNoise)" />
+                <circle cx="10" cy="10" r="1.5" fill="#222" /><circle cx="140" cy="10" r="1.5" fill="#222" />
+                <circle cx="15" cy="40" r="1.5" fill="#222" /><circle cx="135" cy="40" r="1.5" fill="#222" />
+                
                 <path d="M 4 9 L 146 9 L 138 41 L 12 41 Z" fill="#020202" />
                 
                 {/* Embedded LCD Screen */}
                 <path d="M 6 11 L 144 11 L 136 39 L 14 39 Z" fill={led.bg} stroke={led.border} strokeWidth="0.5" />
                 <path d="M 6 11 L 144 11 L 136 39 L 14 39 Z" fill="url(#glassGlare)" opacity="0.6" pointerEvents="none" />
 
+                {/* Always show Grand Jackpot Data clearly */}
                 <g transform="translate(75, 22)" className={isHot ? "animate-[pulse_1s_ease-in-out_infinite]" : ""}>
                     <text x="0" y="-3" textAnchor="middle" fill={`url(#textGrad${safeIslandId})`} fontSize="11" fontWeight="900" fontStyle="italic" letterSpacing="4" style={{ filter: `drop-shadow(0 0 8px ${led.glow})` }}>
                         GRAND JACKPOT
@@ -362,7 +428,7 @@ const CabinetSVG = ({
                 <path d="M 35 5 H 205 L 195 25 H 45 Z" fill="#111" opacity="0.9" />
                 <path d="M 35 5 L 45 25 V 105 L 40 125 Z" fill="#111" opacity="0.6" />
                 
-                {/* Screen Hardware Decal */}
+                {/* Screen Hardware Decal (Cleaned up for realism) */}
                 <g transform="translate(155, 10)">
                     <rect width="40" height="12" fill="#050505" opacity="0.9" rx="2" stroke={accent} strokeWidth="0.5" />
                     <text x="20" y="8" textAnchor="middle" fill={accent} fontSize="5" fontFamily="monospace" fontWeight="900" letterSpacing="1">
@@ -381,6 +447,9 @@ const CabinetSVG = ({
              <path d="M 0 0 L 220 0 L 235 60 L -15 60 Z" fill={safeIslandId === 5 ? "url(#brushMetal)" : "url(#darkPlast)"} stroke="#111" strokeWidth="3" filter="url(#pbrNoise)" />
              <path d="M -15 60 L 235 60 L 230 75 L -10 75 Z" fill="#050505" />
              
+             {/* Deck Screws */}
+             <circle cx="5" cy="55" r="1.5" fill="#333" /><circle cx="215" cy="55" r="1.5" fill="#333" />
+
              {mode === 'game' && (
                  <g opacity="0.4">
                      <text x="30" y="12" fill="#fff" fontSize="5" fontWeight="bold">ベット</text>
@@ -465,7 +534,7 @@ const CabinetSVG = ({
                          </>
                      )}
 
-                     {/* HUD Readouts */}
+                     {/* HUD Readouts - Keeping Laps, Volatility, Wins clear */}
                      <g transform="translate(145, 5)">
                          <rect width="40" height="12" fill="rgba(0,0,0,0.8)" rx="2" stroke={accent} strokeWidth="0.5" />
                          <text x="20" y="8.5" textAnchor="middle" fill="#FFF" fontSize="6" fontFamily="monospace" fontWeight="900" style={{ filter: `drop-shadow(0 0 2px #fff)` }}>
