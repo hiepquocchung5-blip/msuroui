@@ -28,29 +28,29 @@ const CabinetSVG = ({
     
     const accent = getAccentColor();
 
-    // --- AAA FLUID ANIMATION PROFILES (Heavy Machinery) ---
+    // --- AAA FLUID ANIMATION PROFILES (Slowed for Heavy/Premium Feel) ---
     const isBusy = visualState === 'BUSY';
     const isHot = visualState === 'JACKPOT_HOT';
     const isBroken = visualState === 'BROKEN';
     
     const animProfile = {
         FREE: { 
-            ledSpeed: '5s', 
-            physics: { y: [0, -2, 0], transition: { repeat: Infinity, duration: 6, ease: "easeInOut" } } 
+            ledSpeed: '8s', // Slow, breathing LED traces
+            physics: { y: [0, -3, 0], transition: { repeat: Infinity, duration: 8, ease: "easeInOut" } } 
         },
         BUSY: { 
-            ledSpeed: '1.5s', 
-            physics: { y: [0, -1, 0], scale: [1, 1.002, 1], transition: { repeat: Infinity, duration: 3, ease: "easeInOut" } } 
+            ledSpeed: '3s', 
+            physics: { y: [0, -1.5, 0], scale: [1, 1.002, 1], transition: { repeat: Infinity, duration: 5, ease: "easeInOut" } } 
         },
         JACKPOT_HOT: { 
-            ledSpeed: '0.5s', 
-            physics: { y: [0, -4, 0], scale: [1, 1.01, 1], filter: ['drop-shadow(0 20px 30px rgba(0,0,0,0.9))', `drop-shadow(0 20px 50px ${accent}80)`], transition: { repeat: Infinity, duration: 1.5, ease: "easeInOut" } } 
+            ledSpeed: '1s', 
+            physics: { y: [0, -3, 0], scale: [1, 1.01, 1], filter: ['drop-shadow(0 20px 30px rgba(0,0,0,0.9))', `drop-shadow(0 20px 50px ${accent}80)`], transition: { repeat: Infinity, duration: 2, ease: "easeInOut" } } 
         },
         BROKEN: { 
             ledSpeed: '0s', 
             physics: { y: 0, opacity: 0.6, filter: 'grayscale(0.8)' } 
         }
-    }[visualState] || { ledSpeed: '5s', physics: { y: 0 } };
+    }[visualState] || { ledSpeed: '8s', physics: { y: 0 } };
 
     const displayLaps = machine?.total_laps || stats.laps || 0;
     const displayWins = machine?.total_payout || stats.wins || 0;
@@ -68,11 +68,13 @@ const CabinetSVG = ({
     
     const currentTheme = islandThemes[safeIslandId];
 
+    // Extended array for smooth infinite scrolling animation
     const bellySparklinePoints = useMemo(() => {
         let pts = [];
         let y = 40; 
-        for(let x = -10; x <= 200; x += 5) {
-            y = Math.max(10, Math.min(70, 40 + (Math.sin((displayNum * x) + x) * 15) + (Math.cos(x * 3) * 5)));
+        // Generates 400px of data for a 200px wide screen to allow panning
+        for(let x = 0; x <= 400; x += 5) {
+            y = Math.max(10, Math.min(70, 40 + (Math.sin((displayNum * x) * 0.05) * 15) + (Math.cos(x * 0.1) * 5)));
             pts.push(`${x},${y.toFixed(1)}`);
         }
         return pts.join(' ');
@@ -131,22 +133,26 @@ const CabinetSVG = ({
             
             <filter id="grungeGlow"><feGaussianBlur stdDeviation="2" result="blur"/><feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
 
+            {/* Smooth Sweeping Specular Light for the Chassis */}
             <filter id="specular">
                 <feSpecularLighting surfaceScale="3" specularConstant="1.2" specularExponent="30" lightingColor="#fff">
                     <fePointLight x="120" y={isHot ? 20 : 80} z="200">
-                        {isHot && <animate attributeName="x" values="20;220;20" dur="3s" repeatCount="indefinite" ease="easeInOut" />}
+                        <animate attributeName="x" values="-50;300;-50" dur={isHot ? "3s" : "12s"} repeatCount="indefinite" ease="easeInOut" />
                     </fePointLight>
                 </feSpecularLighting>
                 <feComposite operator="in" in2="SourceGraphic"/>
                 <feBlend mode="screen" in2="SourceGraphic"/>
             </filter>
 
-            <linearGradient id="glassGlare" x1="0" y1="0" x2="1" y2="1">
+            {/* Cinematic Sweeping Glass Glare */}
+            <linearGradient id="glassGlare" x1="-1" y1="-1" x2="2" y2="2">
                 <stop offset="0%" stopColor="rgba(255,255,255,0)" />
-                <stop offset="40%" stopColor="rgba(255,255,255,0.02)" />
-                <stop offset="45%" stopColor="rgba(255,255,255,0.3)" />
-                <stop offset="50%" stopColor="rgba(255,255,255,0)" />
+                <stop offset="45%" stopColor="rgba(255,255,255,0)" />
+                <stop offset="50%" stopColor="rgba(255,255,255,0.4)" />
+                <stop offset="55%" stopColor="rgba(255,255,255,0)" />
                 <stop offset="100%" stopColor="rgba(255,255,255,0)" />
+                <animate attributeName="x1" values="-2; 2; -2" dur="10s" repeatCount="indefinite" />
+                <animate attributeName="x2" values="1; 5; 1" dur="10s" repeatCount="indefinite" />
             </linearGradient>
 
             {/* Hardware Patterns & Decals */}
@@ -196,96 +202,79 @@ const CabinetSVG = ({
 
     // --- 2. CULTURAL GRAFFITI, GRUNGE & HARDWARE ENGINE ---
     const renderGraffitiDecals = () => {
-        // Hardware overlays (Coin Slots, Locks, Warning Stickers) universally applied to feel "Real"
         const renderHardware = () => (
             <g className="hardware-layer">
-                {/* Coin Slot Right Side */}
                 <g transform="translate(205, 180)">
                     <rect x="0" y="0" width="16" height="45" rx="3" fill="url(#chrome)" stroke="#000" strokeWidth="1" filter="url(#pbrNoise)" />
                     <rect x="7" y="5" width="2" height="20" fill="#000" />
                     <text x="8" y="38" textAnchor="middle" fill="#000" fontSize="4" fontWeight="bold">100¥</text>
                     <path d="M 4 40 L 12 40 L 8 43 Z" fill="#f00" />
                 </g>
-                
-                {/* Operator Keyhole Left Side */}
                 <g transform="translate(15, 185)">
                     <circle cx="8" cy="8" r="6" fill="url(#chrome)" stroke="#111" strokeWidth="0.5" />
                     <circle cx="8" cy="8" r="4" fill="#000" />
                     <rect x="7" y="8" width="2" height="4" fill="#000" />
                 </g>
-
-                {/* Generic Hazard Tape Edge */}
                 <rect x="10" y="390" width="40" height="5" fill="url(#pat-hazard)" />
                 <rect x="190" y="390" width="40" height="5" fill="url(#pat-hazard)" />
             </g>
         );
 
-        // Island Specific Street Graffiti
         const renderStreetTags = () => {
             switch(safeIslandId) {
-                case 1: // Kyoto Zen - Sumi-e Ink Wash & Red Stamps
+                case 1: 
                     return (
                         <g className="graffiti-layer" style={{mixBlendMode: 'overlay'}}>
                             <path d="M 15 350 Q 50 300 25 250 T 35 150" fill="none" stroke="#000" strokeWidth="15" strokeLinecap="round" filter="blur(2px)"/>
-                            {/* Ink Drips */}
                             <circle cx="20" cy="280" r="3" fill="#000" filter="blur(1px)"/>
                             <circle cx="45" cy="310" r="2" fill="#000" filter="blur(1px)"/>
-                            {/* Vertical Hanko Seal */}
                             <g transform="translate(210, 260)" opacity="0.8">
                                 <rect x="0" y="0" width="12" height="35" fill="#a00" opacity="0.6"/>
                                 <text x="6" y="10" fill="#fff" fontSize="6" textAnchor="middle" fontWeight="bold">京</text>
                                 <text x="6" y="20" fill="#fff" fontSize="6" textAnchor="middle" fontWeight="bold">都</text>
                                 <text x="6" y="30" fill="#fff" fontSize="6" textAnchor="middle" fontWeight="bold">印</text>
                             </g>
-                            {/* Marker Scrawl */}
                             <text x="25" y="380" fill="#000" fontSize="8" fontWeight="bold" transform="rotate(-15)" opacity="0.6" style={{fontFamily: 'Impact'}}>DO NOT KICK</text>
                         </g>
                     );
-                case 2: // Okinawa Tropic - Neon Pop Stickers & Wave Scrawls
+                case 2: 
                     return (
                         <g className="graffiti-layer" style={{mixBlendMode: 'screen'}}>
                             <path d="M 10 300 Q 30 280 50 300 T 90 300" fill="none" stroke="#0ff" strokeWidth="4" filter="url(#grungeGlow)" opacity="0.6"/>
                             <path d="M 150 150 Q 170 130 190 150 T 230 150" fill="none" stroke="#f0f" strokeWidth="2" filter="url(#grungeGlow)" opacity="0.5"/>
                             <text x="-150" y="215" fill="#fff" fontSize="24" fontWeight="900" fontStyle="italic" transform="rotate(-90)" letterSpacing="5" opacity="0.2">TROPIC</text>
-                            {/* Sticker Slap */}
                             <g transform="translate(25, 250) rotate(-10)">
                                 <rect x="0" y="0" width="30" height="15" fill="#ffeb3b" rx="2" />
                                 <text x="15" y="10" fill="#000" fontSize="6" textAnchor="middle" fontWeight="900">100% PURE</text>
                             </g>
                         </g>
                     );
-                case 3: // Osaka Neon - Bosozoku/Yakuza Graffiti
+                case 3: 
                     return (
                         <g className="graffiti-layer" opacity="0.7">
                             <text x="-380" y="35" fill="#f00" fontSize="30" fontWeight="900" fontFamily="Impact, sans-serif" transform="rotate(-90)" letterSpacing="2" stroke="#000" strokeWidth="2">BOSOZOKU</text>
-                            {/* Spray Paint Drips */}
                             <path d="M 25 200 Q 40 210 25 220" fill="none" stroke="#fff" strokeWidth="5" strokeLinecap="round" opacity="0.5" style={{mixBlendMode: 'overlay'}}/>
                             <circle cx="28" cy="225" r="2.5" fill="#fff" opacity="0.5" style={{mixBlendMode: 'overlay'}}/>
                             <circle cx="25" cy="235" r="1" fill="#fff" opacity="0.5" style={{mixBlendMode: 'overlay'}}/>
-                            {/* Heavy Marker */}
                             <text x="215" y="250" fill="#000" fontSize="12" fontWeight="900" transform="rotate(90)" style={{fontFamily: 'serif'}} opacity="0.8">神風</text>
                         </g>
                     );
-                case 4: // Tokyo Cyber - Circuit Schematics, Barcodes & Neon Tags
+                case 4: 
                     return (
                         <g className="graffiti-layer" opacity="0.8" fill="#0ff" style={{mixBlendMode: 'screen'}}>
-                            {/* Barcode */}
                             <g transform="translate(15, 130) rotate(-90)">
                                 <rect x="0" y="0" width="2" height="15" /><rect x="4" y="0" width="4" height="15" /><rect x="10" y="0" width="1" height="15" /><rect x="13" y="0" width="6" height="15" /><rect x="21" y="0" width="2" height="15" />
                                 <text x="10" y="22" fill="#0ff" fontSize="4" fontFamily="monospace" letterSpacing="1">V-77.0X</text>
                             </g>
-                            {/* Hex Grid Sketch */}
                             <path d="M 200 340 L 205 330 L 215 330 L 220 340 L 215 350 L 205 350 Z" fill="none" stroke="#a855f7" strokeWidth="1" filter="url(#grungeGlow)"/>
                             <text x="195" y="375" fontSize="4" fontFamily="monospace" letterSpacing="1" opacity="0.7">SYS.ERR.77</text>
                             <text x="35" y="385" fill="#f0f" fontSize="8" fontWeight="bold" transform="rotate(-5)" filter="url(#grungeGlow)" style={{fontFamily: 'Impact'}}>JACKED</text>
                         </g>
                     );
-                case 5: // Ginza Gold - Defaced Luxury
+                case 5: 
                     return (
                         <g className="graffiti-layer" opacity="0.5" style={{mixBlendMode: 'color-dodge'}}>
-                            {/* Filigree Watermarks */}
                             <path d="M 15 300 C 30 250, 0 200, 25 150" fill="none" stroke="url(#gold)" strokeWidth="8" filter="blur(1px)"/>
-                            {/* Defaced spray */}
                             <path d="M 225 300 C 210 250, 240 200, 215 150" fill="none" stroke="#f00" strokeWidth="4" filter="url(#grungeGlow)" opacity="0.6"/>
                             <text x="210" y="220" fill="#f00" fontSize="16" fontWeight="900" transform="rotate(15)" style={{fontFamily: 'Impact'}}>VIP ONLY</text>
                         </g>
@@ -310,7 +299,7 @@ const CabinetSVG = ({
             case 2: fill="url(#anodizedBlue)"; stroke="#00f3ff"; path = "M10,30 H50 V45 H190 V30 H230 V395 H10 Z"; break;
             case 3: fill="url(#brushMetal)"; stroke="#F00"; path = "M10,50 L40,30 L80,50 L120,30 L160,50 L200,30 L230,50 L235,395 L5,395 Z"; break;
             case 4: fill="url(#cyberPurple)"; stroke="#A855F7"; path = "M15,40 L35,20 L205,20 L225,40 L225,395 L15,395 Z"; break;
-            case 5: fill="#1a1000"; stroke="url(#gold)"; path = "M20,60 L120,20 L220,60 L225,395 L15,395 Z"; break;
+            case 5: fill="url(#gold)"; stroke="#FFF"; path = "M20,60 L120,20 L220,60 L225,395 L15,395 Z"; break;
             default: fill="url(#anodizedRed)"; stroke="url(#gold)"; path = "M10,35 Q120,15 230,35 L235,395 L5,395 Z"; break;
         }
 
@@ -323,7 +312,7 @@ const CabinetSVG = ({
                 <path d={path} fill={fill} stroke={stroke} strokeWidth="3" filter="url(#pbrNoise)" />
                 <path d={path} fill={`url(#pat-${safeIslandId})`} opacity="1" style={{mixBlendMode: 'screen'}} pointerEvents="none" />
                 
-                {/* Specular Highlight for Curved Metal */}
+                {/* Slow Specular Highlight for Curved Metal */}
                 <path d={path} fill="none" stroke="url(#glassGlare)" strokeWidth="6" pointerEvents="none" />
 
                 {/* Street Culture / Graffiti & Hardware Layer */}
@@ -332,7 +321,6 @@ const CabinetSVG = ({
                 {/* Serial Plate (Screwed in) */}
                 <g transform="translate(15, 305)" opacity="0.8">
                     <rect width="26" height="10" fill="url(#darkChrome)" rx="1" stroke="#000" strokeWidth="0.5"/>
-                    {/* Tiny Screws */}
                     <circle cx="2" cy="2" r="0.8" fill="#555" /><circle cx="24" cy="2" r="0.8" fill="#555" />
                     <circle cx="2" cy="8" r="0.8" fill="#555" /><circle cx="24" cy="8" r="0.8" fill="#555" />
                     <text x="13" y="7" textAnchor="middle" fill={accent} fontSize="4" fontFamily="monospace" fontWeight="bold">SRO-0{displayNum.toString().slice(-1)}</text>
@@ -388,8 +376,7 @@ const CabinetSVG = ({
                 <path d="M 6 11 L 144 11 L 136 39 L 14 39 Z" fill={led.bg} stroke={led.border} strokeWidth="0.5" />
                 <path d="M 6 11 L 144 11 L 136 39 L 14 39 Z" fill="url(#glassGlare)" opacity="0.6" pointerEvents="none" />
 
-                {/* Always show Grand Jackpot Data clearly */}
-                <g transform="translate(75, 22)" className={isHot ? "animate-[pulse_1s_ease-in-out_infinite]" : ""}>
+                <g transform="translate(75, 22)" className={isHot ? "animate-[pulse_1s_ease-in-out_infinite]" : "animate-[pulse_6s_ease-in-out_infinite]"}>
                     <text x="0" y="-3" textAnchor="middle" fill={`url(#textGrad${safeIslandId})`} fontSize="11" fontWeight="900" fontStyle="italic" letterSpacing="4" style={{ filter: `drop-shadow(0 0 8px ${led.glow})` }}>
                         GRAND JACKPOT
                     </text>
@@ -401,11 +388,11 @@ const CabinetSVG = ({
                 {/* Topper Warning Sirens */}
                 <g transform="translate(-10, 15)">
                     <circle cx="0" cy="0" r="8" fill="url(#chrome)" />
-                    <circle cx="0" cy="0" r="6" fill={isHot ? '#f00' : '#300'} filter={isHot ? 'url(#hotGlow)' : ''} className={isHot ? 'animate-pulse' : ''} />
+                    <circle cx="0" cy="0" r="6" fill={isHot ? '#f00' : '#300'} filter={isHot ? 'url(#hotGlow)' : ''} className={isHot ? 'animate-[pulse_1s_infinite]' : 'animate-[pulse_6s_infinite]'} />
                 </g>
                 <g transform="translate(160, 15)">
                     <circle cx="0" cy="0" r="8" fill="url(#chrome)" />
-                    <circle cx="0" cy="0" r="6" fill={isHot ? '#f00' : '#300'} filter={isHot ? 'url(#hotGlow)' : ''} className={isHot ? 'animate-pulse' : ''} />
+                    <circle cx="0" cy="0" r="6" fill={isHot ? '#f00' : '#300'} filter={isHot ? 'url(#hotGlow)' : ''} className={isHot ? 'animate-[pulse_1s_infinite]' : 'animate-[pulse_6s_infinite]'} />
                 </g>
             </g>
         );
@@ -428,7 +415,6 @@ const CabinetSVG = ({
                 <path d="M 35 5 H 205 L 195 25 H 45 Z" fill="#111" opacity="0.9" />
                 <path d="M 35 5 L 45 25 V 105 L 40 125 Z" fill="#111" opacity="0.6" />
                 
-                {/* Screen Hardware Decal (Cleaned up for realism) */}
                 <g transform="translate(155, 10)">
                     <rect width="40" height="12" fill="#050505" opacity="0.9" rx="2" stroke={accent} strokeWidth="0.5" />
                     <text x="20" y="8" textAnchor="middle" fill={accent} fontSize="5" fontFamily="monospace" fontWeight="900" letterSpacing="1">
@@ -436,7 +422,9 @@ const CabinetSVG = ({
                     </text>
                 </g>
                 
-                <path d="M 35 5 H 205 L 200 125 H 40 Z" fill="url(#glassGlare)" opacity="0.7" pointerEvents="none" />
+                <g style={{mixBlendMode: 'screen'}} opacity="0.5" pointerEvents="none">
+                    <path d="M 35 5 H 205 L 200 125 H 40 Z" fill="url(#glassGlare)" />
+                </g>
             </g>
         );
     };
@@ -461,7 +449,7 @@ const CabinetSVG = ({
              <g transform="translate(195, 10)">
                  <rect x="0" y="0" width="18" height="32" rx="4" fill="#0a0a0a" stroke="url(#chrome)" strokeWidth="2" />
                  <line x1="9" y1="6" x2="9" y2="26" stroke="#111" strokeWidth="3" strokeLinecap="round" />
-                 <circle cx="9" cy="38" r="4" fill="#0F0" filter="url(#glowLight)" className={isBusy ? 'opacity-30' : 'animate-[pulse_2s_ease-in-out_infinite]'} />
+                 <circle cx="9" cy="38" r="4" fill="#0F0" filter="url(#glowLight)" className={isBusy ? 'opacity-30' : 'animate-[pulse_4s_ease-in-out_infinite]'} />
              </g>
 
              <g transform="translate(5, 15)">
@@ -474,7 +462,7 @@ const CabinetSVG = ({
              <g transform="translate(17, 45)">
                  <circle cx="0" cy="0" r="14" fill="#111" />
                  <circle cx="0" cy="0" r="10" fill="url(#chrome)" />
-                 <circle cx="0" cy="-4" r="8" fill={isBusy ? "#00F3FF" : "red"} filter="url(#glowLight)" opacity={isBusy ? 0.6 : 1} />
+                 <circle cx="0" cy="-4" r="8" fill={isBusy ? "#00F3FF" : "red"} filter="url(#glowLight)" opacity={isBusy ? 0.6 : 1} className="animate-[pulse_4s_ease-in-out_infinite]" />
              </g>
         </g>
     );
@@ -495,10 +483,10 @@ const CabinetSVG = ({
                      {/* Screen Base & Deep Shadow */}
                      <rect x="0" y="0" width="190" height="80" fill={screenBg} className="transition-all duration-1000" />
                      <rect x="0" y="0" width="190" height="80" fill={`url(#pat-${safeIslandId})`} opacity="0.15" />
-                     <rect x="0" y="0" width="190" height="80" fill="none" stroke="#000" strokeWidth="8" opacity="0.6" /> {/* Inner CRT Shadow */}
+                     <rect x="0" y="0" width="190" height="80" fill="none" stroke="#000" strokeWidth="8" opacity="0.6" />
                      <rect x="0" y="0" width="190" height="80" fill="url(#crtScanline)" opacity="0.3" pointerEvents="none" />
 
-                     {/* Tracking Reticle (Circuit Chaos Vibe) */}
+                     {/* Tracking Reticle */}
                      {!isBroken && (
                          <g opacity="0.2">
                              <circle cx="95" cy="40" r="30" fill="none" stroke={accent} strokeWidth="0.5" strokeDasharray="2 4" />
@@ -508,9 +496,12 @@ const CabinetSVG = ({
                          </g>
                      )}
 
+                     {/* Infinite Telemetry Waveform */}
                      {!isBroken && (
                          <g opacity="0.4">
-                             <polyline points={bellySparklinePoints} fill="none" stroke={accent} strokeWidth="1.5" filter="url(#glowLight)" className="transition-all duration-500" />
+                             <polyline points={bellySparklinePoints} fill="none" stroke={accent} strokeWidth="1.5" filter="url(#glowLight)">
+                                 <animateTransform attributeName="transform" type="translate" values="0 0; -200 0" dur="25s" repeatCount="indefinite" ease="linear" />
+                             </polyline>
                          </g>
                      )}
 
@@ -519,22 +510,22 @@ const CabinetSVG = ({
                              <text x="95" y="45" textAnchor="middle" fill="#F00" fontSize="14" fontWeight="900" fontStyle="italic" letterSpacing="4" filter="url(#glowLight)">SYSTEM OFFLINE</text>
                          </g>
                      ) : (
-                         <>
-                             <g transform="translate(95, 45)">
-                                 <text x="0" y="-12" textAnchor="middle" fill={accent} fontSize="5" fontWeight="900" opacity="0.8" letterSpacing="3">
-                                     {currentTheme.title}
-                                 </text>
-                                 <text x="0" y="0" textAnchor="middle" fill={`url(#textGrad${safeIslandId})`} fontSize="18" fontWeight="900" fontStyle="italic" style={{ filter: `drop-shadow(0 0 5px ${accent})` }}>
-                                     {currentTheme.name}
-                                 </text>
-                                 <text x="0" y="16" textAnchor="middle" fill="#FFF" fontSize="8" opacity="0.3" letterSpacing="6">
-                                     {currentTheme.kanji}
-                                 </text>
-                             </g>
-                         </>
+                         <g transform="translate(95, 45)">
+                             <rect x="-65" y="-22" width="130" height="34" rx="3" fill="#000" opacity="0.8" stroke={accent} strokeWidth="0.5" />
+                             <path d="M -65 -12 L -65 -22 L -55 -22 M 65 -12 L 65 -22 L 55 -22 M -65 4 L -65 14 L -55 14 M 65 4 L 65 14 L 55 14" fill="none" stroke={accent} strokeWidth="1.5" filter="url(#glowLight)" />
+                             
+                             <text x="0" y="-14" textAnchor="middle" fill={accent} fontSize="4" fontWeight="900" opacity="1" letterSpacing="3" className="animate-[pulse_4s_infinite]">
+                                 [ {currentTheme.title} ]
+                             </text>
+                             <text x="0" y="2" textAnchor="middle" fill={`url(#textGrad${safeIslandId})`} fontSize="15" fontWeight="900" fontStyle="italic" style={{ filter: `drop-shadow(0 0 6px ${accent})` }}>
+                                 {currentTheme.name}
+                             </text>
+                             <text x="0" y="16" textAnchor="middle" fill="#FFF" fontSize="6" opacity="0.8" letterSpacing="8">
+                                 {currentTheme.kanji}
+                             </text>
+                         </g>
                      )}
 
-                     {/* HUD Readouts - Keeping Laps, Volatility, Wins clear */}
                      <g transform="translate(145, 5)">
                          <rect width="40" height="12" fill="rgba(0,0,0,0.8)" rx="2" stroke={accent} strokeWidth="0.5" />
                          <text x="20" y="8.5" textAnchor="middle" fill="#FFF" fontSize="6" fontFamily="monospace" fontWeight="900" style={{ filter: `drop-shadow(0 0 2px #fff)` }}>
@@ -557,8 +548,10 @@ const CabinetSVG = ({
                      </g>
                  </g>
                  
-                 {/* Curved CRT Glass Glare */}
-                 <path d="M 0 0 L 190 0 L 180 80 L 10 80 Z" fill="url(#glassGlare)" opacity="0.6" pointerEvents="none" style={{mixBlendMode: 'screen'}} />
+                 {/* Cinematic Sweeping Glare for Belly Glass */}
+                 <g style={{mixBlendMode: 'screen'}} opacity="0.5" pointerEvents="none">
+                     <path d="M 0 0 L 190 0 L 180 80 L 10 80 Z" fill="url(#glassGlare)" />
+                 </g>
             </g>
         );
     };
@@ -581,7 +574,7 @@ const CabinetSVG = ({
                     <ellipse cx="22" cy="3" rx="8" ry="3" fill="url(#gold)" stroke="#B8860B" strokeWidth="0.5" />
                     <ellipse cx="35" cy="6" rx="8" ry="3" fill="url(#gold)" stroke="#B8860B" strokeWidth="0.5" />
                     <ellipse cx="30" cy="2" rx="8" ry="3" fill="url(#gold)" stroke="#B8860B" strokeWidth="0.5" />
-                    {isHot && <circle cx="35" cy="4" r="12" fill="#FFD700" opacity="0.5" filter="url(#glowLight)" className="animate-[pulse_2s_ease-in-out_infinite]" />}
+                    {isHot && <circle cx="35" cy="4" r="12" fill="#FFD700" opacity="0.5" filter="url(#glowLight)" className="animate-[pulse_4s_ease-in-out_infinite]" />}
                  </g>
              )}
         </g>
@@ -608,8 +601,10 @@ const CabinetSVG = ({
             {renderTelemetryDashboard()}
             {renderCoinTray()}
             
-            {/* Environmental Glass Glare for entire cabinet */}
-            <path d="M 15 40 L 225 40 L 230 395 L 10 395 Z" fill="url(#glassGlare)" opacity="0.25" pointerEvents="none" style={{mixBlendMode:'screen'}} />
+            {/* Environmental Sweeping Glass Glare for entire cabinet */}
+            <g style={{mixBlendMode: 'screen'}} opacity="0.3" pointerEvents="none">
+                <path d="M 15 40 L 225 40 L 230 395 L 10 395 Z" fill="url(#glassGlare)" />
+            </g>
         </motion.svg>
     );
 };
