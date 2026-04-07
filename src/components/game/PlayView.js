@@ -43,7 +43,6 @@ const PAYTABLE_DATA = [
     { id: 7, name: 'REPLAY', mult: 'FREE SPIN', color: 'text-cyan-400', glow: 'shadow-[0_0_15px_cyan]' }
 ];
 
-// Backend matrix expects Row-Major: [0,1,2] is Top Row.
 const PAYLINES = [[0, 1, 2], [3, 4, 5], [6, 7, 8], [0, 4, 8], [6, 4, 2]];
 
 const ISLAND_BET_AMOUNTS = {
@@ -79,10 +78,9 @@ const RollupNumber = ({ value, duration = 1000 }) => {
     return <>{count.toLocaleString()}</>;
 };
 
-// --- VIRTUALIZED REEL COMPONENT (V7 ROW/COL FIX) ---
-const ReelColumn = ({ isSpinning, finalSymbols, locked, isWinning, isTeaser, isReachEye, colIdx, isFreeze, islandId }) => {
+// --- VIRTUALIZED REEL COMPONENT ---
+const ReelColumn = ({ isSpinning, finalSymbols, locked, isWinning, isTeaser, isReachEye, colIdx, isFreeze, islandId, isReady }) => {
     
-    // VISUAL FIX: Seamless Loop Integration
     const spinStrip = useMemo(() => {
         const randomFill = Array.from({length: 3}, () => Math.floor(Math.random() * 7) + 1);
         return [...finalSymbols, ...randomFill];
@@ -97,6 +95,20 @@ const ReelColumn = ({ isSpinning, finalSymbols, locked, isWinning, isTeaser, isR
             ${isReachReel ? 'ring-4 ring-red-500 shadow-[inset_0_0_80px_rgba(239,68,68,0.5)] animate-pulse saturate-150' : ''}
         `} style={{ transform: 'translateZ(0)' }}>
             
+            {/* Visual Boot Sequence (Circuit Chaos Decrypting) */}
+            {!isReady && (
+                <div className="absolute inset-0 z-40 bg-black/80 flex flex-col items-center justify-center backdrop-blur-sm overflow-hidden">
+                    <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/circuit-board.png')] opacity-30 mix-blend-color-dodge animate-[pulse_1s_ease-in-out_infinite]"></div>
+                    <div className={`w-full h-1 bg-cyan-500/50 shadow-[0_0_15px_cyan] absolute animate-[scanline_2s_linear_infinite] delay-${colIdx * 100}`}></div>
+                    <Cpu size={16} className="text-cyan-500/50 animate-spin-slow mb-1" />
+                    <span className="text-[6px] font-mono text-cyan-500/80 tracking-widest uppercase">SYNCING</span>
+                </div>
+            )}
+
+            <style dangerouslySetInnerHTML={{__html: `
+                @keyframes scanline { 0% { top: -10%; } 100% { top: 110%; } }
+            `}} />
+
             <div className="absolute inset-0 overflow-hidden" style={{ perspective: '1000px' }}>
                 <div 
                     className={`w-full absolute flex flex-col justify-between will-change-transform
@@ -155,22 +167,21 @@ const SectorLoader = ({ progress, islandName }) => (
 
 const PlayView = ({ machine, island, onLeave }) => {
     const router = useRouter();
-    const { user, updateBalance } = useAuth();
+    const { user } = useAuth();
     const { addToast } = useToast();
     const { playSound } = useGameSound();
     
     const slotLogic = useSlotMachine(machine?.id, island?.id, machine?.session_token);
     
     const { 
-        reels, winningLines, isSpinning, isTeaser, isReachEye, isFreeze, lastWin, winTier, sessionWinStreak, streakMult, volatility,
+        reels, winningLines, isSpinning, isTeaser, isReachEye, isFreeze, lastWin, winTier, sessionWinStreak, momentumMult, inZone, volatility,
         freeSpins, bonusMode, bonusSpinsLeft, atSequence, atCurrentStep,
-        showBonusSummary, bonusTotalWin, clearBonusTotal, levelUpData, setLevelUpData,
-        isJackpot, setIsJackpot, lapsSinceBonus, momentumMult, inZone, error, 
+        showBonusSummary, bonusTotalWin, clearBonusTotal, levelUpData, 
+        isJackpot, lapsSinceBonus, error, 
         showIdleWarning, isIdleKicked, resetIdleTimer, isReady,
-        autoPlay, spin, stopReel, setAutoPlay, setLastWin, turboMode, setTurboMode, pfData
+        autoPlay, spin, stopReel, setAutoPlay, setLastWin, turboMode, setTurboMode
     } = slotLogic;
     
-    // --- AAA CINEMATIC LOADING & CACHING STATE ---
     const [localLoadProgress, setLocalLoadProgress] = useState(0);
     const [isCinematicReady, setIsCinematicReady] = useState(false);
     const [sessionMinutes, setSessionMinutes] = useState(0);
@@ -180,17 +191,14 @@ const PlayView = ({ machine, island, onLeave }) => {
     const [charInteraction, setCharInteraction] = useState(null);
     const [coinParticles, setCoinParticles] = useState([]); 
     
-    // UI State
     const [showPaytable, setShowPaytable] = useState(false);
     const [showSettings, setShowSettings] = useState(false);
     
-    // Hardware & Physics
     const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
     const [isMobile, setIsMobile] = useState(false);
     const [reelThud, setReelThud] = useState([false, false, false]);
     const [currentJackpot, setCurrentJackpot] = useState(3000000);
     
-    // --- LATENCY MASKING QUEUE ---
     const [apiReady, setApiReady] = useState(true);
     const [queuedStops, setQueuedStops] = useState(new Set());
 
@@ -213,18 +221,15 @@ const PlayView = ({ machine, island, onLeave }) => {
     const relativeNum = (((machine?.machine_number || 1) - 1) % MACHINES_PER_FLOOR) + 1;
     const displayId = `${currentFloor}-${relativeNum.toString().padStart(2, '0')}`;
 
-    // --- LOCALIZED ASSET PRELOADING (V7 Caching) ---
+    // --- LOCALIZED ASSET PRELOADING ---
     useEffect(() => {
         if (!island?.id) return;
         
         const cacheKey = `sector_cached_${island.id}_${user?.active_pet_id || island.hostess_char_id || 'luna'}`;
         
-        // Instant bypass if already loaded previously
         if (localStorage.getItem(cacheKey) === 'true') {
             setLocalLoadProgress(100);
             setIsCinematicReady(true);
-            
-            // Background warm-up
             const bgImg = new Image();
             bgImg.src = `/assets/backgrounds/bg_${island.id}.jpg`;
         } else {
@@ -234,7 +239,7 @@ const PlayView = ({ machine, island, onLeave }) => {
             const localAssets = [
                 `/assets/backgrounds/bg_${island.id}.jpg`,
                 `/assets/characters/${user?.active_pet_id || island.hostess_char_id || 'luna'}.png`,
-                `/assets/machines/belly_${island.id}.png`
+                ...Array.from({ length: 7 }).map((_, i) => `/assets/symbols/island${island.id}/${i + 1}.svg`)
             ];
 
             let loaded = 0;
@@ -245,31 +250,21 @@ const PlayView = ({ machine, island, onLeave }) => {
                     loaded++;
                     setLocalLoadProgress(Math.round((loaded / localAssets.length) * 100));
                     if (loaded === localAssets.length) {
-                        localStorage.setItem(cacheKey, 'true'); // Flag cache
-                        setTimeout(() => {
-                            setIsCinematicReady(true);
-                            addToast(`Welcome back, ${user?.username}! Sector mounted.`, 'info');
-                        }, 500); 
+                        localStorage.setItem(cacheKey, 'true');
+                        setTimeout(() => { setIsCinematicReady(true); }, 500); 
                     }
                 };
             });
         }
 
-        const sessionTimer = setInterval(() => {
-            setSessionMinutes(prev => prev + 1);
-        }, 60000);
-
+        const sessionTimer = setInterval(() => { setSessionMinutes(prev => prev + 1); }, 60000);
         const checkMobile = () => setIsMobile(window.innerWidth < 768);
+        
         checkMobile();
         window.addEventListener('resize', checkMobile);
-        
-        return () => {
-            window.removeEventListener('resize', checkMobile);
-            clearInterval(sessionTimer);
-        };
-    }, [island?.id, user?.active_pet_id, island?.hostess_char_id, user?.username, addToast]);
+        return () => { window.removeEventListener('resize', checkMobile); clearInterval(sessionTimer); };
+    }, [island?.id, user?.active_pet_id, island?.hostess_char_id]);
 
-    // --- GYROSCOPE & MOUSE PARALLAX ---
     useEffect(() => {
         if (!isCinematicReady) return;
         const handleOrientation = (e) => {
@@ -295,7 +290,6 @@ const PlayView = ({ machine, island, onLeave }) => {
         }
     }, [resetIdleTimer, isMobile]);
 
-    // --- JACKPOT POLLING ---
     useEffect(() => {
         const fetchJackpot = async () => {
             if (!island?.id) return;
@@ -311,7 +305,6 @@ const PlayView = ({ machine, island, onLeave }) => {
 
     useEffect(() => { if (isJackpot) setCurrentJackpot(3000000); }, [isJackpot]);
 
-    // --- ERROR & STATE HANDLING ---
     useEffect(() => {
         if (error) {
             addToast(`SYSTEM: ${error}`, 'error');
@@ -331,9 +324,7 @@ const PlayView = ({ machine, island, onLeave }) => {
 
     const isOverheating = sessionWinStreak >= 3 || momentumMult > 1.2 || inZone || bonusMode;
 
-    useEffect(() => {
-        if (isFreeze) { playSound('bigwin'); } 
-    }, [isFreeze, playSound]);
+    useEffect(() => { if (isFreeze) { playSound('bigwin'); } }, [isFreeze, playSound]);
 
     useEffect(() => {
         if (isReachWaitState) setCharInteraction("🔥 GEKIATSU! REACH!");
@@ -341,16 +332,14 @@ const PlayView = ({ machine, island, onLeave }) => {
         else if (sessionWinStreak >= 3 && !isCurrentlySpinning) setCharInteraction(`🔥 COMBO x${sessionWinStreak}!`);
         else if (momentumMult > 1.2 && !isCurrentlySpinning) setCharInteraction(`Momentum x${momentumMult.toFixed(1)}!`);
         else setCharInteraction(null);
-    }, [isReachWaitState, inZone, momentumMult, sessionWinStreak, streakMult, isCurrentlySpinning]);
+    }, [isReachWaitState, inZone, momentumMult, sessionWinStreak, isCurrentlySpinning]);
 
     useEffect(() => {
         if (levelUpData && levelUpData.length > 0) { 
-            playSound('bigwin'); 
-            triggerCoinShower(80); 
+            playSound('bigwin'); triggerCoinShower(80); 
         }
     }, [levelUpData, playSound]);
 
-    // Win Processing
     useEffect(() => {
         if (lastWin > 0 && winStage === 'idle' && !winHandled.current && !isCurrentlySpinning) {
             winHandled.current = true; 
@@ -416,7 +405,6 @@ const PlayView = ({ machine, island, onLeave }) => {
         
     }, [user, currentBet, winStage, playSound, spin, freeSpins, bonusMode, isCurrentlySpinning, isFreeze, levelUpData, addToast, isReady, setAutoPlay]);
 
-    // Unified Stop Executor (Triggers exact physics logic)
     const executeStop = useCallback((idx) => {
         playSound('stop');
         if (navigator.vibrate) navigator.vibrate(20);
@@ -424,15 +412,14 @@ const PlayView = ({ machine, island, onLeave }) => {
         setReelThud(prev => { const n = [...prev]; n[idx] = true; return n; });
         setTimeout(() => { setReelThud(prev => { const n = [...prev]; n[idx] = false; return n; }); }, 150);
         
-        stopReel(idx); // Locks the specific reel array
+        stopReel(idx); 
     }, [playSound, stopReel]);
 
-    // UI Handle Manual Button Clicks
     const handleManualStop = useCallback((idx) => {
         if (isSpinning[idx] && !autoPlay) {
             if (atSequence && atSequence.length > 0 && atSequence[atCurrentStep] !== idx) return; 
             
-            // If the server hasn't responded yet, queue the action
+            // If the server hasn't responded yet, queue the action (Redis Pipeline Masking)
             if (!apiReady) {
                 setQueuedStops(prev => new Set(prev).add(idx));
                 playSound('click'); 
@@ -504,14 +491,12 @@ const PlayView = ({ machine, island, onLeave }) => {
         return () => window.removeEventListener('keydown', handleKeyDown);
     }, [handleSpin, handleQuickStop, handleManualStop, isCurrentlySpinning, resetIdleTimer, winStage]);
 
-    // --- BULLETPROOF WINDETAILS FIX ---
     const winDetails = useMemo(() => {
-        const defaultWin = PAYTABLE_DATA[6]; // Fallback to Replay symbol
-        if (isJackpot) return PAYTABLE_DATA[0]; // Force GJP
+        const defaultWin = PAYTABLE_DATA[6]; 
+        if (isJackpot) return PAYTABLE_DATA[0]; 
         if (!winningLines || winningLines.length === 0) return defaultWin;
         
         const firstLine = winningLines[0];
-        // Ensure we fetch correctly mapped symbols from the flat matrix
         if (firstLine === 99) return PAYTABLE_DATA.find(p => p.id === reels[0]) || defaultWin;
         
         const symId = reels[PAYLINES[firstLine][0]];
@@ -531,13 +516,12 @@ const PlayView = ({ machine, island, onLeave }) => {
                 onPointerMove={handlePointerMove} 
                 onPointerDown={resetIdleTimer}
             >
-                {/* CSS ANIMATIONS FOR VIRTUALIZED REELS */}
                 <style dangerouslySetInnerHTML={{__html: `
                     @keyframes reel-spin-fast { 0% { transform: translateY(-50%); } 100% { transform: translateY(0%); } }
                     @keyframes snap-bounce-soft { 0% { transform: translateY(-5%); } 40% { transform: translateY(2%); } 75% { transform: translateY(-1%); } 100% { transform: translateY(0%); } }
                 `}} />
 
-                {/* --- CINEMATIC OVERLAYS & LETTERBOXING --- */}
+                {/* --- CINEMATIC OVERLAYS --- */}
                 <AnimatePresence>
                     {isCinematicReady && (
                         <>
@@ -547,7 +531,6 @@ const PlayView = ({ machine, island, onLeave }) => {
                     )}
                 </AnimatePresence>
 
-                {/* --- CINEMATIC FLOOR LIGHTING --- */}
                 <AnimatePresence>
                     {(isJackpot || winTier === 'EPIC' || winTier === 'MEGA' || isFreeze) && (
                         <motion.div 
@@ -572,7 +555,6 @@ const PlayView = ({ machine, island, onLeave }) => {
                     )}
                 </AnimatePresence>
 
-                {/* --- SYSTEM FREEZE OVERLAY --- */}
                 <AnimatePresence>
                     {isFreeze && isCurrentlySpinning && (
                         <motion.div 
@@ -603,7 +585,6 @@ const PlayView = ({ machine, island, onLeave }) => {
                     )}
                 </AnimatePresence>
 
-                {/* --- IMMERSIVE BACKGROUND --- */}
                 {isCinematicReady && (
                     <div className={`absolute inset-0 z-0 pointer-events-none transition-opacity duration-500 ${isCurrentlySpinning ? 'opacity-40' : 'opacity-100'}`}>
                         <div className={`absolute inset-0 scale-110 blur-[1px] opacity-60 transition-all duration-1000 ${isReachWaitState ? 'grayscale-[30%] sepia-[50%] hue-rotate-[-20deg] scale-125' : ''}`}>
@@ -616,7 +597,6 @@ const PlayView = ({ machine, island, onLeave }) => {
                     </div>
                 )}
 
-                {/* AFK WARNING BANNER */}
                 <AnimatePresence>
                     {showIdleWarning && (
                         <motion.div initial={{ y: -50, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: -50, opacity: 0 }} className="fixed top-24 left-1/2 transform -translate-x-1/2 z-[100] w-[90%] max-w-sm bg-red-600 border-2 border-white shadow-[0_0_30px_red] rounded-full p-2 flex items-center justify-center gap-2 animate-pulse">
@@ -629,7 +609,6 @@ const PlayView = ({ machine, island, onLeave }) => {
                 <GlobalTicker />
                 <ActiveEvents />
 
-                {/* V3 INTEGRATED GRAND JACKPOT TICKER */}
                 <div className="bg-black border-b border-white/10 h-8 md:h-10 flex items-center overflow-hidden relative z-30 shadow-lg">
                     <div className="bg-gradient-to-r from-yellow-700 to-yellow-900 h-full px-2 md:px-4 flex items-center justify-center border-r border-yellow-500/50 z-10 shadow-[2px_0_10px_rgba(0,0,0,0.5)]">
                         <Trophy className="w-3 h-3 md:w-4 md:h-4 text-yellow-300 md:mr-2 drop-shadow-md" />
@@ -650,7 +629,6 @@ const PlayView = ({ machine, island, onLeave }) => {
                     <div className={`absolute bottom-0 left-0 h-[2px] transition-all duration-500 shadow-[0_0_8px_currentColor] ${currentJackpot >= 7000000 ? 'bg-purple-500 text-purple-500' : currentJackpot >= 3600000 ? 'bg-red-500 text-red-500' : 'bg-yellow-500 text-yellow-500'}`} style={{ width: `${jpProgressPercent}%` }} />
                 </div>
                 
-                {/* --- CYBER HUD (PLAYER CARE FOCUS) --- */}
                 <div className="absolute top-16 md:top-20 left-0 w-full px-2 md:px-6 flex flex-row justify-between items-start z-40 pointer-events-none mt-1">
                     
                     <div className="flex flex-col gap-1 md:gap-2">
@@ -808,6 +786,7 @@ const PlayView = ({ machine, island, onLeave }) => {
                                         isTeaser={isTeaser} 
                                         isReachEye={isReachEye}
                                         isFreeze={isFreeze} 
+                                        isReady={isReady && apiReady}
                                     />
                                 ))}
 

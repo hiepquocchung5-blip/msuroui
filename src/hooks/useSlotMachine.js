@@ -2,18 +2,24 @@ import { useState, useCallback, useRef, useEffect } from 'react';
 import api from '../services/api';
 import { useAuth } from '../context/AuthContext';
 
+// Helper to generate a realistic initial 3x3 grid (Avoids 1/GJP to prevent false hype)
+const generateInitialReels = () => {
+    return Array.from({ length: 9 }, () => Math.floor(Math.random() * 6) + 2);
+};
+
 export const useSlotMachine = (machineId, islandId, initialSessionToken = null) => {
     const { user, updateBalance } = useAuth();
     
     // --- CORE GAME STATE ---
-    const [reels, setReels] = useState([7, 7, 7, 7, 7, 7, 7, 7, 7]); 
+    // V7.8+ FIX: Replaced static 7s with a randomized organic grid on load
+    const [reels, setReels] = useState(generateInitialReels()); 
     const [winningLines, setWinningLines] = useState([]); 
     const [isSpinning, setIsSpinning] = useState([false, false, false]); 
     const [isTeaser, setIsTeaser] = useState(false); 
     const [isReachEye, setIsReachEye] = useState(false);
     const [isFreeze, setIsFreeze] = useState(false);
     
-    // --- LEVIATHAN v6.8 TELEMETRY & TRUST ---
+    // --- LEVIATHAN TELEMETRY & TRUST ---
     const [freeSpins, setFreeSpins] = useState(0); 
     const [bonusMode, setBonusMode] = useState(null); 
     const [bonusSpinsLeft, setBonusSpinsLeft] = useState(0);
@@ -129,6 +135,8 @@ export const useSlotMachine = (machineId, islandId, initialSessionToken = null) 
                     setFreeSpins(state.free_spins || 0);
                     setLapsSinceBonus(state.laps_since_bonus || 0);
                     setSessionWinStreak(state.session_win_streak || 0);
+                    // Also recover grid if available
+                    if (state.last_grid) setReels(state.last_grid);
                 }
             }
         } catch (e) { setError(e.response?.data?.error || "Failed to connect to machine."); }
@@ -312,18 +320,15 @@ export const useSlotMachine = (machineId, islandId, initialSessionToken = null) 
             }
 
         } catch (err) {
-            // V7 Error Object Parsing Fix
             const responseError = err.response?.data?.error;
             let errMsg = err.message;
 
-            // If the backend sends an object (e.g. {code: 'ERR_SESSION_INVALID', message: '...'})
             if (responseError) {
                 errMsg = typeof responseError === 'object' ? responseError.message : responseError;
             }
 
             setError(errMsg);
 
-            // Safe string-check for auto-resync
             if (typeof errMsg === 'string') {
                 const lowerMsg = errMsg.toLowerCase();
                 if (lowerMsg.includes("sync") || lowerMsg.includes("token") || lowerMsg.includes("mismatch")) {
