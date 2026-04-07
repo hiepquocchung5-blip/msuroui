@@ -5,8 +5,7 @@ import {
     Minus, Plus, Zap, StopCircle, Gamepad2, 
     Trophy, Flame, MessageCircle, TrendingUp, 
     ShieldAlert, X, Coins, Repeat, Target, Activity, Cpu, MapPin, 
-    HelpCircle, AlertOctagon, Settings, LogOut, Menu, Heart, Clock, LifeBuoy, Sparkles,
-    ChevronRight, ChevronLeft, Crosshair, Swords
+    HelpCircle, AlertOctagon, Settings, LogOut, Menu, Heart, Clock, LifeBuoy, Sparkles
 } from 'lucide-react';
 import { useRouter } from 'next/router';
 
@@ -158,6 +157,7 @@ const PlayView = ({ machine, island, onLeave }) => {
     
     const slotLogic = useSlotMachine(machine?.id, island?.id, machine?.session_token);
     
+    // --- ZERO LATENCY ASSET PRELOADER ---
     const { progress: assetProgress, isReady: assetsReady } = useSpinLoader(island?.id, user?.active_pet_id || island?.hostess_char_id);
 
     const { 
@@ -177,12 +177,6 @@ const PlayView = ({ machine, island, onLeave }) => {
     const [showPaytable, setShowPaytable] = useState(false);
     const [showSettings, setShowSettings] = useState(false);
     
-    // HUD Overlays
-    const [showMissions, setShowMissions] = useState(false);
-    const [missionsData, setMissionsData] = useState([]);
-    const [showTournaments, setShowTournaments] = useState(false);
-    const [tourneyData, setTourneyData] = useState([]);
-
     // Smoothed Parallax State
     const [targetMousePos, setTargetMousePos] = useState({ x: 0, y: 0 });
     const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
@@ -208,24 +202,6 @@ const PlayView = ({ machine, island, onLeave }) => {
     const currentFloor = Math.ceil((machine?.machine_number || 1) / MACHINES_PER_FLOOR);
     const relativeNum = (((machine?.machine_number || 1) - 1) % MACHINES_PER_FLOOR) + 1;
     const displayId = `${currentFloor}-${relativeNum.toString().padStart(2, '0')}`;
-
-    // Background HUD Fetcher
-    useEffect(() => {
-        const fetchHUDData = async () => {
-            if(!sessionReady) return;
-            try {
-                const [misRes, tourRes] = await Promise.all([
-                    api.get('/game/missions.php'),
-                    api.get('/tournaments/list.php')
-                ]);
-                if (misRes.data?.status === 'success') setMissionsData(misRes.data.data);
-                if (tourRes.data?.status === 'success') setTourneyData(tourRes.data.data);
-            } catch (e) {}
-        };
-        fetchHUDData();
-        const intv = setInterval(fetchHUDData, 30000);
-        return () => clearInterval(intv);
-    }, [sessionReady]);
 
     useEffect(() => {
         const sessionTimer = setInterval(() => { setSessionMinutes(prev => prev + 1); }, 60000);
@@ -436,7 +412,7 @@ const PlayView = ({ machine, island, onLeave }) => {
                 onPointerMove={handlePointerMove} 
                 onPointerDown={resetIdleTimer}
             >
-                {/* AAA KEYFRAMES */}
+                {/* AAA KEYFRAMES & UTILS */}
                 <style dangerouslySetInnerHTML={{__html: `
                     @keyframes reel-spin-fast { 0% { transform: translateY(-50%); } 100% { transform: translateY(0%); } }
                     @keyframes snap-bounce-soft { 0% { transform: translateY(-5%); } 40% { transform: translateY(2%); } 75% { transform: translateY(-1%); } 100% { transform: translateY(0%); } }
@@ -536,61 +512,6 @@ const PlayView = ({ machine, island, onLeave }) => {
 
                 <GlobalTicker />
                 <ActiveEvents />
-
-                {/* --- LIVE TELEMETRY HUDs (MISSIONS & TOURNAMENTS) --- */}
-                {/* Left HUD: Missions */}
-                <div className={`absolute left-0 top-[120px] z-40 transition-transform duration-300 ${showMissions ? 'translate-x-0' : '-translate-x-[90%]'}`}>
-                    <div className="flex items-start">
-                        <GlassCard className="w-48 p-3 rounded-l-none border-l-0 bg-black/80 backdrop-blur-xl rounded-r-xl border-cyan-500/30">
-                            <div className="flex items-center gap-2 mb-2 border-b border-white/10 pb-1">
-                                <Crosshair size={12} className="text-cyan-400"/>
-                                <span className="text-[10px] font-black text-white tracking-widest uppercase">Directives</span>
-                            </div>
-                            <div className="space-y-3">
-                                {missionsData.slice(0,2).map((m) => {
-                                    const pct = Math.min(100, (m.progress / m.total) * 100);
-                                    return (
-                                        <div key={m.id}>
-                                            <div className="text-[9px] text-gray-300 mb-1 leading-tight">{m.task}</div>
-                                            <div className="w-full h-1 bg-gray-800 rounded-full overflow-hidden">
-                                                <div className={`h-full ${m.claimed ? 'bg-green-500' : 'bg-cyan-500 shadow-[0_0_5px_cyan]'}`} style={{width: `${pct}%`}}></div>
-                                            </div>
-                                        </div>
-                                    );
-                                })}
-                                {missionsData.length === 0 && <div className="text-[9px] text-gray-500 text-center">No active missions.</div>}
-                            </div>
-                        </GlassCard>
-                        <button onClick={() => setShowMissions(!showMissions)} className="bg-black/80 border border-cyan-500/30 border-l-0 rounded-r-lg p-1.5 text-cyan-400 hover:text-white transition-colors backdrop-blur-xl">
-                            {showMissions ? <ChevronLeft size={16}/> : <ChevronRight size={16}/>}
-                        </button>
-                    </div>
-                </div>
-
-                {/* Right HUD: Tournaments */}
-                <div className={`absolute right-0 top-[120px] z-40 transition-transform duration-300 ${showTournaments ? 'translate-x-0' : 'translate-x-[90%]'}`}>
-                    <div className="flex items-start flex-row-reverse">
-                        <GlassCard className="w-48 p-3 rounded-r-none border-r-0 bg-black/80 backdrop-blur-xl rounded-l-xl border-yellow-500/30">
-                            <div className="flex items-center gap-2 mb-2 border-b border-white/10 pb-1 flex-row-reverse">
-                                <Swords size={12} className="text-yellow-400"/>
-                                <span className="text-[10px] font-black text-white tracking-widest uppercase text-right">Tournaments</span>
-                            </div>
-                            <div className="space-y-3 text-right">
-                                {tourneyData.slice(0,2).map((t) => (
-                                    <div key={t.id}>
-                                        <div className="text-[9px] text-yellow-400 font-bold mb-0.5 truncate">{t.title}</div>
-                                        <div className="text-[8px] text-gray-400 font-mono">Rank: {t.my_score !== null ? `#${t.my_rank || '?'}` : 'Unranked'}</div>
-                                        <div className="text-[8px] text-gray-500 font-mono flex items-center justify-end gap-1"><Clock size={8}/> {t.time_left}</div>
-                                    </div>
-                                ))}
-                                {tourneyData.length === 0 && <div className="text-[9px] text-gray-500 text-center">No active events.</div>}
-                            </div>
-                        </GlassCard>
-                        <button onClick={() => setShowTournaments(!showTournaments)} className="bg-black/80 border border-yellow-500/30 border-r-0 rounded-l-lg p-1.5 text-yellow-400 hover:text-white transition-colors backdrop-blur-xl">
-                            {showTournaments ? <ChevronRight size={16}/> : <ChevronLeft size={16}/>}
-                        </button>
-                    </div>
-                </div>
 
                 <div className="bg-black border-b border-white/10 h-8 md:h-10 flex items-center overflow-hidden relative z-30 shadow-lg">
                     <div className="bg-gradient-to-r from-yellow-700 to-yellow-900 h-full px-2 md:px-4 flex items-center justify-center border-r border-yellow-500/50 z-10 shadow-[2px_0_10px_rgba(0,0,0,0.5)]">
@@ -723,7 +644,7 @@ const PlayView = ({ machine, island, onLeave }) => {
                         transition={{ type: 'spring', stiffness: isMobile ? 80 : 100, damping: 25 }}
                         style={{ transformStyle: 'preserve-3d', transform: 'translateZ(0)' }}
                     >
-                        {/* MACHINE AURA (Replaces harsh rectangular borders) */}
+                        {/* MACHINE AURA */}
                         <div className="absolute inset-0 pointer-events-none -z-10 flex items-center justify-center">
                             {turboMode && <div className="absolute w-[120%] h-[120%] bg-yellow-500/30 blur-[60px] rounded-full animate-[pulse_1s_infinite] mix-blend-screen"></div>}
                             {isReachWaitState && <div className="absolute w-[140%] h-[140%] bg-red-600/40 blur-[80px] rounded-full animate-[pulse_0.5s_infinite] mix-blend-screen"></div>}
@@ -754,7 +675,6 @@ const PlayView = ({ machine, island, onLeave }) => {
                             </div>
 
                             <div className={`flex-1 flex gap-[1%] p-[1%] bg-[#050505] rounded-b-sm border-x-2 border-b-2 relative ${isReachWaitState ? 'border-red-600 shadow-[inset_0_0_40px_rgba(239,68,68,0.3)]' : (inZone && !bonusMode ? 'border-yellow-500/50 shadow-[inset_0_0_40px_rgba(234,179,8,0.15)]' : 'border-gray-900')}`}>
-                                
                                 {[0, 1, 2].map(colIdx => (
                                     <ReelColumn 
                                         key={colIdx} 
@@ -770,7 +690,7 @@ const PlayView = ({ machine, island, onLeave }) => {
                                     />
                                 ))}
 
-                                {/* LASER WIN LINES (Replaces yellow box glow) */}
+                                {/* LASER WIN LINES */}
                                 {winningLines.length > 0 && winStage !== 'gambling' && !isJackpot && (
                                     <div className="absolute inset-0 pointer-events-none z-40">
                                         {winningLines.map(lineIdx => {
@@ -782,7 +702,6 @@ const PlayView = ({ machine, island, onLeave }) => {
                                                 3: "top-[50%] left-[-10%] w-[120%] h-[4px] -translate-y-1/2 rotate-[35deg]",
                                                 4: "top-[50%] left-[-10%] w-[120%] h-[4px] -translate-y-1/2 -rotate-[35deg]"
                                             };
-                                            // Determine line color based on win tier
                                             let lineColor = "bg-green-400 shadow-[0_0_15px_#4ade80,0_0_5px_#fff_inset]";
                                             if (winTier === 'MEGA' || winTier === 'EPIC') lineColor = "bg-red-500 shadow-[0_0_20px_#ef4444,0_0_8px_#fff_inset]";
                                             else if (winTier === 'BIG') lineColor = "bg-yellow-400 shadow-[0_0_15px_#facc15,0_0_5px_#fff_inset]";
@@ -802,41 +721,53 @@ const PlayView = ({ machine, island, onLeave }) => {
                             </div>
                         </div>
 
-                        {/* --- DYNAMIC CONTROL DECK --- */}
+                        {/* --- DYNAMIC CONTROL DECK (PHYSICAL AAA BUTTONS) --- */}
                         <div className="absolute top-[57.5%] left-[5%] w-[90%] h-[15%] pointer-events-auto" style={{ perspective: '800px', transform: 'translateZ(40px)' }}>
                             <div className="w-full h-full relative flex items-center justify-center" style={{ transform: 'rotateX(25deg)', transformOrigin: 'top center' }}>
                                 
                                 {/* Left Controls: Bet Adjust */}
-                                <div className={`absolute left-[5%] top-[10%] flex flex-col md:flex-row items-center gap-1 bg-black/60 p-1.5 rounded-lg border border-white/10 shadow-inner backdrop-blur-md transition-opacity duration-300 ${isCurrentlySpinning ? 'opacity-40 pointer-events-none' : 'opacity-100'}`}>
+                                <div className={`absolute left-[5%] top-[10%] flex flex-col md:flex-row items-center gap-1 bg-[#111]/80 p-1.5 rounded-lg border border-[#333] shadow-[inset_0_2px_10px_rgba(0,0,0,1)] backdrop-blur-md transition-opacity duration-300 ${isCurrentlySpinning ? 'opacity-50 pointer-events-none' : 'opacity-100'}`}>
                                     <div className="flex items-center gap-1 w-full justify-between">
-                                        <motion.button whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.8 }} onClick={() => { playSound('click'); setBetIndex(Math.max(0, betIndex - 1))}} className="w-8 h-8 bg-gradient-to-b from-gray-700 to-gray-900 border border-gray-600 rounded flex items-center justify-center text-white shadow-md hover:bg-gray-700 transition-colors"><Minus size={14}/></motion.button>
-                                        <div className="w-16 text-center font-mono font-black text-yellow-400 text-xs drop-shadow-[0_0_5px_rgba(234,179,8,0.5)] leading-none">{currentBet.toLocaleString()}</div>
-                                        <motion.button whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.8 }} onClick={() => { playSound('click'); setBetIndex(Math.min(activeBetAmounts.length - 1, betIndex + 1))}} className="w-8 h-8 bg-gradient-to-b from-gray-700 to-gray-900 border border-gray-600 rounded flex items-center justify-center text-white shadow-md hover:bg-gray-700 transition-colors"><Plus size={14}/></motion.button>
+                                        <motion.button 
+                                            whileTap={{ y: 2, boxShadow: '0 0px 0px rgba(0,0,0,1)' }} 
+                                            onClick={() => { playSound('click'); setBetIndex(Math.max(0, betIndex - 1))}} 
+                                            className="w-8 h-8 bg-gradient-to-b from-[#444] to-[#222] border border-[#555] rounded flex items-center justify-center text-white shadow-[0_4px_0_#111] hover:brightness-125 transition-all"
+                                        ><Minus size={14}/></motion.button>
+                                        
+                                        <div className="w-16 text-center font-mono font-black text-yellow-400 text-xs drop-shadow-[0_0_5px_rgba(234,179,8,0.5)] leading-none border-x border-[#333] px-2">{currentBet.toLocaleString()}</div>
+                                        
+                                        <motion.button 
+                                            whileTap={{ y: 2, boxShadow: '0 0px 0px rgba(0,0,0,1)' }} 
+                                            onClick={() => { playSound('click'); setBetIndex(Math.min(activeBetAmounts.length - 1, betIndex + 1))}} 
+                                            className="w-8 h-8 bg-gradient-to-b from-[#444] to-[#222] border border-[#555] rounded flex items-center justify-center text-white shadow-[0_4px_0_#111] hover:brightness-125 transition-all"
+                                        ><Plus size={14}/></motion.button>
                                     </div>
                                 </div>
 
-                                {/* Center Controls: Primary Spin Action */}
+                                {/* Center Controls: Primary Spin Action (Mechanical Smash Button) */}
                                 <div className="absolute left-1/2 -translate-x-1/2 top-[5%] md:top-[10%] z-40">
                                     {autoPlay && !isCurrentlySpinning && (
-                                        <div className="absolute inset-0 rounded-full border-[3px] border-dashed border-green-500 animate-[spin_4s_linear_infinite] pointer-events-none scale-110"></div>
+                                        <div className="absolute inset-[-10px] rounded-full border-[3px] border-dashed border-green-500 animate-[spin_4s_linear_infinite] pointer-events-none opacity-50"></div>
                                     )}
+                                    
+                                    {/* Physical Button Wrapper */}
                                     <motion.button 
-                                        whileHover={!isCurrentlySpinning && assetsReady && sessionReady && winStage === 'idle' ? { scale: 1.05 } : {}}
-                                        whileTap={!isCurrentlySpinning && assetsReady && sessionReady && winStage === 'idle' ? { y: 4, scale: 0.95 } : {}}
+                                        whileTap={!isCurrentlySpinning && assetsReady && sessionReady && winStage === 'idle' ? { y: 6, boxShadow: "0 0px 0px rgba(0,0,0,1)" } : {}}
                                         onClick={handleSpin} 
                                         disabled={!assetsReady || !sessionReady || (isProcessing.current && !isCurrentlySpinning) || isFreeze || winStage !== 'idle' || isCurrentlySpinning} 
-                                        className={`w-20 h-20 rounded-full border-b-[6px] md:border-b-[8px] flex flex-col items-center justify-center transition-all duration-300 relative overflow-hidden group
-                                        ${(!assetsReady || !sessionReady) || (isProcessing.current && !isCurrentlySpinning) ? 'bg-gray-800 border-gray-950 opacity-50 shadow-inner' : 
-                                          isCurrentlySpinning ? 'bg-gradient-to-b from-red-600 to-red-900 border-red-950 text-white shadow-[0_0_30px_rgba(239,68,68,0.8)]' :
-                                          'bg-gradient-to-b from-red-500 to-red-800 border-red-950 text-white hover:brightness-125 shadow-[0_10px_30px_rgba(239,68,68,0.5),inset_0_2px_10px_rgba(255,255,255,0.3)]'}`}
+                                        className={`w-24 h-24 rounded-full flex flex-col items-center justify-center transition-all duration-150 relative overflow-hidden group outline-none
+                                        ${(!assetsReady || !sessionReady) || (isProcessing.current && !isCurrentlySpinning) ? 'bg-[#222] border-2 border-[#111] shadow-[0_6px_0_#0a0a0a,inset_0_2px_10px_rgba(0,0,0,0.8)] opacity-60' : 
+                                          isCurrentlySpinning ? 'bg-gradient-to-b from-red-700 to-red-950 border-2 border-[#4a0404] text-white/80 shadow-[0_2px_0_#2b0000,inset_0_5px_15px_rgba(0,0,0,0.6)] translate-y-[4px]' :
+                                          bonusMode === 'HEAVEN' ? 'bg-gradient-to-b from-purple-500 to-purple-800 border-2 border-[#4c1d95] text-white hover:brightness-125 shadow-[0_6px_0_#3b0764,0_15px_20px_rgba(168,85,247,0.4),inset_0_2px_10px_rgba(255,255,255,0.4)]' :
+                                          'bg-gradient-to-b from-red-500 to-red-800 border-2 border-[#7f1d1d] text-white hover:brightness-110 shadow-[0_6px_0_#450a0a,0_15px_20px_rgba(220,38,38,0.4),inset_0_2px_10px_rgba(255,255,255,0.4)]'}`}
                                     >
                                         {!isCurrentlySpinning && assetsReady && sessionReady && (
-                                            <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_rgba(255,255,255,0.4),_transparent)] pointer-events-none"></div>
+                                            <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_rgba(255,255,255,0.4),_transparent)] pointer-events-none opacity-50"></div>
                                         )}
-                                        {turboMode && !isCurrentlySpinning && <Zap className="absolute -top-1 -right-1 md:-top-2 md:-right-2 text-yellow-400 fill-yellow-400 animate-pulse drop-shadow-[0_0_15px_rgba(234,179,8,1)] z-10" size={isMobile ? 16 : 20} />}
-                                        <div className="relative z-10 flex flex-col items-center">
-                                            {isCurrentlySpinning ? <Loader2 size={28} className="text-white/80 animate-spin mb-1 drop-shadow-md" /> : <Gamepad2 size={28} strokeWidth={2.5} className="text-white mb-1 drop-shadow-md group-hover:scale-110 transition-transform" />}
-                                            <span className="text-[9px] font-black text-white tracking-widest uppercase drop-shadow-md leading-none">
+                                        {turboMode && !isCurrentlySpinning && <Zap className="absolute top-2 right-2 text-yellow-400 fill-yellow-400 animate-pulse drop-shadow-[0_0_15px_rgba(234,179,8,1)] z-10" size={16} />}
+                                        <div className="relative z-10 flex flex-col items-center mt-1">
+                                            {isCurrentlySpinning ? <Loader2 size={32} className="text-white/60 animate-spin mb-1 drop-shadow-md" /> : <Gamepad2 size={32} strokeWidth={2.5} className="text-white mb-1 drop-shadow-md group-hover:scale-110 transition-transform" />}
+                                            <span className="text-[10px] font-black text-white tracking-widest uppercase drop-shadow-md leading-none">
                                                 {!assetsReady || !sessionReady ? 'WAIT' : 'SPIN'}
                                             </span>
                                         </div>
@@ -844,10 +775,19 @@ const PlayView = ({ machine, island, onLeave }) => {
                                 </div>
 
                                 {/* Right Controls: Auto / Turbo */}
-                                <div className="absolute right-[5%] top-[15%] flex flex-col md:flex-row gap-2">
-                                    <motion.button whileHover={{ scale: 1.1 }} whileTap={{ y: 2 }} onClick={() => { playSound('click'); setTurboMode(!turboMode)}} className={`w-10 h-10 rounded-lg border-b-[3px] flex items-center justify-center shadow-md transition-colors ${turboMode ? 'bg-gradient-to-b from-yellow-400 to-yellow-600 text-black border-yellow-800 shadow-[0_0_20px_rgba(234,179,8,0.6)]' : 'bg-gradient-to-b from-gray-700 to-gray-900 text-gray-400 border-gray-950 hover:bg-gray-700'}`}><Zap size={14} className="md:w-[18px] md:h-[18px]" fill={turboMode ? "currentColor" : "none"}/></motion.button>
-                                    <motion.button whileHover={{ scale: 1.1 }} whileTap={{ y: 2 }} onClick={toggleAutoPlay} className={`w-10 h-10 rounded-lg border-b-[3px] flex items-center justify-center shadow-md transition-colors ${autoPlay ? 'bg-gradient-to-b from-green-500 to-green-700 text-white border-green-900 shadow-[0_0_20px_rgba(34,197,94,0.6)]' : 'bg-gradient-to-b from-gray-700 to-gray-900 text-gray-400 border-gray-950 hover:bg-gray-700'}`}>
-                                        <Repeat size={14} className={autoPlay ? "md:w-[18px] md:h-[18px] animate-spin-slow" : "md:w-[18px] md:h-[18px]"} />
+                                <div className="absolute right-[5%] top-[15%] flex flex-col md:flex-row gap-3">
+                                    <motion.button 
+                                        whileTap={{ y: 2, boxShadow: '0 0px 0px rgba(0,0,0,1)' }} 
+                                        onClick={() => { playSound('click'); setTurboMode(!turboMode)}} 
+                                        className={`w-10 h-10 rounded-lg flex items-center justify-center transition-all outline-none ${turboMode ? 'bg-gradient-to-b from-yellow-400 to-yellow-600 text-black border border-yellow-300 shadow-[0_4px_0_#854d0e,0_0_15px_rgba(234,179,8,0.6)]' : 'bg-gradient-to-b from-[#333] to-[#111] text-gray-500 border border-[#444] shadow-[0_4px_0_#050505] hover:brightness-125'}`}
+                                    ><Zap size={18} fill={turboMode ? "currentColor" : "none"}/></motion.button>
+                                    
+                                    <motion.button 
+                                        whileTap={{ y: 2, boxShadow: '0 0px 0px rgba(0,0,0,1)' }} 
+                                        onClick={toggleAutoPlay} 
+                                        className={`w-10 h-10 rounded-lg flex items-center justify-center transition-all outline-none ${autoPlay ? 'bg-gradient-to-b from-green-500 to-green-700 text-white border border-green-400 shadow-[0_4px_0_#14532d,0_0_15px_rgba(34,197,94,0.6)]' : 'bg-gradient-to-b from-[#333] to-[#111] text-gray-500 border border-[#444] shadow-[0_4px_0_#050505] hover:brightness-125'}`}
+                                    >
+                                        <Repeat size={18} className={autoPlay ? "animate-spin-slow" : ""} />
                                     </motion.button>
                                 </div>
                             </div>
