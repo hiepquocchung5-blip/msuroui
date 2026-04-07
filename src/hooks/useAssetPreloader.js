@@ -1,5 +1,4 @@
 import { useState, useEffect } from 'react';
-import { useRouter } from 'next/router';
 
 // Dynamically generate the paths for all 35 island symbols (5 islands * 7 symbols)
 const ISLAND_SYMBOLS = Array.from({ length: 5 }).flatMap((_, islandIndex) => 
@@ -8,76 +7,92 @@ const ISLAND_SYMBOLS = Array.from({ length: 5 }).flatMap((_, islandIndex) =>
     )
 );
 
-// Global heavy assets
+// Global heavy assets required for zero-latency UI rendering
+// V11 Optimization: Purged static machine headers and bellies. Relying strictly on dynamic SVG chassis.
 const HEAVY_ASSETS = [
-    '/assets/characters/luna.png', '/assets/characters/mika.png', '/assets/characters/kira.png',
-    '/assets/characters/yami.png', '/assets/characters/glacia.png', '/assets/characters/sky.png',
-    '/assets/characters/ivy.png', '/assets/characters/cyber.png', '/assets/characters/penny.png',
-    '/assets/characters/void.png',
-    '/assets/machines/belly_1.png', '/assets/machines/belly_2.png', '/assets/machines/belly_3.png',
-    '/assets/machines/belly_4.png', '/assets/machines/belly_5.png',
+    // The 5 Core Island Hostesses
+    '/assets/characters/luna.png', 
+    '/assets/characters/mika.png', 
+    '/assets/characters/kira.png',
+    '/assets/characters/cyber.png', 
+    '/assets/characters/gold.png',
+    
+    // The 5 Core Environments
+    '/assets/backgrounds/bg_1.jpg',
+    '/assets/backgrounds/bg_2.jpg',
+    '/assets/backgrounds/bg_3.jpg',
+    '/assets/backgrounds/bg_4.jpg',
+    '/assets/backgrounds/bg_5.jpg',
+    
+    // Symbol Matrix
     ...ISLAND_SYMBOLS
 ];
 
 export const useAssetPreloader = () => {
     const [progress, setProgress] = useState(0);
     const [loaded, setLoaded] = useState(false);
-    const router = useRouter();
 
     useEffect(() => {
-        // 1. FAST PATH: Check if assets are already cached in this browser
-        const isCached = localStorage.getItem('suro_assets_cached') === 'v6.9';
-        
-        if (isCached) {
+        const CACHE_NAME = 'suro-assets-v11';
+        const CACHE_FLAG = 'suro_assets_cached_v11';
+
+        // 1. FAST PATH: Check if assets are already securely saved to disk
+        if (localStorage.getItem(CACHE_FLAG) === 'true') {
             setLoaded(true);
             setProgress(100);
-            
-            // FIX: Removed the aggressive HEAVY_ASSETS.forEach() loop here. 
-            // It was creating 50+ concurrent requests instantly, triggering net::ERR_HTTP2_PROTOCOL_ERROR.
-            // The browser's native disk cache will handle keeping these assets warm.
             return;
         }
 
-        // 2. FULL BOOT SEQUENCE (First time or cache cleared)
+        // 2. FULL BOOT SEQUENCE: Download and write to persistent CacheStorage
         let loadedCount = 0;
         const total = HEAVY_ASSETS.length;
 
-        const loadImage = (src) => {
-            return new Promise((resolve) => {
-                const img = new Image();
-                img.src = src;
-                img.onload = resolve;
-                img.onerror = resolve; // Continue even if one fails to prevent soft-locks
-            });
-        };
-
-        const loadAll = async () => {
-            // FIX: Process in smaller chunks with a micro-delay to prevent HTTP/2 stream exhaustion
-            const chunkSize = 3; 
-            
-            for (let i = 0; i < total; i += chunkSize) {
-                const chunk = HEAVY_ASSETS.slice(i, i + chunkSize);
+        const cacheAssets = async () => {
+            try {
+                const cache = await caches.open(CACHE_NAME);
+                const chunkSize = 5; 
                 
-                await Promise.all(chunk.map(async (src) => {
-                    await loadImage(src);
-                    loadedCount++;
-                    setProgress(Math.round((loadedCount / total) * 100));
-                }));
+                for (let i = 0; i < total; i += chunkSize) {
+                    const chunk = HEAVY_ASSETS.slice(i, i + chunkSize);
+                    
+                    await Promise.all(chunk.map(async (src) => {
+                        try {
+                            const cachedResponse = await cache.match(src);
+                            if (!cachedResponse) {
+                                const fetchRes = await fetch(src);
+                                if (fetchRes.ok) {
+                                    await cache.put(src, fetchRes.clone());
+                                }
+                            }
+                        } catch (e) {
+                            console.warn(`[PRELOADER] Failed to cache asset: ${src}`, e);
+                        } finally {
+                            loadedCount++;
+                            setProgress(Math.round((loadedCount / total) * 100));
+                        }
+                    }));
+                }
 
-                // Micro-delay gives the local Next.js dev server breathing room
-                await new Promise(resolve => setTimeout(resolve, 20));
-            }
+                localStorage.setItem(CACHE_FLAG, 'true');
+                
+                setTimeout(() => {
+                    setLoaded(true);
+                }, 800);
 
-            // Mark as cached for future visits
-            localStorage.setItem('suro_assets_cached', 'v6.9');
-            
-            // Slight delay to let the 100% animation finish
-            setTimeout(() => {
+            } catch (error) {
+                console.error("[PRELOADER] Cache API Error:", error);
                 setLoaded(true);
-            }, 800);
+                setProgress(100);
+            }
         };
 
-        loadAll();
+        if ('caches' in window) {
+            cacheAssets();
+        } else {
+            console.warn("[PRELOADER] CacheStorage API not supported. Falling back to native rendering.");
+            setLoaded(true);
+        }
+
     }, []);
 
     return { progress, loaded };

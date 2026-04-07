@@ -2,7 +2,6 @@ import { useState, useCallback, useRef, useEffect } from 'react';
 import api from '../services/api';
 import { useAuth } from '../context/AuthContext';
 
-// Helper to generate a realistic initial 3x3 grid (Avoids 1/GJP to prevent false hype)
 const generateInitialReels = () => {
     return Array.from({ length: 9 }, () => Math.floor(Math.random() * 6) + 2);
 };
@@ -10,8 +9,6 @@ const generateInitialReels = () => {
 export const useSlotMachine = (machineId, islandId, initialSessionToken = null) => {
     const { user, updateBalance } = useAuth();
     
-    // --- CORE GAME STATE ---
-    // V7.8+ FIX: Replaced static 7s with a randomized organic grid on load
     const [reels, setReels] = useState(generateInitialReels()); 
     const [winningLines, setWinningLines] = useState([]); 
     const [isSpinning, setIsSpinning] = useState([false, false, false]); 
@@ -19,14 +16,13 @@ export const useSlotMachine = (machineId, islandId, initialSessionToken = null) 
     const [isReachEye, setIsReachEye] = useState(false);
     const [isFreeze, setIsFreeze] = useState(false);
     
-    // --- LEVIATHAN TELEMETRY & TRUST ---
     const [freeSpins, setFreeSpins] = useState(0); 
     const [bonusMode, setBonusMode] = useState(null); 
     const [bonusSpinsLeft, setBonusSpinsLeft] = useState(0);
     const [lapsSinceBonus, setLapsSinceBonus] = useState(0);
     const [momentumMult, setMomentumMult] = useState(1.0);
     const [inZone, setInZone] = useState(false);
-    const [pfData, setPfData] = useState(null); // Provably Fair Cryptographic State
+    const [pfData, setPfData] = useState(null); 
     
     const [winTier, setWinTier] = useState('NONE'); 
     const [sessionWinStreak, setSessionWinStreak] = useState(0);
@@ -43,14 +39,12 @@ export const useSlotMachine = (machineId, islandId, initialSessionToken = null) 
     const [levelUpData, setLevelUpData] = useState(null); 
     const [error, setError] = useState(null);
     
-    // --- SMART AUTO-PLAY & AFK SYSTEM ---
     const [showIdleWarning, setShowIdleWarning] = useState(false);
     const [isIdleKicked, setIsIdleKicked] = useState(false); 
     const [autoPlay, setAutoPlay] = useState(false);
     const [turboMode, setTurboMode] = useState(false); 
     const [sessionToken, setSessionToken] = useState(initialSessionToken); 
 
-    // --- REFS FOR STABLE CALLBACKS ---
     const idleTimerRef = useRef(null); 
     const warningTimerRef = useRef(null);
     const spinDataRef = useRef(null); 
@@ -72,13 +66,11 @@ export const useSlotMachine = (machineId, islandId, initialSessionToken = null) 
     
     useEffect(() => () => clearTimers(), [clearTimers]);
 
-    // --- SERVER HEARTBEAT ---
     useEffect(() => {
         let pingInterval;
         if (sessionToken && machineId && !isIdleKicked) {
             pingInterval = setInterval(() => {
-                api.post('/game/machine_actions.php', { action: 'ping', machine_id: machineId })
-                   .catch(() => {}); 
+                api.post('/game/machine_actions.php', { action: 'ping', machine_id: machineId }).catch(() => {}); 
             }, 60000); 
         }
         return () => clearInterval(pingInterval);
@@ -113,12 +105,10 @@ export const useSlotMachine = (machineId, islandId, initialSessionToken = null) 
         if (idleTimerRef.current) clearTimeout(idleTimerRef.current);
         if (warningTimerRef.current) clearTimeout(warningTimerRef.current);
         
-        // 4 Minutes = Warning | 5 Minutes = Kick
         warningTimerRef.current = setTimeout(handleIdleWarning, 240000);
         idleTimerRef.current = setTimeout(handleIdleTimeout, 300000);
     }, [handleIdleTimeout, handleIdleWarning, isIdleKicked]);
 
-    // 1. Enter Machine & Recover State
     const enter = useCallback(async () => {
         if(!machineId) return;
         try {
@@ -135,7 +125,6 @@ export const useSlotMachine = (machineId, islandId, initialSessionToken = null) 
                     setFreeSpins(state.free_spins || 0);
                     setLapsSinceBonus(state.laps_since_bonus || 0);
                     setSessionWinStreak(state.session_win_streak || 0);
-                    // Also recover grid if available
                     if (state.last_grid) setReels(state.last_grid);
                 }
             }
@@ -146,7 +135,6 @@ export const useSlotMachine = (machineId, islandId, initialSessionToken = null) 
         if(machineId && !initialSessionToken) enter(); 
     }, [machineId, initialSessionToken, enter]);
 
-    // 2. Post-Spin Processor
     const handlePostSpinEffects = useCallback((data, currentBetAmount) => {
         setWinningLines(data.winning_lines || []);
         
@@ -173,11 +161,8 @@ export const useSlotMachine = (machineId, islandId, initialSessionToken = null) 
         setStreakMult(data.streak_multiplier || 1.0);
         setVolatility(data.volatility_mode || 'medium');
 
-        if (data.win_amount > 0) {
-            setLastWin(data.win_amount);
-        } else {
-            setLastWin(0);
-        }
+        if (data.win_amount > 0) setLastWin(data.win_amount);
+        else setLastWin(0);
 
         let shouldInterruptAutoPlay = false;
         if (data.is_freeze || data.is_jackpot || (data.level_up && data.level_up.length > 0)) {
@@ -199,26 +184,17 @@ export const useSlotMachine = (machineId, islandId, initialSessionToken = null) 
         }
     }, [updateBalance, bonusMode, showBonusSummary]);
 
-    // 3. Skill Stop Logic
     const stopReel = useCallback((index) => {
         setIsSpinning(prevSpinning => {
             if (!prevSpinning[index] || !spinDataRef.current) return prevSpinning;
 
             setAtCurrentStep(currentStep => {
-                if (atSequence.length > 0 && !autoPlayRef.current) {
+                if (atSequence.length > 0) {
                     if (atSequence[currentStep] !== index) return currentStep; 
                     return currentStep + 1;
                 }
                 return currentStep;
             });
-
-            let isValid = true;
-            if (atSequence.length > 0 && !autoPlayRef.current) {
-                const stoppedCount = prevSpinning.filter(s => !s).length;
-                if (atSequence[stoppedCount] !== index) isValid = false;
-            }
-
-            if (!isValid) return prevSpinning;
 
             const data = spinDataRef.current;
             
@@ -245,7 +221,6 @@ export const useSlotMachine = (machineId, islandId, initialSessionToken = null) 
         });
     }, [handlePostSpinEffects, atSequence]);
 
-    // 4. Core Spin API Trigger
     const spin = useCallback(async (betAmount) => {
         if (!user || !sessionToken) return; 
         
@@ -276,12 +251,9 @@ export const useSlotMachine = (machineId, islandId, initialSessionToken = null) 
                 session_token: sessionToken
             };
 
-            if (customClientSeed) {
-                payload.client_seed = customClientSeed;
-            }
+            if (customClientSeed) payload.client_seed = customClientSeed;
 
             const res = await api.post('/game/spin.php', payload);
-            
             const data = res.data;
             if (data.status !== 'success') throw new Error(data.error || "Spin Failed");
             if (data.session_token) setSessionToken(data.session_token);
@@ -300,33 +272,24 @@ export const useSlotMachine = (machineId, islandId, initialSessionToken = null) 
             if (data.is_reach_eye) setIsReachEye(true);
             if (data.is_freeze) setIsFreeze(true);
 
-            if (autoPlayRef.current) {
-                const baseTime = turboModeRef.current ? 150 : 350;
-                let order = data.bonus_spins_left > 0 ? [0,1,2].sort(() => Math.random() - 0.5) : [0, 1, 2];
-                setAtSequence(order); 
-                
-                timers.current.push(setTimeout(() => stopReel(order[0]), baseTime));
-                timers.current.push(setTimeout(() => stopReel(order[1]), baseTime * 2));
-                
-                let finalReelDelay = baseTime * 3;
-                if ((data.is_teaser || data.win_tier === 'MEGA' || data.win_tier === 'EPIC') && !turboModeRef.current) {
-                    finalReelDelay = 2200; 
-                }
-                timers.current.push(setTimeout(() => stopReel(order[2]), finalReelDelay));
-            } else {
-                timers.current.push(setTimeout(() => stopReel(0), 3000));
-                timers.current.push(setTimeout(() => stopReel(1), 3400));
-                timers.current.push(setTimeout(() => stopReel(2), data.is_teaser ? 5000 : 3800)); 
+            // V11: Hyper-Fast Automated Resolution (Max 1 second total spin time)
+            const baseTime = turboModeRef.current ? 100 : 300;
+            let order = (data.bonus_spins_left > 0 || autoPlayRef.current) ? [0,1,2].sort(() => Math.random() - 0.5) : [0, 1, 2];
+            
+            timers.current.push(setTimeout(() => stopReel(order[0]), baseTime));
+            timers.current.push(setTimeout(() => stopReel(order[1]), baseTime * 2));
+            
+            let finalReelDelay = baseTime * 3;
+            // Extend slightly for cinematic teaser/big win build-up if not in turbo
+            if ((data.is_teaser || data.win_tier === 'MEGA' || data.win_tier === 'EPIC') && !turboModeRef.current) {
+                finalReelDelay = 1200; 
             }
+            timers.current.push(setTimeout(() => stopReel(order[2]), finalReelDelay));
 
         } catch (err) {
             const responseError = err.response?.data?.error;
             let errMsg = err.message;
-
-            if (responseError) {
-                errMsg = typeof responseError === 'object' ? responseError.message : responseError;
-            }
-
+            if (responseError) errMsg = typeof responseError === 'object' ? responseError.message : responseError;
             setError(errMsg);
 
             if (typeof errMsg === 'string') {
@@ -336,7 +299,6 @@ export const useSlotMachine = (machineId, islandId, initialSessionToken = null) 
                     enter(); 
                 }
             }
-
             setAutoPlay(false); 
             setIsSpinning([false, false, false]);
         }
@@ -357,8 +319,6 @@ export const useSlotMachine = (machineId, islandId, initialSessionToken = null) 
         lapsSinceBonus, momentumMult, inZone, winTier, sessionWinStreak, streakMult, volatility,
         showBonusSummary, bonusTotalWin, clearBonusTotal, levelUpData, setLevelUpData,
         autoPlay, setAutoPlay, turboMode, setTurboMode,
-        pfData, 
-        spin, stopReel, setLastWin,
-        isReady: !!sessionToken
+        pfData, spin, isReady: !!sessionToken
     };
 };
