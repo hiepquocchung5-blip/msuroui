@@ -5,7 +5,8 @@ import {
     Minus, Plus, Zap, StopCircle, Gamepad2, 
     Trophy, Flame, MessageCircle, TrendingUp, 
     ShieldAlert, X, Coins, Repeat, Target, Activity, Cpu, MapPin, 
-    HelpCircle, AlertOctagon, Settings, LogOut, Menu, Heart, Clock, LifeBuoy, Sparkles
+    HelpCircle, AlertOctagon, Settings, LogOut, Menu, Heart, Clock, LifeBuoy, Sparkles,
+    ChevronRight, ChevronLeft, Crosshair, Swords
 } from 'lucide-react';
 import { useRouter } from 'next/router';
 
@@ -81,7 +82,7 @@ const ReelColumn = ({ isSpinning, finalSymbols, locked, isWinning, isTeaser, isR
     return (
         <div className={`flex-1 flex flex-col relative h-full bg-gradient-to-b from-[#0f1115] via-[#1c1f26] to-[#0f1115] border-x border-white/10 rounded-md overflow-hidden transition-all duration-500 will-change-transform
             ${locked ? 'border-2 border-yellow-400' : ''}
-            ${isReachReel ? 'ring-4 ring-red-500 shadow-[inset_0_0_80px_rgba(239,68,68,0.5)] animate-pulse saturate-150' : ''}
+            ${isReachReel ? 'saturate-150 brightness-125' : ''}
         `} style={{ transform: 'translateZ(0)' }}>
             
             <style dangerouslySetInnerHTML={{__html: `@keyframes scanline { 0% { top: -10%; } 100% { top: 110%; } }`}} />
@@ -99,7 +100,7 @@ const ReelColumn = ({ isSpinning, finalSymbols, locked, isWinning, isTeaser, isR
                         <div key={idx} className="relative flex items-center justify-center w-full" style={{ height: isSpinning ? '16.66%' : '33.33%' }}>
                             <div className={`w-[90%] aspect-[16/9] flex items-center justify-center bg-black/40 backdrop-blur-[2px] border border-white/10 rounded-lg shadow-inner transition-colors duration-500
                                 ${isTeaser && !isReachEye && !isSpinning && idx === 1 && colIdx === 1 ? 'ring-2 ring-red-500/50 animate-[pulse_1s_ease-in-out_infinite] shadow-[0_0_40px_rgba(239,68,68,0.6)] bg-red-900/20' : ''}
-                                ${isWinning && !isSpinning && idx < 3 ? 'z-10 shadow-[0_0_40px_rgba(255,215,0,0.4)] bg-yellow-900/20 ring-1 ring-yellow-400/80 scale-105' : ''}
+                                ${isWinning && !isSpinning && idx < 3 ? 'z-10 scale-[1.02] brightness-110' : ''}
                             `}>
                                 {isReady && <SymbolSVG id={symId} isWinning={isWinning && !isSpinning && idx < 3} islandId={islandId} />}
                             </div>
@@ -157,7 +158,6 @@ const PlayView = ({ machine, island, onLeave }) => {
     
     const slotLogic = useSlotMachine(machine?.id, island?.id, machine?.session_token);
     
-    // --- ZERO LATENCY ASSET PRELOADER ---
     const { progress: assetProgress, isReady: assetsReady } = useSpinLoader(island?.id, user?.active_pet_id || island?.hostess_char_id);
 
     const { 
@@ -177,6 +177,12 @@ const PlayView = ({ machine, island, onLeave }) => {
     const [showPaytable, setShowPaytable] = useState(false);
     const [showSettings, setShowSettings] = useState(false);
     
+    // HUD Overlays
+    const [showMissions, setShowMissions] = useState(false);
+    const [missionsData, setMissionsData] = useState([]);
+    const [showTournaments, setShowTournaments] = useState(false);
+    const [tourneyData, setTourneyData] = useState([]);
+
     // Smoothed Parallax State
     const [targetMousePos, setTargetMousePos] = useState({ x: 0, y: 0 });
     const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
@@ -203,6 +209,24 @@ const PlayView = ({ machine, island, onLeave }) => {
     const relativeNum = (((machine?.machine_number || 1) - 1) % MACHINES_PER_FLOOR) + 1;
     const displayId = `${currentFloor}-${relativeNum.toString().padStart(2, '0')}`;
 
+    // Background HUD Fetcher
+    useEffect(() => {
+        const fetchHUDData = async () => {
+            if(!sessionReady) return;
+            try {
+                const [misRes, tourRes] = await Promise.all([
+                    api.get('/game/missions.php'),
+                    api.get('/tournaments/list.php')
+                ]);
+                if (misRes.data?.status === 'success') setMissionsData(misRes.data.data);
+                if (tourRes.data?.status === 'success') setTourneyData(tourRes.data.data);
+            } catch (e) {}
+        };
+        fetchHUDData();
+        const intv = setInterval(fetchHUDData, 30000);
+        return () => clearInterval(intv);
+    }, [sessionReady]);
+
     useEffect(() => {
         const sessionTimer = setInterval(() => { setSessionMinutes(prev => prev + 1); }, 60000);
         const checkMobile = () => setIsMobile(window.innerWidth < 768);
@@ -216,7 +240,7 @@ const PlayView = ({ machine, island, onLeave }) => {
         const lerp = (start, end, factor) => start + (end - start) * factor;
         const renderLoop = () => {
             setMousePos(prev => ({
-                x: lerp(prev.x, targetMousePos.x, 0.05), // Heavy dampening for smooth feel
+                x: lerp(prev.x, targetMousePos.x, 0.05),
                 y: lerp(prev.y, targetMousePos.y, 0.05)
             }));
             animationFrameRef.current = requestAnimationFrame(renderLoop);
@@ -244,7 +268,7 @@ const PlayView = ({ machine, island, onLeave }) => {
         if (!isMobile && typeof window !== 'undefined') {
             const { clientX, clientY } = e;
             const { innerWidth, innerHeight } = window;
-            const x = ((clientX / innerWidth) - 0.5) * 8; // Max 4 deg rotation
+            const x = ((clientX / innerWidth) - 0.5) * 8; 
             const y = ((clientY / innerHeight) - 0.5) * -8;
             setTargetMousePos({ x, y });
         }
@@ -320,7 +344,6 @@ const PlayView = ({ machine, island, onLeave }) => {
         return () => { if (winTimeoutRef.current) clearTimeout(winTimeoutRef.current); };
     }, [lastWin, autoPlay, playSound, bonusMode, winStage, isCurrentlySpinning, winTier, isJackpot, setLastWin]);
 
-    // --- AAA PARTICLE ENGINE ---
     const triggerCoinShower = useCallback((amount = 40, isPremium = false) => {
         const newParticles = Array.from({length: amount}).map((_, i) => {
             const isGold = Math.random() > 0.3;
@@ -466,9 +489,7 @@ const PlayView = ({ machine, island, onLeave }) => {
                             initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} 
                             className="fixed inset-0 z-[200] bg-black/95 backdrop-blur-sm pointer-events-none flex flex-col items-center justify-center overflow-hidden"
                         >
-                            {/* CRT Scanline Overlay */}
                             <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.05)_1px,transparent_1px)] bg-[size:100%_4px] z-10 mix-blend-overlay pointer-events-none"></div>
-                            
                             <h1 data-text="SYSTEM FREEZE" className="glitch-effect text-white text-5xl md:text-8xl font-black italic tracking-widest relative drop-shadow-[0_0_30px_rgba(255,255,255,0.8)] z-20">
                                 SYSTEM FREEZE
                             </h1>
@@ -515,6 +536,61 @@ const PlayView = ({ machine, island, onLeave }) => {
 
                 <GlobalTicker />
                 <ActiveEvents />
+
+                {/* --- LIVE TELEMETRY HUDs (MISSIONS & TOURNAMENTS) --- */}
+                {/* Left HUD: Missions */}
+                <div className={`absolute left-0 top-[120px] z-40 transition-transform duration-300 ${showMissions ? 'translate-x-0' : '-translate-x-[90%]'}`}>
+                    <div className="flex items-start">
+                        <GlassCard className="w-48 p-3 rounded-l-none border-l-0 bg-black/80 backdrop-blur-xl rounded-r-xl border-cyan-500/30">
+                            <div className="flex items-center gap-2 mb-2 border-b border-white/10 pb-1">
+                                <Crosshair size={12} className="text-cyan-400"/>
+                                <span className="text-[10px] font-black text-white tracking-widest uppercase">Directives</span>
+                            </div>
+                            <div className="space-y-3">
+                                {missionsData.slice(0,2).map((m) => {
+                                    const pct = Math.min(100, (m.progress / m.total) * 100);
+                                    return (
+                                        <div key={m.id}>
+                                            <div className="text-[9px] text-gray-300 mb-1 leading-tight">{m.task}</div>
+                                            <div className="w-full h-1 bg-gray-800 rounded-full overflow-hidden">
+                                                <div className={`h-full ${m.claimed ? 'bg-green-500' : 'bg-cyan-500 shadow-[0_0_5px_cyan]'}`} style={{width: `${pct}%`}}></div>
+                                            </div>
+                                        </div>
+                                    );
+                                })}
+                                {missionsData.length === 0 && <div className="text-[9px] text-gray-500 text-center">No active missions.</div>}
+                            </div>
+                        </GlassCard>
+                        <button onClick={() => setShowMissions(!showMissions)} className="bg-black/80 border border-cyan-500/30 border-l-0 rounded-r-lg p-1.5 text-cyan-400 hover:text-white transition-colors backdrop-blur-xl">
+                            {showMissions ? <ChevronLeft size={16}/> : <ChevronRight size={16}/>}
+                        </button>
+                    </div>
+                </div>
+
+                {/* Right HUD: Tournaments */}
+                <div className={`absolute right-0 top-[120px] z-40 transition-transform duration-300 ${showTournaments ? 'translate-x-0' : 'translate-x-[90%]'}`}>
+                    <div className="flex items-start flex-row-reverse">
+                        <GlassCard className="w-48 p-3 rounded-r-none border-r-0 bg-black/80 backdrop-blur-xl rounded-l-xl border-yellow-500/30">
+                            <div className="flex items-center gap-2 mb-2 border-b border-white/10 pb-1 flex-row-reverse">
+                                <Swords size={12} className="text-yellow-400"/>
+                                <span className="text-[10px] font-black text-white tracking-widest uppercase text-right">Tournaments</span>
+                            </div>
+                            <div className="space-y-3 text-right">
+                                {tourneyData.slice(0,2).map((t) => (
+                                    <div key={t.id}>
+                                        <div className="text-[9px] text-yellow-400 font-bold mb-0.5 truncate">{t.title}</div>
+                                        <div className="text-[8px] text-gray-400 font-mono">Rank: {t.my_score !== null ? `#${t.my_rank || '?'}` : 'Unranked'}</div>
+                                        <div className="text-[8px] text-gray-500 font-mono flex items-center justify-end gap-1"><Clock size={8}/> {t.time_left}</div>
+                                    </div>
+                                ))}
+                                {tourneyData.length === 0 && <div className="text-[9px] text-gray-500 text-center">No active events.</div>}
+                            </div>
+                        </GlassCard>
+                        <button onClick={() => setShowTournaments(!showTournaments)} className="bg-black/80 border border-yellow-500/30 border-r-0 rounded-l-lg p-1.5 text-yellow-400 hover:text-white transition-colors backdrop-blur-xl">
+                            {showTournaments ? <ChevronRight size={16}/> : <ChevronLeft size={16}/>}
+                        </button>
+                    </div>
+                </div>
 
                 <div className="bg-black border-b border-white/10 h-8 md:h-10 flex items-center overflow-hidden relative z-30 shadow-lg">
                     <div className="bg-gradient-to-r from-yellow-700 to-yellow-900 h-full px-2 md:px-4 flex items-center justify-center border-r border-yellow-500/50 z-10 shadow-[2px_0_10px_rgba(0,0,0,0.5)]">
@@ -647,6 +723,12 @@ const PlayView = ({ machine, island, onLeave }) => {
                         transition={{ type: 'spring', stiffness: isMobile ? 80 : 100, damping: 25 }}
                         style={{ transformStyle: 'preserve-3d', transform: 'translateZ(0)' }}
                     >
+                        {/* MACHINE AURA (Replaces harsh rectangular borders) */}
+                        <div className="absolute inset-0 pointer-events-none -z-10 flex items-center justify-center">
+                            {turboMode && <div className="absolute w-[120%] h-[120%] bg-yellow-500/30 blur-[60px] rounded-full animate-[pulse_1s_infinite] mix-blend-screen"></div>}
+                            {isReachWaitState && <div className="absolute w-[140%] h-[140%] bg-red-600/40 blur-[80px] rounded-full animate-[pulse_0.5s_infinite] mix-blend-screen"></div>}
+                        </div>
+
                         {/* Cabinet Graphic */}
                         <div className="absolute inset-0 w-full h-full pointer-events-none drop-shadow-[0_40px_50px_rgba(0,0,0,0.9)]" style={{ transform: 'translateZ(-10px)' }}>
                             <CabinetSVG 
@@ -660,8 +742,6 @@ const PlayView = ({ machine, island, onLeave }) => {
                                 machine={machine}
                                 stats={{ laps: machine?.total_laps, wins: machine?.total_payout }}
                             />
-                            {turboMode && <div className="absolute inset-0 rounded-[2rem] border-[4px] border-yellow-500 opacity-50 shadow-[0_0_40px_rgba(255,215,0,0.4)] animate-pulse pointer-events-none"></div>}
-                            {isReachWaitState && <div className="absolute inset-0 rounded-[2rem] border-[4px] border-red-600 opacity-80 shadow-[inset_0_0_60px_rgba(239,68,68,0.5)] animate-pulse pointer-events-none"></div>}
                         </div>
 
                         {/* Reels Area */}
@@ -690,25 +770,30 @@ const PlayView = ({ machine, island, onLeave }) => {
                                     />
                                 ))}
 
-                                {/* Solid Red Win Lines */}
+                                {/* LASER WIN LINES (Replaces yellow box glow) */}
                                 {winningLines.length > 0 && winStage !== 'gambling' && !isJackpot && (
                                     <div className="absolute inset-0 pointer-events-none z-40">
                                         {winningLines.map(lineIdx => {
                                             if (lineIdx === 99) return null; 
                                             const lineStyles = {
-                                                0: "top-[16.66%] left-0 w-full h-2 -translate-y-1/2",
-                                                1: "top-[50%] left-0 w-full h-2 -translate-y-1/2",
-                                                2: "top-[83.33%] left-0 w-full h-2 -translate-y-1/2",
-                                                3: "top-[50%] left-[-10%] w-[120%] h-2 -translate-y-1/2 rotate-[35deg]",
-                                                4: "top-[50%] left-[-10%] w-[120%] h-2 -translate-y-1/2 -rotate-[35deg]"
+                                                0: "top-[16.66%] left-0 w-full h-[4px] -translate-y-1/2",
+                                                1: "top-[50%] left-0 w-full h-[4px] -translate-y-1/2",
+                                                2: "top-[83.33%] left-0 w-full h-[4px] -translate-y-1/2",
+                                                3: "top-[50%] left-[-10%] w-[120%] h-[4px] -translate-y-1/2 rotate-[35deg]",
+                                                4: "top-[50%] left-[-10%] w-[120%] h-[4px] -translate-y-1/2 -rotate-[35deg]"
                                             };
+                                            // Determine line color based on win tier
+                                            let lineColor = "bg-green-400 shadow-[0_0_15px_#4ade80,0_0_5px_#fff_inset]";
+                                            if (winTier === 'MEGA' || winTier === 'EPIC') lineColor = "bg-red-500 shadow-[0_0_20px_#ef4444,0_0_8px_#fff_inset]";
+                                            else if (winTier === 'BIG') lineColor = "bg-yellow-400 shadow-[0_0_15px_#facc15,0_0_5px_#fff_inset]";
+
                                             return (
                                                 <motion.div 
                                                     key={lineIdx} 
-                                                    initial={{ scaleX: 0 }} 
-                                                    animate={{ scaleX: 1 }} 
-                                                    transition={{ duration: 0.3, ease: "easeOut" }}
-                                                    className={`absolute bg-red-600 shadow-[0_0_15px_red,0_0_5px_white_inset] origin-center z-50 ${lineStyles[lineIdx]}`}
+                                                    initial={{ scaleX: 0, opacity: 0 }} 
+                                                    animate={{ scaleX: 1, opacity: [1, 0.8, 1] }} 
+                                                    transition={{ duration: 0.3, ease: "easeOut", opacity: { repeat: Infinity, duration: 0.5 } }}
+                                                    className={`absolute origin-center z-50 rounded-full ${lineColor} ${lineStyles[lineIdx]}`}
                                                 />
                                             );
                                         })}
@@ -717,7 +802,7 @@ const PlayView = ({ machine, island, onLeave }) => {
                             </div>
                         </div>
 
-                        {/* --- DYNAMIC CONTROL DECK (AAA Refinement) --- */}
+                        {/* --- DYNAMIC CONTROL DECK --- */}
                         <div className="absolute top-[57.5%] left-[5%] w-[90%] h-[15%] pointer-events-auto" style={{ perspective: '800px', transform: 'translateZ(40px)' }}>
                             <div className="w-full h-full relative flex items-center justify-center" style={{ transform: 'rotateX(25deg)', transformOrigin: 'top center' }}>
                                 
@@ -730,7 +815,7 @@ const PlayView = ({ machine, island, onLeave }) => {
                                     </div>
                                 </div>
 
-                                {/* Center Controls: Primary Spin Action (Magnetic Glow) */}
+                                {/* Center Controls: Primary Spin Action */}
                                 <div className="absolute left-1/2 -translate-x-1/2 top-[5%] md:top-[10%] z-40">
                                     {autoPlay && !isCurrentlySpinning && (
                                         <div className="absolute inset-0 rounded-full border-[3px] border-dashed border-green-500 animate-[spin_4s_linear_infinite] pointer-events-none scale-110"></div>
