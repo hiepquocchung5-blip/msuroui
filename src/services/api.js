@@ -1,13 +1,13 @@
 import axios from 'axios';
 
 // ============================================================================
-// SUROPARA V6.9.7 - DIRECT API SERVICE (LEVIATHAN TIER)
+// SUROPARA V7.9 - DIRECT API SERVICE (LEVIATHAN TIER)
 // Architecture: Direct Backend Connection (Proxy Bypassed)
-// Upgrades: Global 401 Interceptors & Secure Token Purging
+// Upgrades: Gamble mode completely eradicated for strict Provably Fair compliance.
 // ============================================================================
 
 // Fallback directly to the live domain if the .env variable is missing.
-const API_URL = process.env.NEXT_PUBLIC_API_URL ; 
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://apisuro.online/api'; 
 
 const api = axios.create({
     baseURL: API_URL,
@@ -72,7 +72,6 @@ export const game = {
     pingMachine: (machineId) => api.post('/game/machine_actions.php', { action: 'ping', machine_id: machineId }),
     
     spin: (machineId, betAmount) => api.post('/game/spin.php', { machine_id: machineId, bet_amount: betAmount }),
-    gamble: (choice) => api.post('/game/gamble.php', { choice }),
     
     getActiveEvents: () => api.get('/game/active_events.php'),
     getDailyBonus: () => api.get('/game/daily_bonus.php'),
