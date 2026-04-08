@@ -5,7 +5,7 @@ import {
     Minus, Plus, Zap, StopCircle, Gamepad2, 
     Trophy, Flame, MessageCircle, TrendingUp, 
     ShieldAlert, X, Coins, Repeat, Target, Activity, Cpu, MapPin, 
-    HelpCircle, AlertOctagon, Settings, LogOut, Menu, Heart, Clock, LifeBuoy, Sparkles
+    HelpCircle, AlertOctagon, Settings, LogOut, Menu, Heart, Clock, LifeBuoy, Sparkles, Loader2
 } from 'lucide-react';
 import { useRouter } from 'next/router';
 
@@ -675,6 +675,7 @@ const PlayView = ({ machine, island, onLeave }) => {
                             </div>
 
                             <div className={`flex-1 flex gap-[1%] p-[1%] bg-[#050505] rounded-b-sm border-x-2 border-b-2 relative ${isReachWaitState ? 'border-red-600 shadow-[inset_0_0_40px_rgba(239,68,68,0.3)]' : (inZone && !bonusMode ? 'border-yellow-500/50 shadow-[inset_0_0_40px_rgba(234,179,8,0.15)]' : 'border-gray-900')}`}>
+                                
                                 {[0, 1, 2].map(colIdx => (
                                     <ReelColumn 
                                         key={colIdx} 
@@ -722,11 +723,11 @@ const PlayView = ({ machine, island, onLeave }) => {
                         </div>
 
                         {/* --- DYNAMIC CONTROL DECK (PHYSICAL AAA BUTTONS) --- */}
-                        <div className="absolute top-[57.5%] left-[5%] w-[90%] h-[15%] pointer-events-auto" style={{ perspective: '800px', transform: 'translateZ(40px)' }}>
+                        <div className="absolute top-[56%] left-[5%] w-[90%] h-[15%] pointer-events-auto" style={{ perspective: '800px', transform: 'translateZ(40px)' }}>
                             <div className="w-full h-full relative flex items-center justify-center" style={{ transform: 'rotateX(25deg)', transformOrigin: 'top center' }}>
                                 
                                 {/* Left Controls: Bet Adjust */}
-                                <div className={`absolute left-[5%] top-[10%] flex flex-col md:flex-row items-center gap-1 bg-[#111]/80 p-1.5 rounded-lg border border-[#333] shadow-[inset_0_2px_10px_rgba(0,0,0,1)] backdrop-blur-md transition-opacity duration-300 ${isCurrentlySpinning ? 'opacity-50 pointer-events-none' : 'opacity-100'}`}>
+                                <div className={`absolute left-[2%] md:left-[5%] top-[10%] flex flex-col md:flex-row items-center gap-1 bg-[#111]/80 p-1.5 rounded-lg border border-[#333] shadow-[inset_0_2px_10px_rgba(0,0,0,1)] backdrop-blur-md transition-opacity duration-300 ${isCurrentlySpinning ? 'opacity-50 pointer-events-none' : 'opacity-100'}`}>
                                     <div className="flex items-center gap-1 w-full justify-between">
                                         <motion.button 
                                             whileTap={{ y: 2, boxShadow: '0 0px 0px rgba(0,0,0,1)' }} 
@@ -744,10 +745,11 @@ const PlayView = ({ machine, island, onLeave }) => {
                                     </div>
                                 </div>
 
-                                {/* Center Controls: Primary Spin Action (Mechanical Smash Button) */}
-                                <div className="absolute left-1/2 -translate-x-1/2 top-[5%] md:top-[10%] z-40">
+                                {/* Center Controls: Primary Spin Action (Stacked Over Sub-Controls) */}
+                                <div className="absolute left-1/2 -translate-x-1/2 top-[-15%] md:top-[-10%] z-40 flex flex-col items-center gap-3">
+                                    
                                     {autoPlay && !isCurrentlySpinning && (
-                                        <div className="absolute inset-[-10px] rounded-full border-[3px] border-dashed border-green-500 animate-[spin_4s_linear_infinite] pointer-events-none opacity-50"></div>
+                                        <div className="absolute top-[-10px] w-[100px] h-[100px] rounded-full border-[3px] border-dashed border-green-500 animate-[spin_4s_linear_infinite] pointer-events-none opacity-50 z-0"></div>
                                     )}
                                     
                                     {/* Physical Button Wrapper */}
@@ -755,7 +757,7 @@ const PlayView = ({ machine, island, onLeave }) => {
                                         whileTap={!isCurrentlySpinning && assetsReady && sessionReady && winStage === 'idle' ? { y: 6, boxShadow: "0 0px 0px rgba(0,0,0,1)" } : {}}
                                         onClick={handleSpin} 
                                         disabled={!assetsReady || !sessionReady || (isProcessing.current && !isCurrentlySpinning) || isFreeze || winStage !== 'idle' || isCurrentlySpinning} 
-                                        className={`w-24 h-24 rounded-full flex flex-col items-center justify-center transition-all duration-150 relative overflow-hidden group outline-none
+                                        className={`w-20 h-20 md:w-24 md:h-24 rounded-full flex flex-col items-center justify-center transition-all duration-150 relative overflow-hidden group outline-none z-10
                                         ${(!assetsReady || !sessionReady) || (isProcessing.current && !isCurrentlySpinning) ? 'bg-[#222] border-2 border-[#111] shadow-[0_6px_0_#0a0a0a,inset_0_2px_10px_rgba(0,0,0,0.8)] opacity-60' : 
                                           isCurrentlySpinning ? 'bg-gradient-to-b from-red-700 to-red-950 border-2 border-[#4a0404] text-white/80 shadow-[0_2px_0_#2b0000,inset_0_5px_15px_rgba(0,0,0,0.6)] translate-y-[4px]' :
                                           bonusMode === 'HEAVEN' ? 'bg-gradient-to-b from-purple-500 to-purple-800 border-2 border-[#4c1d95] text-white hover:brightness-125 shadow-[0_6px_0_#3b0764,0_15px_20px_rgba(168,85,247,0.4),inset_0_2px_10px_rgba(255,255,255,0.4)]' :
@@ -764,7 +766,6 @@ const PlayView = ({ machine, island, onLeave }) => {
                                         {!isCurrentlySpinning && assetsReady && sessionReady && (
                                             <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_rgba(255,255,255,0.4),_transparent)] pointer-events-none opacity-50"></div>
                                         )}
-                                        {turboMode && !isCurrentlySpinning && <Zap className="absolute top-2 right-2 text-yellow-400 fill-yellow-400 animate-pulse drop-shadow-[0_0_15px_rgba(234,179,8,1)] z-10" size={16} />}
                                         <div className="relative z-10 flex flex-col items-center mt-1">
                                             {isCurrentlySpinning ? <Loader2 size={32} className="text-white/60 animate-spin mb-1 drop-shadow-md" /> : <Gamepad2 size={32} strokeWidth={2.5} className="text-white mb-1 drop-shadow-md group-hover:scale-110 transition-transform" />}
                                             <span className="text-[10px] font-black text-white tracking-widest uppercase drop-shadow-md leading-none">
@@ -772,23 +773,25 @@ const PlayView = ({ machine, island, onLeave }) => {
                                             </span>
                                         </div>
                                     </motion.button>
-                                </div>
 
-                                {/* Right Controls: Auto / Turbo */}
-                                <div className="absolute right-[5%] top-[15%] flex flex-col md:flex-row gap-3">
-                                    <motion.button 
-                                        whileTap={{ y: 2, boxShadow: '0 0px 0px rgba(0,0,0,1)' }} 
-                                        onClick={() => { playSound('click'); setTurboMode(!turboMode)}} 
-                                        className={`w-10 h-10 rounded-lg flex items-center justify-center transition-all outline-none ${turboMode ? 'bg-gradient-to-b from-yellow-400 to-yellow-600 text-black border border-yellow-300 shadow-[0_4px_0_#854d0e,0_0_15px_rgba(234,179,8,0.6)]' : 'bg-gradient-to-b from-[#333] to-[#111] text-gray-500 border border-[#444] shadow-[0_4px_0_#050505] hover:brightness-125'}`}
-                                    ><Zap size={18} fill={turboMode ? "currentColor" : "none"}/></motion.button>
-                                    
-                                    <motion.button 
-                                        whileTap={{ y: 2, boxShadow: '0 0px 0px rgba(0,0,0,1)' }} 
-                                        onClick={toggleAutoPlay} 
-                                        className={`w-10 h-10 rounded-lg flex items-center justify-center transition-all outline-none ${autoPlay ? 'bg-gradient-to-b from-green-500 to-green-700 text-white border border-green-400 shadow-[0_4px_0_#14532d,0_0_15px_rgba(34,197,94,0.6)]' : 'bg-gradient-to-b from-[#333] to-[#111] text-gray-500 border border-[#444] shadow-[0_4px_0_#050505] hover:brightness-125'}`}
-                                    >
-                                        <Repeat size={18} className={autoPlay ? "animate-spin-slow" : ""} />
-                                    </motion.button>
+                                    {/* Sub-controls: Turbo & AutoPlay */}
+                                    <div className="flex items-center gap-4 z-10">
+                                        <motion.button 
+                                            whileTap={{ y: 2, boxShadow: '0 0px 0px rgba(0,0,0,1)' }} 
+                                            onClick={() => { playSound('click'); setTurboMode(!turboMode)}} 
+                                            className={`w-10 h-10 md:w-12 md:h-12 rounded-lg flex items-center justify-center transition-all outline-none ${turboMode ? 'bg-gradient-to-b from-yellow-400 to-yellow-600 text-black border border-yellow-300 shadow-[0_4px_0_#854d0e,0_0_15px_rgba(234,179,8,0.6)]' : 'bg-gradient-to-b from-[#333] to-[#111] text-gray-500 border border-[#444] shadow-[0_4px_0_#050505] hover:brightness-125'}`}
+                                        >
+                                            <Zap size={16} className="md:w-[18px] md:h-[18px]" fill={turboMode ? "currentColor" : "none"}/>
+                                        </motion.button>
+                                        
+                                        <motion.button 
+                                            whileTap={{ y: 2, boxShadow: '0 0px 0px rgba(0,0,0,1)' }} 
+                                            onClick={toggleAutoPlay} 
+                                            className={`w-10 h-10 md:w-12 md:h-12 rounded-lg flex items-center justify-center transition-all outline-none ${autoPlay ? 'bg-gradient-to-b from-green-500 to-green-700 text-white border border-green-400 shadow-[0_4px_0_#14532d,0_0_15px_rgba(34,197,94,0.6)]' : 'bg-gradient-to-b from-[#333] to-[#111] text-gray-500 border border-[#444] shadow-[0_4px_0_#050505] hover:brightness-125'}`}
+                                        >
+                                            <Repeat size={16} className={`md:w-[18px] md:h-[18px] ${autoPlay ? "animate-spin-slow" : ""}`} />
+                                        </motion.button>
+                                    </div>
                                 </div>
                             </div>
                         </div>
