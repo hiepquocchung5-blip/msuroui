@@ -76,15 +76,15 @@ const CabinetSVG = ({
         return pts.join(' ');
     }, [displayNum]);
 
-    // --- 1. OPTIMIZED MATERIALS (No Heavy Specular/Glass Glare) ---
+    // --- 1. OPTIMIZED MATERIALS (Simplified & Cleaned) ---
     const renderDefs = () => (
         <defs>
             <linearGradient id="chrome" x1="0" y1="0" x2="1" y2="1">
-                <stop offset="0%" stopColor="#111" />
-                <stop offset="30%" stopColor="#888" />
+                <stop offset="0%" stopColor="#222" />
+                <stop offset="30%" stopColor="#aaa" />
                 <stop offset="45%" stopColor="#fff" />
-                <stop offset="55%" stopColor="#555" />
-                <stop offset="100%" stopColor="#111" />
+                <stop offset="55%" stopColor="#777" />
+                <stop offset="100%" stopColor="#222" />
             </linearGradient>
             <linearGradient id="darkChrome" x1="0" y1="0" x2="1" y2="1">
                 <stop offset="0%" stopColor="#050505" /><stop offset="50%" stopColor="#222" /><stop offset="100%" stopColor="#050505" />
@@ -97,28 +97,14 @@ const CabinetSVG = ({
                 <stop offset="0%" stopColor="#1a1a1a"/><stop offset="30%" stopColor="#333"/><stop offset="50%" stopColor="#555"/><stop offset="70%" stopColor="#333"/><stop offset="100%" stopColor="#1a1a1a"/>
             </linearGradient>
             <linearGradient id="anodizedRed" x1="0" y1="0" x2="1" y2="1">
-                <stop offset="0%" stopColor="#2b0000"/><stop offset="50%" stopColor="#660000"/><stop offset="100%" stopColor="#1a0000"/>
+                <stop offset="0%" stopColor="#2b0000"/><stop offset="50%" stopColor="#800000"/><stop offset="100%" stopColor="#1a0000"/>
             </linearGradient>
             <linearGradient id="anodizedBlue" x1="0" y1="0" x2="1" y2="1">
-                <stop offset="0%" stopColor="#001122"/><stop offset="50%" stopColor="#003366"/><stop offset="100%" stopColor="#000a14"/>
+                <stop offset="0%" stopColor="#001122"/><stop offset="50%" stopColor="#004488"/><stop offset="100%" stopColor="#000a14"/>
             </linearGradient>
             <linearGradient id="cyberPurple" x1="0" y1="0" x2="1" y2="1">
-                <stop offset="0%" stopColor="#100022"/><stop offset="50%" stopColor="#3b0066"/><stop offset="100%" stopColor="#0a0014"/>
+                <stop offset="0%" stopColor="#100022"/><stop offset="50%" stopColor="#4c0088"/><stop offset="100%" stopColor="#0a0014"/>
             </linearGradient>
-
-            {/* Kept minimal noise for realism, but stripped heavy lighting calculations */}
-            <filter id="pbrNoise">
-                <feTurbulence type="fractalNoise" baseFrequency="0.9" numOctaves="1" result="noise" />
-                <feColorMatrix type="saturate" values="0"/>
-                <feComponentTransfer><feFuncA type="table" tableValues="0 0.04"/></feComponentTransfer>
-                <feComposite operator="in" in2="SourceGraphic" result="texture" />
-                <feBlend mode="multiply" in="texture" in2="SourceGraphic" />
-            </filter>
-
-            <filter id="ambientGlow" x="-20%" y="-20%" width="140%" height="140%">
-                <feGaussianBlur stdDeviation="6" result="blur"/>
-                <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
-            </filter>
 
             <pattern id="pat-hazard" width="20" height="20" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
                 <rect width="10" height="20" fill="#000" opacity="0.6"/>
@@ -146,24 +132,19 @@ const CabinetSVG = ({
             <linearGradient id="textGrad5" x1="0" y1="0" x2="1" y2="0"><stop offset="0%" stopColor="#FFFACD"/><stop offset="100%" stopColor="#FFD700"/></linearGradient>
 
             <clipPath id="screenClipLocal"><path d="M 4 4 L 186 4 L 176 76 L 14 76 Z" /></clipPath>
+            
+            <filter id="ambientGlow" x="-20%" y="-20%" width="140%" height="140%">
+                <feGaussianBlur stdDeviation="6" result="blur"/>
+                <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+            </filter>
         </defs>
     );
 
-    // --- 2. GRAFFITI & HARDWARE ---
+    // --- 2. GRAFFITI & HARDWARE (Coin slot/100Yen removed) ---
     const renderGraffitiDecals = () => {
         const renderHardware = () => (
             <g className="hardware-layer">
-                <g transform="translate(205, 180)">
-                    <rect x="0" y="0" width="16" height="45" rx="3" fill="url(#chrome)" stroke="#000" strokeWidth="1" filter="url(#pbrNoise)" />
-                    <rect x="7" y="5" width="2" height="20" fill="#000" />
-                    <text x="8" y="38" textAnchor="middle" fill="#000" fontSize="4" fontWeight="bold">100¥</text>
-                    <path d="M 4 40 L 12 40 L 8 43 Z" fill="#f00" />
-                </g>
-                <g transform="translate(15, 185)">
-                    <circle cx="8" cy="8" r="6" fill="url(#chrome)" stroke="#111" strokeWidth="0.5" />
-                    <circle cx="8" cy="8" r="4" fill="#000" />
-                    <rect x="7" y="8" width="2" height="4" fill="#000" />
-                </g>
+                {/* Hazard bumpers kept for aesthetics, coin slots removed */}
                 <rect x="10" y="390" width="40" height="5" fill="url(#pat-hazard)" />
                 <rect x="190" y="390" width="40" height="5" fill="url(#pat-hazard)" />
             </g>
@@ -233,7 +214,7 @@ const CabinetSVG = ({
         return <>{renderStreetTags()}{renderHardware()}</>;
     };
 
-    // --- 3. CHASSIS BASE (No Specular) ---
+    // --- 3. CHASSIS BASE (Filters removed) ---
     const renderChassis = () => {
         let path, fill, stroke;
         switch(safeIslandId) {
@@ -247,8 +228,8 @@ const CabinetSVG = ({
 
         return (
             <g>
-                <path d={path} fill="none" stroke={accent} strokeWidth={isHot ? "12" : "6"} filter="url(#ambientGlow)" opacity={isHot ? 0.7 : 0.2} />
-                <path d={path} fill={fill} stroke={stroke} strokeWidth="3" filter="url(#pbrNoise)" />
+                <path d={path} fill="none" stroke={accent} strokeWidth={isHot ? "12" : "6"} opacity={isHot ? 0.7 : 0.2} />
+                <path d={path} fill={fill} stroke={stroke} strokeWidth="3" />
                 <path d={path} fill={`url(#pat-${safeIslandId})`} opacity="1" style={{mixBlendMode: 'screen'}} pointerEvents="none" />
                 
                 {renderGraffitiDecals()}
@@ -286,7 +267,7 @@ const CabinetSVG = ({
         );
     };
 
-    // --- 4. TOPPER ---
+    // --- 4. TOPPER (Cleaned up gradients) ---
     const renderTopper = () => {
         const ledThemes = {
             1: { bg: '#2b0000', glow: '#ff0000', border: '#FFD700' }, 
@@ -299,7 +280,7 @@ const CabinetSVG = ({
 
         return (
             <g transform="translate(45, -8)">
-                <path d="M 0 5 L 150 5 L 140 45 L 10 45 Z" fill="url(#chrome)" stroke="#111" strokeWidth="2" filter="url(#pbrNoise)" />
+                <path d="M 0 5 L 150 5 L 140 45 L 10 45 Z" fill="url(#chrome)" stroke="#111" strokeWidth="2" />
                 <path d="M 4 9 L 146 9 L 138 41 L 12 41 Z" fill="#020202" />
                 <path d="M 6 11 L 144 11 L 136 39 L 14 39 Z" fill={led.bg} stroke={led.border} strokeWidth="0.5" />
 
@@ -327,7 +308,7 @@ const CabinetSVG = ({
     // --- 5. SCREEN BEZEL ---
     const renderScreenArea = () => (
         <g transform="translate(0, 80)">
-            <path d="M 30 0 H 210 L 205 130 H 35 Z" fill="url(#darkPlast)" stroke={safeIslandId === 5 ? "url(#gold)" : "url(#chrome)"} strokeWidth="4" filter="url(#pbrNoise)" />
+            <path d="M 30 0 H 210 L 205 130 H 35 Z" fill="#1a1a1a" stroke={safeIslandId === 5 ? "url(#gold)" : "url(#chrome)"} strokeWidth="4" />
             <path d="M 35 5 H 205 L 200 125 H 40 Z" fill="#020202" />
             <path d="M 35 5 H 205 L 195 25 H 45 Z" fill="#111" opacity="0.9" />
             <path d="M 35 5 L 45 25 V 105 L 40 125 Z" fill="#111" opacity="0.6" />
@@ -341,7 +322,7 @@ const CabinetSVG = ({
     // --- 6. CONTROL DECK ---
     const renderButtonDeck = () => (
         <g transform="translate(10, 220)">
-             <path d="M 0 0 L 220 0 L 235 60 L -15 60 Z" fill={safeIslandId === 5 ? "url(#brushMetal)" : "url(#darkPlast)"} stroke="#111" strokeWidth="3" filter="url(#pbrNoise)" />
+             <path d="M 0 0 L 220 0 L 235 60 L -15 60 Z" fill={safeIslandId === 5 ? "url(#brushMetal)" : "#1a1a1a"} stroke="#111" strokeWidth="3" />
              <path d="M -15 60 L 235 60 L 230 75 L -10 75 Z" fill="#050505" />
              <circle cx="5" cy="55" r="1.5" fill="#333" /><circle cx="215" cy="55" r="1.5" fill="#333" />
 
@@ -371,7 +352,7 @@ const CabinetSVG = ({
         let screenBg = isHot ? '#1a0505' : (isBroken ? '#000' : (isBusy ? '#020a0a' : '#050508'));
         return (
             <g transform="translate(25, 295)">
-                 <path d="M 0 0 L 190 0 L 180 80 L 10 80 Z" fill="#020202" stroke="url(#chrome)" strokeWidth="3" filter="url(#pbrNoise)" />
+                 <path d="M 0 0 L 190 0 L 180 80 L 10 80 Z" fill="#020202" stroke="url(#chrome)" strokeWidth="3" />
                  <g clipPath="url(#screenClipLocal)">
                      <rect x="0" y="0" width="190" height="80" fill={screenBg} className="transition-all duration-1000" />
                      <rect x="0" y="0" width="190" height="80" fill={`url(#pat-${safeIslandId})`} opacity="0.15" />
@@ -427,19 +408,34 @@ const CabinetSVG = ({
         );
     };
 
-    // --- 8. COIN TRAY ---
-    const renderCoinTray = () => (
+    // --- 8. CYBERNETIC COOLING BASE & DATA LINK ---
+    const renderCyberBase = () => (
         <g transform="translate(5, 380)">
-             <path d="M 5 0 Q 115 20 225 0 L 230 20 Q 115 35 0 20 Z" fill={safeIslandId === 5 ? "url(#gold)" : "url(#chrome)"} stroke="#111" strokeWidth="3" filter="url(#pbrNoise)" />
-             <path d="M 15 5 Q 115 20 215 5 L 210 15 Q 115 25 20 15 Z" fill="#050505" />
-             {(displayWins > 0 || isHot) && (
-                 <g transform="translate(30, 8)">
-                    <ellipse cx="20" cy="5" rx="8" ry="3" fill="url(#gold)" stroke="#B8860B" strokeWidth="0.5" />
-                    <ellipse cx="22" cy="3" rx="8" ry="3" fill="url(#gold)" stroke="#B8860B" strokeWidth="0.5" />
-                    <ellipse cx="35" cy="6" rx="8" ry="3" fill="url(#gold)" stroke="#B8860B" strokeWidth="0.5" />
-                    <ellipse cx="30" cy="2" rx="8" ry="3" fill="url(#gold)" stroke="#B8860B" strokeWidth="0.5" />
-                 </g>
+             {/* Main Angular Chassis */}
+             <path d="M 5 0 L 70 0 L 85 10 L 145 10 L 160 0 L 225 0 L 230 25 L 0 25 Z" fill="#0d0d0d" stroke="#1a1a1a" strokeWidth="2" />
+             <path d="M 85 10 L 145 10 L 140 20 L 90 20 Z" fill="#050505" stroke={accent} strokeWidth="1" opacity="0.8" />
+
+             {/* Neon Underglow (visible when HOT) */}
+             {isHot && (
+                 <path d="M 0 25 L 230 25" stroke={accent} strokeWidth="4" opacity="0.5" filter="url(#ambientGlow)" />
              )}
+
+             {/* Side Exhaust Grills */}
+             <g transform="translate(20, 5)">
+                 {[0, 4, 8].map(y => <rect key={`l-${y}`} x="0" y={y} width="40" height="1.5" fill="#000" />)}
+             </g>
+             <g transform="translate(170, 5)">
+                 {[0, 4, 8].map(y => <rect key={`r-${y}`} x="0" y={y} width="40" height="1.5" fill="#000" />)}
+             </g>
+
+             {/* Central Power Core */}
+             <g transform="translate(115, 15)">
+                 <circle cx="0" cy="0" r="5" fill="#000" stroke={accent} strokeWidth="1.5" />
+                 <circle cx="0" cy="0" r="2.5" fill={accent} className={isBusy || isHot ? 'animate-pulse' : ''} />
+                 {/* Fiber optic data lines connecting to the core */}
+                 <path d="M -30 -5 L -10 -5 L -5 0" fill="none" stroke={accent} strokeWidth="0.5" opacity="0.6" />
+                 <path d="M 30 -5 L 10 -5 L 5 0" fill="none" stroke={accent} strokeWidth="0.5" opacity="0.6" />
+             </g>
         </g>
     );
 
@@ -458,7 +454,7 @@ const CabinetSVG = ({
             {renderScreenArea()} 
             {renderButtonDeck()}
             {renderTelemetryDashboard()}
-            {renderCoinTray()}
+            {renderCyberBase()}
         </motion.svg>
     );
 };
