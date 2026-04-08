@@ -8,7 +8,7 @@ import api, { game, user as userApi } from '../services/api';
 import { 
     ChevronLeft, ChevronRight, Lock, Coins, MapPin, Loader2, 
     Bell, Trophy, Calendar, ClipboardList, Activity, Layers, 
-    Sparkles, Zap, AlertTriangle, ShieldAlert 
+    Sparkles, Zap, AlertTriangle, ShieldAlert, Users 
 } from 'lucide-react';
 
 import CharacterSVG from '../components/visuals/CharacterSVG';
