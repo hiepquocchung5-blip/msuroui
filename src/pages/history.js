@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
 import { useAuth } from '../context/AuthContext';
 import { user as userApi } from '../services/api';
-import { ChevronLeft, ArrowDownCircle, ArrowUpCircle, Clock, CheckCircle, XCircle, RefreshCw, AlertCircle, FileText, Image as ImageIcon, Gift } from 'lucide-react';
+import { ChevronLeft, ArrowDownCircle, ArrowUpCircle, Clock, CheckCircle, XCircle, RefreshCw, AlertCircle, FileText, Image as ImageIcon, Gift, History as HistoryIcon } from 'lucide-react';
 import GlassCard from '../components/ui/GlassCard';
 import BottomDock from '../components/layout/BottomDock';
 
@@ -94,14 +94,14 @@ export default function HistoryPage() {
                         
                         <div className="flex flex-col items-end gap-1">
                             <StatusBadge status={tx.status} />
-                            {tx.admin_note && <div className="text-[9px] text-gray-500 italic max-w-[100px] truncate">"{tx.admin_note}"</div>}
+                            {tx.admin_note && <div className="text-[9px] text-gray-500 italic max-w-[100px] truncate">&quot;{tx.admin_note}&quot;</div>}
                         </div>
                     </GlassCard>
                 ))}
                 
                 {!isFetching && transactions.length === 0 && (
                     <div className="text-center text-gray-500 py-10 flex flex-col items-center">
-                        <History size={48} className="opacity-20 mb-2"/>
+                        <HistoryIcon size={48} className="opacity-20 mb-2"/>
                         <span className="text-xs">No transactions found.</span>
                     </div>
                 )}
@@ -131,7 +131,7 @@ export default function HistoryPage() {
                             {selectedTx.admin_note && (
                                 <div className="bg-white/5 p-3 rounded-xl border border-white/10">
                                     <div className="text-[10px] text-gray-500 font-bold uppercase mb-1 flex items-center gap-1"><FileText size={10}/> Admin Note</div>
-                                    <p className="text-xs text-white italic">"{selectedTx.admin_note}"</p>
+                                    <p className="text-xs text-white italic">&quot;{selectedTx.admin_note}&quot;</p>
                                 </div>
                             )}
 

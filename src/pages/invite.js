@@ -92,7 +92,7 @@ export default function InvitePage() {
 
                 {/* Claim Section */}
                 <div className="space-y-2">
-                    <label className="text-xs text-gray-500 font-bold ml-1 uppercase">Enter Friend's Code</label>
+                    <label className="text-xs text-gray-500 font-bold ml-1 uppercase">Enter Friend&apos;s Code</label>
                     <div className="bg-black/30 border border-white/5 rounded-xl p-4">
                         <div className="flex gap-2 mb-2">
                             <input 

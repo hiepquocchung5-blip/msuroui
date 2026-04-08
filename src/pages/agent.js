@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
 import { useAuth } from '../context/AuthContext';
 import api from '../services/api'; // Direct API access
-import { ChevronLeft, Users, Send, DollarSign, RefreshCw, Copy, Activity } from 'lucide-react';
+import { ChevronLeft, Users, Send, DollarSign, RefreshCw, Copy, Activity, Shield } from 'lucide-react';
 import GlassCard from '../components/ui/GlassCard';
 import BottomDock from '../components/layout/BottomDock';
 
