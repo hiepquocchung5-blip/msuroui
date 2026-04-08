@@ -16,11 +16,19 @@ import CabinetSVG from '../components/visuals/CabinetSVG';
 import IslandLandscapeSVG from '../components/visuals/IslandLandscapeSVG';
 import SymbolSVG from '../components/visuals/SymbolSVG';
 import BottomDock from '../components/layout/BottomDock';
-import GlassCard from '../components/ui/GlassCard';
 import DailyBonusModal from '../components/game/DailyBonusModal';
 import GlobalTicker from '../components/ui/GlobalTicker';
 import ActiveEvents from '../components/ui/ActiveEvents';
 import { useGameSound } from '../hooks/useGameSound';
+
+// --- LEVIATHAN GJP MATRIX (V7.11 PARITY) ---
+const GJP_THRESHOLDS = {
+    1: { base: 3000000, trigger: 3600000, max: 7200000 },
+    2: { base: 4000000, trigger: 4500000, max: 8100000 },
+    3: { base: 5000000, trigger: 6000000, max: 10000000 },
+    4: { base: 7500000, trigger: 9000000, max: 15000000 },
+    5: { base: 10000000, trigger: 12000000, max: 20000000 }
+};
 
 // --- Local Rollup Counter for Jackpot ---
 const RollupNumber = ({ value }) => {
@@ -47,14 +55,13 @@ const RollupNumber = ({ value }) => {
 };
 
 // --- DYNAMIC FLOATING SYMBOL MATRIX ---
-// Replaces the generic Sakura particles with an immersive casino symbol drift
 const FloatingSymbols = () => {
     const [particles, setParticles] = useState([]);
     
     useEffect(() => {
         const generated = Array.from({ length: 12 }).map((_, i) => ({
             id: i,
-            symId: Math.floor(Math.random() * 6) + 2, // Symbols 2-7
+            symId: Math.floor(Math.random() * 6) + 2,
             islandId: Math.floor(Math.random() * 5) + 1,
             size: Math.random() * 40 + 20,
             left: Math.random() * 100,
@@ -156,6 +163,8 @@ export default function Lobby() {
     const [showDailyBonus, setShowDailyBonus] = useState(false);
     const [serverPing, setServerPing] = useState(true);
 
+    const selectedIsland = islands.length > 0 ? islands[currentIndex] : null;
+
     // --- FETCH LIVE DATA & APPLY ISLAND THEMES ---
     useEffect(() => {
         const initLobby = async () => {
@@ -211,8 +220,18 @@ export default function Lobby() {
         if (!loading && user) initLobby();
     }, [loading, user]);
 
-    const selectedIsland = islands.length > 0 ? islands[currentIndex] : null;
+    // Snap Jackpot baseline immediately on carousel change
+    useEffect(() => {
+        if (selectedIsland) {
+            const limits = GJP_THRESHOLDS[selectedIsland.id] || GJP_THRESHOLDS[1];
+            // If the current jackpot visually looks completely wrong for this island, snap it to base
+            if (jackpotAmount < limits.base || jackpotAmount > limits.max + 1000000) {
+                setJackpotAmount(limits.base);
+            }
+        }
+    }, [selectedIsland?.id]);
 
+    // --- ISLAND-SPECIFIC JACKPOT POLLING ---
     useEffect(() => {
         const fetchIslandJackpot = async () => {
             if (!selectedIsland?.id) return;
@@ -220,12 +239,14 @@ export default function Lobby() {
                 const response = await api.get(`/game/ticker.php?island_id=${selectedIsland.id}`);
                 
                 if (response.data.status === 'success' && response.data.jackpot_amount) {
-                    const newJp = response.data.jackpot_amount;
+                    const newJp = parseFloat(response.data.jackpot_amount);
+                    
                     if (prevJackpotRef.current !== null && (newJp - prevJackpotRef.current > 500000)) {
                         playSound('bigwin');
                         setShowJpCelebration(true);
                         setTimeout(() => setShowJpCelebration(false), 8000);
                     }
+                    
                     setJackpotAmount(newJp);
                     prevJackpotRef.current = newJp;
                     setServerPing(true);
@@ -239,6 +260,7 @@ export default function Lobby() {
         return () => clearInterval(interval);
     }, [selectedIsland?.id, playSound]);
 
+    // --- CAROUSEL NAVIGATION ---
     const paginate = useCallback((newDirection) => {
         if (islands.length === 0) return;
         playSound('click');
@@ -265,14 +287,22 @@ export default function Lobby() {
 
     if (loading || islands.length === 0) return <div className="bg-[#050505] min-h-screen" />;
 
-    const jpProgressPercent = Math.min(100, Math.max(0, ((jackpotAmount - 3000000) / (7200000 - 3000000)) * 100));
-    const isJPHot = jackpotAmount >= 3600000 && jackpotAmount < 7000000;
-    const isJPCritical = jackpotAmount >= 7000000;
+    // --- EXACT DYNAMIC GJP THRESHOLD LOGIC ---
+    const gjpLimits = GJP_THRESHOLDS[selectedIsland?.id] || GJP_THRESHOLDS[1];
+    const jpProgressPercent = Math.min(100, Math.max(0, ((jackpotAmount - gjpLimits.base) / (gjpLimits.max - gjpLimits.base)) * 100));
+    
+    // Strict contextual zone calculation
+    const isJPHot = jackpotAmount >= gjpLimits.trigger && jackpotAmount < gjpLimits.max;
+    const isJPCritical = jackpotAmount >= gjpLimits.max;
 
     let jpContainerClass = "w-full max-w-sm sm:max-w-md rounded-2xl p-3 sm:p-4 flex flex-col items-center text-center backdrop-blur-md relative overflow-hidden transition-all duration-1000 z-10 ";
-    if (isJPCritical) jpContainerClass += "bg-gradient-to-b from-purple-900/60 to-black/90 border-2 border-purple-500 shadow-[0_0_50px_rgba(168,85,247,0.6)] animate-[shake-epic_0.5s_infinite]";
-    else if (isJPHot) jpContainerClass += "bg-gradient-to-b from-red-900/60 to-black/90 border border-red-500 shadow-[0_0_40px_rgba(239,68,68,0.5)] animate-pulse";
-    else jpContainerClass += `bg-gradient-to-b ${selectedIsland?.theme?.bgGrad || 'from-yellow-900/30'} to-black/80 border ${selectedIsland?.theme?.border || 'border-yellow-500/40'} shadow-lg`;
+    if (isJPCritical) {
+        jpContainerClass += "bg-gradient-to-b from-purple-900/60 to-black/90 border-2 border-purple-500 shadow-[0_0_50px_rgba(168,85,247,0.6)] animate-[shake-epic_0.5s_infinite]";
+    } else if (isJPHot) {
+        jpContainerClass += "bg-gradient-to-b from-red-900/60 to-black/90 border border-red-500 shadow-[0_0_40px_rgba(239,68,68,0.5)] animate-pulse";
+    } else {
+        jpContainerClass += `bg-gradient-to-b ${selectedIsland?.theme?.bgGrad || 'from-yellow-900/30'} to-black/80 border ${selectedIsland?.theme?.border || 'border-yellow-500/40'} shadow-lg`;
+    }
 
     return (
         <div className="min-h-[100dvh] bg-[#050505] pb-[90px] relative overflow-hidden flex flex-col selection:bg-cyan-500 selection:text-black font-sans">
