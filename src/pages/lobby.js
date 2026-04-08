@@ -139,7 +139,7 @@ const slideVariants = {
     })
 };
 
-export default function Lobby() {
+export default function App() {
     const { user, loading, updateBalance } = useAuth();
     const { addToast } = useToast();
     const router = useRouter();
@@ -156,7 +156,6 @@ export default function Lobby() {
     const [topOperatives, setTopOperatives] = useState([]); // Community Avatars
     const prevJackpotRef = useRef(null);
     
-    const [showJpCelebration, setShowJpCelebration] = useState(false);
     const [userStats, setUserStats] = useState({ totalDeposited: 0 });
     
     const [showDailyBonus, setShowDailyBonus] = useState(false);
@@ -246,8 +245,6 @@ export default function Lobby() {
                     
                     if (prevJackpotRef.current !== null && (newJp - prevJackpotRef.current > 500000)) {
                         playSound('bigwin');
-                        setShowJpCelebration(true);
-                        setTimeout(() => setShowJpCelebration(false), 8000);
                     }
                     
                     setJackpotAmount(newJp);
@@ -554,36 +551,6 @@ export default function Lobby() {
                     />
                 ))}
             </div>
-
-            {/* --- GJP CELEBRATION OVERLAY --- */}
-            <AnimatePresence>
-                {showJpCelebration && (
-                    <motion.div 
-                        initial={{ opacity: 0 }} 
-                        animate={{ opacity: 1 }} 
-                        exit={{ opacity: 0 }} 
-                        className="fixed inset-0 z-[100] flex flex-col items-center justify-center bg-black/80 backdrop-blur-sm pointer-events-none"
-                    >
-                        <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/stardust.png')] opacity-40 animate-[spin_20s_linear_infinite] mix-blend-color-dodge" />
-                        <div className="absolute inset-0 bg-gradient-to-t from-red-900/50 via-transparent to-yellow-900/50 animate-pulse" />
-                        
-                        <motion.div 
-                            initial={{ scale: 0.5, y: 50 }} 
-                            animate={{ scale: 1, y: 0 }} 
-                            transition={{ type: 'spring', bounce: 0.5 }} 
-                            className="text-center relative z-10"
-                        >
-                            <Trophy size={100} className="text-yellow-400 mx-auto mb-4 animate-bounce drop-shadow-[0_0_30px_rgba(234,179,8,0.8)]" />
-                            <h2 className="text-5xl md:text-7xl font-black italic text-transparent bg-clip-text bg-gradient-to-b from-yellow-200 to-red-600 drop-shadow-2xl mb-2 tracking-tighter uppercase">
-                                JACKPOT SURGE
-                            </h2>
-                            <p className="text-white font-mono text-sm md:text-lg animate-pulse tracking-widest bg-black/50 px-4 py-1 rounded-full border border-yellow-500/30 inline-block">
-                                A PROGRESSIVE POOL IS BOILING OVER!
-                            </p>
-                        </motion.div>
-                    </motion.div>
-                )}
-            </AnimatePresence>
 
             <AnimatePresence>
                 {showDailyBonus && <DailyBonusModal onClose={() => setShowDailyBonus(false)} />}
