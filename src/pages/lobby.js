@@ -321,26 +321,31 @@ export default function Lobby() {
             <div className="pt-3 px-4 sm:px-6 pb-2 flex flex-col sm:flex-row justify-between items-start sm:items-center z-20 bg-gradient-to-b from-black/95 to-transparent backdrop-blur-sm sticky top-8 gap-3 sm:gap-0 border-b border-white/5 shadow-sm">
                 <div className="flex flex-col gap-1 w-full sm:w-auto">
                     <div className="flex items-center justify-between sm:justify-start gap-3">
+                         {/* Cyber-ID Operative Badge */}
                          <motion.div 
                             whileHover={{ scale: 1.05 }}
-                            className="flex items-center gap-2 cursor-pointer group bg-black/50 p-1.5 pr-4 rounded-full border border-white/10 shadow-inner"
+                            className="flex items-center gap-3 cursor-pointer group bg-black/60 p-2 pr-5 rounded-2xl border border-cyan-500/30 shadow-[inset_0_0_20px_rgba(0,243,255,0.05)] backdrop-blur-md relative overflow-hidden"
                             onClick={() => router.push('/profile')}
                          >
-                             <div className="bg-gradient-to-br from-cyan-500 to-purple-600 w-8 h-8 rounded-full flex items-center justify-center border-2 border-white shadow-[0_0_10px_rgba(6,182,212,0.6)] group-hover:shadow-[0_0_15px_cyan] transition-all overflow-hidden relative">
-                                 <div className="absolute inset-0 scale-125 pt-1 opacity-50 group-hover:opacity-100 transition-opacity">
-                                    <CharacterSVG type={user.active_pet_id || 'luna'} mood="idle" />
+                             <div className="absolute inset-0 bg-[linear-gradient(transparent_50%,rgba(0,243,255,0.1)_50%)] bg-[length:100%_4px] pointer-events-none mix-blend-screen" />
+                             
+                             <div className="bg-gradient-to-br from-cyan-500 to-blue-600 w-10 h-10 rounded-xl flex items-center justify-center border border-white/50 shadow-[0_0_15px_rgba(6,182,212,0.6)] group-hover:shadow-[0_0_25px_cyan] transition-all overflow-hidden relative z-10">
+                                 <div className="absolute inset-0 scale-[1.5] pt-2 opacity-60 group-hover:opacity-100 transition-opacity">
+                                    <CharacterSVG type={user.active_pet_id || 'luna'} mood="idle" stickerMode={true} />
                                  </div>
-                                 <span className="text-white font-black text-xs italic relative z-10 drop-shadow-md">{user.level}</span>
+                                 <span className="text-white font-black text-sm italic relative z-10 drop-shadow-[0_2px_2px_rgba(0,0,0,0.8)]">{user.level}</span>
                              </div>
-                             <div className="flex flex-col">
-                                 <span className="text-[9px] text-cyan-300 font-bold tracking-widest uppercase flex items-center gap-1">
-                                    Rank <span className="opacity-50">|</span> အဆင့် <span className="opacity-50">|</span> 段位
+                             
+                             <div className="flex flex-col relative z-10">
+                                 <span className="text-[10px] text-cyan-300 font-bold tracking-[0.2em] uppercase flex items-center gap-1.5 drop-shadow-md">
+                                    <ShieldAlert size={10} className="text-cyan-400" /> Operative
                                  </span>
-                                 <div className="w-24 sm:w-32 h-1.5 bg-gray-900 rounded-full overflow-hidden border border-white/10 mt-0.5 shadow-inner">
-                                    <div className="h-full bg-gradient-to-r from-cyan-400 to-purple-500 transition-all duration-1000 shadow-[0_0_5px_cyan]" style={{width: `${user.progress_percent || 0}%`}}></div>
+                                 <div className="w-28 sm:w-36 h-1.5 bg-gray-950 rounded-full overflow-hidden border border-white/10 mt-1 shadow-inner">
+                                    <div className="h-full bg-gradient-to-r from-cyan-400 to-purple-500 transition-all duration-1000 shadow-[0_0_8px_cyan]" style={{width: `${user.progress_percent || 0}%`}}></div>
                                 </div>
                              </div>
                          </motion.div>
+
                          <div className={`flex sm:hidden items-center gap-1 text-[8px] font-black tracking-widest px-2 py-0.5 rounded-full border ${serverPing ? 'text-green-400 border-green-500/30 bg-green-500/10' : 'text-red-500 border-red-500/30 bg-red-500/10'}`}>
                              <Activity size={10} className={serverPing ? 'animate-pulse' : ''} />
                              {serverPing ? 'LIVE' : 'DISC'}
@@ -549,6 +554,36 @@ export default function Lobby() {
                     />
                 ))}
             </div>
+
+            {/* --- GJP CELEBRATION OVERLAY --- */}
+            <AnimatePresence>
+                {showJpCelebration && (
+                    <motion.div 
+                        initial={{ opacity: 0 }} 
+                        animate={{ opacity: 1 }} 
+                        exit={{ opacity: 0 }} 
+                        className="fixed inset-0 z-[100] flex flex-col items-center justify-center bg-black/80 backdrop-blur-sm pointer-events-none"
+                    >
+                        <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/stardust.png')] opacity-40 animate-[spin_20s_linear_infinite] mix-blend-color-dodge" />
+                        <div className="absolute inset-0 bg-gradient-to-t from-red-900/50 via-transparent to-yellow-900/50 animate-pulse" />
+                        
+                        <motion.div 
+                            initial={{ scale: 0.5, y: 50 }} 
+                            animate={{ scale: 1, y: 0 }} 
+                            transition={{ type: 'spring', bounce: 0.5 }} 
+                            className="text-center relative z-10"
+                        >
+                            <Trophy size={100} className="text-yellow-400 mx-auto mb-4 animate-bounce drop-shadow-[0_0_30px_rgba(234,179,8,0.8)]" />
+                            <h2 className="text-5xl md:text-7xl font-black italic text-transparent bg-clip-text bg-gradient-to-b from-yellow-200 to-red-600 drop-shadow-2xl mb-2 tracking-tighter uppercase">
+                                JACKPOT SURGE
+                            </h2>
+                            <p className="text-white font-mono text-sm md:text-lg animate-pulse tracking-widest bg-black/50 px-4 py-1 rounded-full border border-yellow-500/30 inline-block">
+                                A PROGRESSIVE POOL IS BOILING OVER!
+                            </p>
+                        </motion.div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
 
             <AnimatePresence>
                 {showDailyBonus && <DailyBonusModal onClose={() => setShowDailyBonus(false)} />}
