@@ -8,7 +8,7 @@ import api, { game, user as userApi } from '../services/api';
 import { 
     ChevronLeft, ChevronRight, Lock, Coins, MapPin, Loader2, 
     Bell, Trophy, Calendar, ClipboardList, Activity, Layers, 
-    Sparkles, Zap, ShieldAlert, Users, Hexagon, Cpu
+    Sparkles, Zap, ShieldAlert, Users, Hexagon, Cpu, Terminal
 } from 'lucide-react';
 
 import CharacterSVG from '../components/visuals/CharacterSVG';
@@ -54,8 +54,8 @@ const RollupNumber = memo(({ value }) => {
     return <>{count.toLocaleString()}</>;
 });
 
-// --- AAA OPTIMIZATION: Memoized Background Reels ---
-const BackgroundReels = memo(() => {
+// --- AAA OPTIMIZATION: Contextual Background Reels ---
+const BackgroundReels = memo(({ islandId }) => {
     const symbols = [1, 2, 3, 4, 5, 6, 7];
     const columns = useMemo(() => [
         { dir: 'up', speed: '30s', opacity: 'opacity-[0.03]', size: 'w-24 h-24 sm:w-32 sm:h-32', delay: '0s' },
@@ -78,8 +78,8 @@ const BackgroundReels = memo(() => {
                         style={{ animation: `${col.dir === 'up' ? 'roll-up' : 'roll-down'} ${col.speed} linear infinite`, animationDelay: col.delay }}
                     >
                         {[...symbols, ...symbols, ...symbols].map((sym, j) => (
-                            <div key={j} className={`${col.size} ${col.opacity} mix-blend-screen grayscale-[50%]`}>
-                                <SymbolSVG id={sym} variant="dim" />
+                            <div key={j} className={`${col.size} ${col.opacity} mix-blend-screen grayscale-[50%] transition-all duration-1000`}>
+                                <SymbolSVG id={sym} islandId={islandId} variant="dim" />
                             </div>
                         ))}
                     </div>
@@ -148,6 +148,7 @@ export default function Lobby() {
     const [jackpotAmount, setJackpotAmount] = useState(3000000);
     const [activePlayers, setActivePlayers] = useState(0);
     const [topOperatives, setTopOperatives] = useState([]); 
+    const [sysLog, setSysLog] = useState('MONITORING SECTORS...');
     
     const [userStats, setUserStats] = useState({ totalDeposited: 0 });
     const [showDailyBonus, setShowDailyBonus] = useState(false);
@@ -159,7 +160,6 @@ export default function Lobby() {
     useEffect(() => {
         const initLobby = async () => {
             try {
-                // Use allSettled so a failed leaderboard doesn't crash the whole lobby
                 const results = await Promise.allSettled([
                     game.getIslands(), 
                     userApi.getNotifications(), 
@@ -199,7 +199,7 @@ export default function Lobby() {
                 if (resProfile.status === 'fulfilled' && resProfile.value?.data?.status === 'success') {
                     setUserStats({ totalDeposited: parseFloat(resProfile.value.data.user.total_deposited) || 0 });
                     if (resProfile.value.data.user.balance !== undefined) {
-                        updateBalance(resProfile.value.data.user.balance); // Sync fresh balance
+                        updateBalance(resProfile.value.data.user.balance); 
                     }
                 }
 
@@ -207,17 +207,14 @@ export default function Lobby() {
                     setTopOperatives(resLeaderboard.value.data.list.slice(0, 5));
                 }
 
-                // Daily Bonus Logic
                 if (user) {
                     const lastClaimStr = localStorage.getItem(`daily_claim_time_${user.id}`);
                     const now = new Date().getTime();
-                    // 86400000 ms = 24 hours
                     if (!lastClaimStr || (now - parseInt(lastClaimStr) > 86400000)) {
                         setTimeout(() => setShowDailyBonus(true), 1500);
                     }
                 }
             } catch (e) { 
-                console.error("Lobby Init Error:", e);
                 setServerPing(false);
             } finally {
                 setIsDataLoaded(true);
@@ -226,6 +223,24 @@ export default function Lobby() {
 
         if (!loading && user) initLobby();
     }, [loading, user]);
+
+    // --- DYNAMIC TELEMETRY LOGS ---
+    useEffect(() => {
+        if (!isDataLoaded) return;
+        const logs = [
+            `ROUTING PACKETS TO SECTOR 0${selectedIsland?.id || 1}...`,
+            `VALIDATING AES-256 SECURE LINK...`,
+            `UPDATING LIQUIDITY POOLS...`,
+            `MONITORING 1000 ACTIVE TERMINALS...`,
+            `SYSTEM OPTIMAL. NO ANOMALIES DETECTED.`
+        ];
+        let idx = 0;
+        const interval = setInterval(() => {
+            setSysLog(logs[idx]);
+            idx = (idx + 1) % logs.length;
+        }, 4000);
+        return () => clearInterval(interval);
+    }, [isDataLoaded, selectedIsland?.id]);
 
     // Snap Jackpot baseline immediately on carousel change
     useEffect(() => {
@@ -247,7 +262,6 @@ export default function Lobby() {
                     setJackpotAmount(parseFloat(response.data.jackpot_amount));
                     setServerPing(true);
                     
-                    // Simulate organic player count
                     const basePlayers = selectedIsland.id === 1 ? 1500 : (selectedIsland.id === 5 ? 300 : 800);
                     setActivePlayers(basePlayers + Math.floor(Math.random() * 150) - 75); 
                 }
@@ -294,7 +308,10 @@ export default function Lobby() {
             <div className="bg-[#050505] min-h-screen flex flex-col items-center justify-center font-mono">
                 <Cpu size={48} className="text-cyan-500 mb-4 animate-pulse drop-shadow-[0_0_15px_cyan]" />
                 <h2 className="text-white font-black italic tracking-[0.3em] uppercase">INITIALIZING LOBBY</h2>
-                <div className="w-48 h-1 bg-gray-900 mt-4 rounded-full overflow-hidden">
+                <div className="text-[10px] text-cyan-400/80 mt-2 flex items-center gap-2">
+                    <Loader2 size={12} className="animate-spin" /> DECRYPTING SECTOR HASHES...
+                </div>
+                <div className="w-48 h-1 bg-gray-900 mt-6 rounded-full overflow-hidden">
                     <div className="h-full bg-cyan-500 w-1/2 animate-[marquee_1s_ease-in-out_infinite]"></div>
                 </div>
             </div>
@@ -312,8 +329,8 @@ export default function Lobby() {
     return (
         <div className="min-h-[100dvh] bg-[#050505] pb-[90px] relative overflow-hidden flex flex-col selection:bg-cyan-500 selection:text-black font-sans">
             
-            {/* Global Overlays (AAA Cinematic Reels) */}
-            <BackgroundReels />
+            {/* Global Overlays (Contextual Cinematic Reels) */}
+            <BackgroundReels islandId={selectedIsland?.id || 1} />
             <div className="absolute inset-0 bg-[linear-gradient(rgba(0,243,255,0.03)_1px,transparent_1px),linear-gradient(90deg,rgba(0,243,255,0.03)_1px,transparent_1px)] bg-[size:40px_40px] pointer-events-none z-0" />
             
             <div className="relative z-50"><GlobalTicker /></div>
@@ -416,7 +433,7 @@ export default function Lobby() {
                     </div>
                 </div>
                 
-                {/* UHD Community Cluster */}
+                {/* UHD Community Cluster with Live Stream */}
                 <div className="flex flex-col justify-center gap-3 bg-black/40 backdrop-blur-2xl border border-white/10 px-5 py-4 rounded-3xl w-full sm:w-auto min-w-[250px] shadow-lg">
                     <div className="flex items-center justify-between w-full text-cyan-400 text-[10px] font-bold tracking-widest uppercase">
                         <div className="flex items-center gap-2">
@@ -427,12 +444,20 @@ export default function Lobby() {
                         <span className="text-white font-mono">{activePlayers.toLocaleString()}</span>
                     </div>
 
+                    {/* Live System Log */}
+                    <div className="flex items-center gap-2 border-t border-white/5 pt-2">
+                        <Terminal size={10} className="text-gray-500" />
+                        <span className="text-[8px] text-gray-400 font-mono uppercase tracking-widest truncate max-w-[150px]">
+                            {sysLog}
+                        </span>
+                    </div>
+
                     {topOperatives.length > 0 && (
                         <div className="flex items-center justify-between pt-2 border-t border-white/5 w-full">
                             <span className="text-[9px] text-gray-500 font-bold tracking-widest uppercase"><Trophy size={10} className="inline mr-1 text-yellow-500/50"/> TOP OP</span>
                             <div className="flex -space-x-2 hover:space-x-1 transition-all duration-300">
                                 {topOperatives.map((op) => (
-                                    <div key={op.id} className="w-7 h-7 rounded-full bg-[#111] border border-white/20 relative overflow-hidden flex items-center justify-center shadow-md" title={op.username}>
+                                    <div key={op.id} className="w-7 h-7 rounded-full bg-[#111] border border-white/20 relative overflow-hidden flex items-center justify-center shadow-md hover:scale-110 hover:z-20 transition-transform" title={op.username}>
                                         <div className="absolute inset-0 scale-[1.3] pt-1 opacity-90 transition-all">
                                             <CharacterSVG type={op.active_pet_id || 'luna'} mood="idle" stickerMode={true} />
                                         </div>
