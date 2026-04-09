@@ -8,7 +8,7 @@ import api, { game, user as userApi } from '../services/api';
 import { 
     ChevronLeft, ChevronRight, Lock, Coins, MapPin, Loader2, 
     Bell, Trophy, Calendar, ClipboardList, Activity, Layers, 
-    Sparkles, Zap, AlertTriangle, ShieldAlert, Users, Hexagon
+    Sparkles, Zap, ShieldAlert, Users, Hexagon, Cpu
 } from 'lucide-react';
 
 import CharacterSVG from '../components/visuals/CharacterSVG';
@@ -133,7 +133,7 @@ const slideVariants = {
 };
 
 export default function Lobby() {
-    const { user, loading } = useAuth();
+    const { user, loading, updateBalance } = useAuth();
     const { addToast } = useToast();
     const router = useRouter();
     const { playSound } = useGameSound();
@@ -142,6 +142,7 @@ export default function Lobby() {
     const [currentIndex, setCurrentIndex] = useState(0);
     const [direction, setDirection] = useState(0);
     const [unreadCount, setUnreadCount] = useState(0);
+    const [isDataLoaded, setIsDataLoaded] = useState(false);
     
     // Live Ticker & Community State
     const [jackpotAmount, setJackpotAmount] = useState(3000000);
@@ -154,19 +155,22 @@ export default function Lobby() {
 
     const selectedIsland = islands.length > 0 ? islands[currentIndex] : null;
 
-    // --- FETCH LIVE DATA & APPLY ISLAND THEMES ---
+    // --- FAULT-TOLERANT DATA FETCHING (Deployment Ready) ---
     useEffect(() => {
         const initLobby = async () => {
             try {
-                const [resIslands, resNotifs, resProfile, resLeaderboard] = await Promise.all([
+                // Use allSettled so a failed leaderboard doesn't crash the whole lobby
+                const results = await Promise.allSettled([
                     game.getIslands(), 
                     userApi.getNotifications(), 
                     userApi.getProfile(),
                     game.getLeaderboard('balance')
                 ]);
 
-                if (resIslands.data?.status === 'success') {
-                    const progressionIslands = resIslands.data.data.map(island => {
+                const [resIslands, resNotifs, resProfile, resLeaderboard] = results;
+
+                if (resIslands.status === 'fulfilled' && resIslands.value?.data?.status === 'success') {
+                    const progressionIslands = resIslands.value.data.data.map(island => {
                         let reqDeposit = parseFloat(island.req_deposit) || 0;
                         let totalMachines = 0;
                         
@@ -188,19 +192,35 @@ export default function Lobby() {
                     setIslands(progressionIslands);
                 }
                 
-                if (resNotifs.data?.status === 'success') setUnreadCount(resNotifs.data.count || 0);
-                if (resProfile.data?.status === 'success') setUserStats({ totalDeposited: parseFloat(resProfile.data.user.total_deposited) || 0 });
-                if (resLeaderboard.data?.status === 'success') setTopOperatives(resLeaderboard.data.list.slice(0, 5));
+                if (resNotifs.status === 'fulfilled' && resNotifs.value?.data?.status === 'success') {
+                    setUnreadCount(resNotifs.value.data.count || 0);
+                }
+                
+                if (resProfile.status === 'fulfilled' && resProfile.value?.data?.status === 'success') {
+                    setUserStats({ totalDeposited: parseFloat(resProfile.value.data.user.total_deposited) || 0 });
+                    if (resProfile.value.data.user.balance !== undefined) {
+                        updateBalance(resProfile.value.data.user.balance); // Sync fresh balance
+                    }
+                }
 
+                if (resLeaderboard.status === 'fulfilled' && resLeaderboard.value?.data?.status === 'success') {
+                    setTopOperatives(resLeaderboard.value.data.list.slice(0, 5));
+                }
+
+                // Daily Bonus Logic
                 if (user) {
                     const lastClaimStr = localStorage.getItem(`daily_claim_time_${user.id}`);
                     const now = new Date().getTime();
+                    // 86400000 ms = 24 hours
                     if (!lastClaimStr || (now - parseInt(lastClaimStr) > 86400000)) {
                         setTimeout(() => setShowDailyBonus(true), 1500);
                     }
                 }
             } catch (e) { 
+                console.error("Lobby Init Error:", e);
                 setServerPing(false);
+            } finally {
+                setIsDataLoaded(true);
             }
         };
 
@@ -226,15 +246,22 @@ export default function Lobby() {
                 if (response.data.status === 'success' && response.data.jackpot_amount) {
                     setJackpotAmount(parseFloat(response.data.jackpot_amount));
                     setServerPing(true);
-                    setActivePlayers(Math.floor(Math.random() * 500) + 1200); 
+                    
+                    // Simulate organic player count
+                    const basePlayers = selectedIsland.id === 1 ? 1500 : (selectedIsland.id === 5 ? 300 : 800);
+                    setActivePlayers(basePlayers + Math.floor(Math.random() * 150) - 75); 
                 }
-            } catch (e) { setServerPing(false); }
+            } catch (e) { 
+                setServerPing(false); 
+            }
         };
 
-        fetchIslandJackpot(); 
-        const interval = setInterval(fetchIslandJackpot, 10000); 
-        return () => clearInterval(interval);
-    }, [selectedIsland?.id]);
+        if (isDataLoaded) {
+            fetchIslandJackpot(); 
+            const interval = setInterval(fetchIslandJackpot, 10000); 
+            return () => clearInterval(interval);
+        }
+    }, [selectedIsland?.id, isDataLoaded]);
 
     // --- CAROUSEL NAVIGATION ---
     const paginate = useCallback((newDirection) => {
@@ -250,18 +277,29 @@ export default function Lobby() {
         else if (swipe > swipeConfidenceThreshold) paginate(-1);
     };
 
-    const isOwned = selectedIsland ? (selectedIsland.id === 1 || selectedIsland.reqDeposit === 0 || userStats.totalDeposited >= selectedIsland.reqDeposit) : false;
-
     const handleEnter = async (island) => {
         playSound('click');
+        const isOwned = island.id === 1 || island.reqDeposit === 0 || userStats.totalDeposited >= island.reqDeposit;
+        
         if (!isOwned) {
-            addToast(`Deposit required to breach this sector.`, 'info');
+            addToast(`Deposit required to breach this sector.`, 'error');
             return;
         }
         router.push(`/game/${island.id}`);
     };
 
-    if (loading || islands.length === 0) return <div className="bg-[#050505] min-h-screen" />;
+    // --- LOADING STATE (Cinematic Loader) ---
+    if (loading || !isDataLoaded || islands.length === 0) {
+        return (
+            <div className="bg-[#050505] min-h-screen flex flex-col items-center justify-center font-mono">
+                <Cpu size={48} className="text-cyan-500 mb-4 animate-pulse drop-shadow-[0_0_15px_cyan]" />
+                <h2 className="text-white font-black italic tracking-[0.3em] uppercase">INITIALIZING LOBBY</h2>
+                <div className="w-48 h-1 bg-gray-900 mt-4 rounded-full overflow-hidden">
+                    <div className="h-full bg-cyan-500 w-1/2 animate-[marquee_1s_ease-in-out_infinite]"></div>
+                </div>
+            </div>
+        );
+    }
 
     // --- EXACT DYNAMIC GJP THRESHOLD LOGIC ---
     const gjpLimits = GJP_THRESHOLDS[selectedIsland?.id] || GJP_THRESHOLDS[1];
@@ -269,6 +307,7 @@ export default function Lobby() {
     
     const isJPHot = jackpotAmount >= gjpLimits.trigger && jackpotAmount < gjpLimits.max;
     const isJPCritical = jackpotAmount >= gjpLimits.max;
+    const isOwned = selectedIsland.id === 1 || selectedIsland.reqDeposit === 0 || userStats.totalDeposited >= selectedIsland.reqDeposit;
 
     return (
         <div className="min-h-[100dvh] bg-[#050505] pb-[90px] relative overflow-hidden flex flex-col selection:bg-cyan-500 selection:text-black font-sans">
@@ -294,7 +333,7 @@ export default function Lobby() {
                                  <div className="absolute inset-0 scale-[1.5] pt-2 opacity-80 group-hover:opacity-100 transition-opacity">
                                     <CharacterSVG type={user.active_pet_id || 'luna'} mood="idle" stickerMode={true} />
                                  </div>
-                                 <span className="text-white font-black text-sm italic relative z-10 drop-shadow-[0_2px_2px_rgba(0,0,0,0.8)]">{user.level}</span>
+                                 <span className="text-white font-black text-sm italic relative z-10 drop-shadow-[0_2px_2px_rgba(0,0,0,0.8)]">{user.level || 1}</span>
                              </div>
                              
                              <div className="flex flex-col relative z-10">
@@ -339,7 +378,7 @@ export default function Lobby() {
                     >
                         <Coins className="w-4 h-4 sm:w-5 sm:h-5 text-yellow-400" />
                         <span className="text-yellow-400 font-mono font-black text-sm sm:text-base tracking-tight flex items-center gap-1">
-                            {parseFloat(user.balance).toLocaleString()} <span className="text-[10px] text-yellow-600 hidden sm:inline">MMK</span>
+                            {parseFloat(user.balance || 0).toLocaleString()} <span className="text-[10px] text-yellow-600 hidden sm:inline">MMK</span>
                         </span>
                     </motion.div>
                 </div>
@@ -392,8 +431,8 @@ export default function Lobby() {
                         <div className="flex items-center justify-between pt-2 border-t border-white/5 w-full">
                             <span className="text-[9px] text-gray-500 font-bold tracking-widest uppercase"><Trophy size={10} className="inline mr-1 text-yellow-500/50"/> TOP OP</span>
                             <div className="flex -space-x-2 hover:space-x-1 transition-all duration-300">
-                                {topOperatives.map((op, idx) => (
-                                    <div key={op.id} className="w-7 h-7 rounded-full bg-[#111] border border-white/20 relative overflow-hidden flex items-center justify-center shadow-md">
+                                {topOperatives.map((op) => (
+                                    <div key={op.id} className="w-7 h-7 rounded-full bg-[#111] border border-white/20 relative overflow-hidden flex items-center justify-center shadow-md" title={op.username}>
                                         <div className="absolute inset-0 scale-[1.3] pt-1 opacity-90 transition-all">
                                             <CharacterSVG type={op.active_pet_id || 'luna'} mood="idle" stickerMode={true} />
                                         </div>
@@ -405,13 +444,17 @@ export default function Lobby() {
                 </div>
             </div>
 
-            {/* --- 3D ISLAND CAROUSEL (UHD CABINET-CENTRIC) --- */}
+            {/* --- 3D ISLAND CAROUSEL (CABINET-CENTRIC) --- */}
             <div className="flex-1 relative flex items-center justify-center perspective-1000 mt-2 sm:mt-4 mb-6 min-h-[45vh] z-10">
                 
+                {/* Seamless Background Crossfading */}
                 <AnimatePresence mode="popLayout">
                     <motion.div 
                         key={`bg-${selectedIsland?.id}`}
-                        initial={{ opacity: 0 }} animate={{ opacity: 0.4 }} exit={{ opacity: 0 }} transition={{ duration: 0.8 }}
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 0.4 }}
+                        exit={{ opacity: 0 }}
+                        transition={{ duration: 0.8 }}
                         className={`absolute inset-0 bg-gradient-to-b ${selectedIsland?.theme?.bgGrad || 'from-black'} via-transparent to-black pointer-events-none z-0`} 
                     />
                 </AnimatePresence>
@@ -419,6 +462,7 @@ export default function Lobby() {
                 <button onClick={() => paginate(-1)} className="absolute left-2 sm:left-6 z-40 p-3 bg-black/40 backdrop-blur-xl rounded-full text-white hover:bg-white/10 border border-white/10 active:scale-95 transition-all">
                     <ChevronLeft size={24} strokeWidth={1.5} />
                 </button>
+                
                 <button onClick={() => paginate(1)} className="absolute right-2 sm:right-6 z-40 p-3 bg-black/40 backdrop-blur-xl rounded-full text-white hover:bg-white/10 border border-white/10 active:scale-95 transition-all">
                     <ChevronRight size={24} strokeWidth={1.5} />
                 </button>
@@ -435,6 +479,7 @@ export default function Lobby() {
                                 animate="center"
                                 exit="exit"
                                 drag="x"
+                                dragDirectionLock
                                 dragConstraints={{ left: 0, right: 0 }}
                                 dragElastic={1}
                                 onDragEnd={handleDragEnd}
