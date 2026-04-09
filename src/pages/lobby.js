@@ -511,9 +511,17 @@ export default function Lobby() {
                                     <div className="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-transparent opacity-90 mix-blend-overlay"></div>
                                     <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-transparent opacity-90"></div>
                                     
-                                    {/* Centered UHD Cabinet */}
+                                    {/* Centered UHD Cabinet (Dynamically synced) */}
                                     <div className="absolute left-1/2 top-[45%] transform -translate-x-1/2 -translate-y-1/2 scale-[1.3] sm:scale-[1.5] z-10 transition-transform duration-700 ease-out group-hover:scale-[1.35] sm:group-hover:scale-[1.55] group-hover:-translate-y-[48%]">
-                                         <CabinetSVG islandId={selectedIsland.id} mode="hall" visualState="FREE" />
+                                         <CabinetSVG 
+                                             islandId={selectedIsland.id} 
+                                             mode="hall" 
+                                             visualState={isJPCritical ? 'JACKPOT_HOT' : (activePlayers > 1000 ? 'BUSY' : 'FREE')} 
+                                             currentJackpot={jackpotAmount}
+                                             userName={user?.username || 'GUEST'}
+                                             machineNumber={`${selectedIsland.id}-000`}
+                                             stats={{ laps: selectedIsland.totalMachines * 10, wins: jackpotAmount * 0.1 }}
+                                         />
                                     </div>
 
                                     {/* Clean Info Typography */}
