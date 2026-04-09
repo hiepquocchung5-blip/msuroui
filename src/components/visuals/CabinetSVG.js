@@ -2,9 +2,9 @@ import React, { memo, useMemo } from 'react';
 import { motion } from 'framer-motion';
 
 // ============================================================================
-// SUROPARA V8.0 CABINET ENGINE
+// SUROPARA V8.1 CABINET ENGINE
 // Hyper-Realistic, Cold Industrial Pachislo Design.
-// No Glitches, No Cartoon Glows. Pure Matte Metals & Glass.
+// Enhanced with 6 New Physical Hardware Greebles for Extreme Realism.
 // ============================================================================
 
 const CabinetSVG = ({ 
@@ -38,7 +38,6 @@ const CabinetSVG = ({
     const accent = getAccentColor();
 
     // V8: No bouncing physics. The machine is heavy and grounded.
-    // Only visual states change (greyscale for broken).
     const animProfile = {
         FREE: { physics: { y: 0, filter: 'drop-shadow(0 20px 25px rgba(0,0,0,0.95))' } },
         BUSY: { physics: { y: 0, filter: 'drop-shadow(0 20px 25px rgba(0,0,0,0.95))' } },
@@ -59,7 +58,7 @@ const CabinetSVG = ({
     };
     const currentTheme = islandThemes[safeIslandId];
 
-    // --- 1. HYPER-REALISTIC MATERIALS (V8) ---
+    // --- 1. HYPER-REALISTIC MATERIALS (V8.1) ---
     const renderDefs = () => (
         <defs>
             {/* Cold, heavy industrial metals */}
@@ -104,7 +103,7 @@ const CabinetSVG = ({
                 <feDropShadow dx="0" dy="-1" stdDeviation="0.5" floodColor="#ffffff" floodOpacity="0.15"/>
             </filter>
 
-            {/* Sharp, clean glass reflection (No blur, highly realistic) */}
+            {/* Sharp, clean glass reflection */}
             <linearGradient id="sharpGlare" x1="-1" y1="-1" x2="2" y2="2">
                 <stop offset="0%" stopColor="rgba(255,255,255,0)" />
                 <stop offset="48%" stopColor="rgba(255,255,255,0)" />
@@ -125,50 +124,161 @@ const CabinetSVG = ({
         </defs>
     );
 
-    // --- 2. AUTHENTIC PHYSICAL GREEBLES ---
+    // --- 2. AUTHENTIC PHYSICAL GREEBLES (Enhanced with 6 new parts) ---
     const renderHardwareGreebles = () => (
         <g className="hardware-details">
             {/* Structural Seams */}
             <path d="M 22 140 L 22 295 M 218 140 L 218 295" stroke="#111" strokeWidth="1" opacity="0.8" />
             <path d="M 24 140 L 24 295 M 216 140 L 216 295" stroke="#ffffff" strokeWidth="1" opacity="0.05" />
 
-            {/* Heavy Hex Screws */}
+            {/* Heavy Hex Screws (Base Chassis) */}
             <g fill="url(#coldChrome)" stroke="#000" strokeWidth="0.5">
                 <circle cx="12" cy="45" r="1.5" /><circle cx="228" cy="45" r="1.5" />
                 <circle cx="12" cy="385" r="1.5" /><circle cx="228" cy="385" r="1.5" />
                 <circle cx="12" cy="140" r="1.5" /><circle cx="228" cy="140" r="1.5" />
             </g>
 
-            {/* Left Side: Heavy Industrial Vents */}
+            {/* [NEW PART 1]: Service LED Array (Top Left Bezel) */}
+            <g transform="translate(10, 95)" filter="url(#panelInset)">
+                <rect width="8" height="20" fill="#050505" rx="1.5" />
+                <circle cx="4" cy="5" r="1.5" fill="#22c55e" opacity={visualState === 'FREE' ? '0.8' : '0.2'} />
+                <circle cx="4" cy="10" r="1.5" fill="#eab308" opacity={visualState === 'BUSY' ? '0.8' : '0.2'} />
+                <circle cx="4" cy="15" r="1.5" fill="#ef4444" opacity={visualState === 'BROKEN' ? '0.8' : '0.2'} />
+            </g>
+
+            {/* [NEW PART 2]: Asset Tag Barcode (Bottom Left Edge) */}
+            <g transform="translate(10, 360)">
+                <rect width="18" height="8" fill="url(#coldChrome)" rx="0.5" stroke="#000" strokeWidth="0.25" />
+                {/* Laser etched barcode lines */}
+                <g fill="#111" opacity="0.8">
+                    <rect x="2" y="2" width="1" height="4" />
+                    <rect x="4" y="2" width="2" height="4" />
+                    <rect x="7" y="2" width="0.5" height="4" />
+                    <rect x="9" y="2" width="2.5" height="4" />
+                    <rect x="13" y="2" width="1" height="4" />
+                    <rect x="15" y="2" width="1" height="4" />
+                </g>
+                <circle cx="1" cy="4" r="0.5" fill="#000" />
+                <circle cx="17" cy="4" r="0.5" fill="#000" />
+            </g>
+
+            {/* [NEW PART 3]: Heat Exhaust Louvers (Top Right Edge) */}
+            <g transform="translate(218, 90)">
+                <rect width="8" height="25" fill="#050505" rx="1" filter="url(#panelInset)" />
+                <line x1="1" y1="4" x2="7" y2="7" stroke="#111" strokeWidth="1.5" strokeLinecap="round" />
+                <line x1="1" y1="10" x2="7" y2="13" stroke="#111" strokeWidth="1.5" strokeLinecap="round" />
+                <line x1="1" y1="16" x2="7" y2="19" stroke="#111" strokeWidth="1.5" strokeLinecap="round" />
+                <line x1="1" y1="22" x2="7" y2="25" stroke="#111" strokeWidth="1.5" strokeLinecap="round" />
+            </g>
+
+            {/* [NEW PART 4]: Secondary Maintenance Lock (Mid Right Edge) */}
+            <g transform="translate(220, 260)">
+                <circle cx="6" cy="6" r="4.5" fill="#050505" stroke="#ef4444" strokeWidth="0.5" filter="url(#panelInset)" />
+                <circle cx="6" cy="6" r="3" fill="url(#coldChrome)" />
+                <rect x="5.5" y="4.5" width="1" height="3" fill="#111" />
+            </g>
+
+            {/* Existing Left Side: Heavy Industrial Vents */}
             <g transform="translate(6, 120)">
                 <rect x="0" y="0" width="6" height="40" fill="#0a0a0c" rx="1" filter="url(#panelInset)" />
                 {[...Array(7)].map((_, i) => (
                     <rect key={i} x="1" y={4 + (i * 5)} width="4" height="2" fill="#000" rx="0.5" />
                 ))}
             </g>
-            
-            {/* Right Side: Operator Key Lock */}
+
+            <g transform="translate(6, 280)">
+                <rect x="0" y="0" width="4" height="25" fill="#111" rx="1" filter="url(#panelGap)" />
+                <circle cx="2" cy="4" r="1" fill="#333" /><circle cx="2" cy="12.5" r="1" fill="#333" /><circle cx="2" cy="21" r="1" fill="#333" />
+            </g>
+
+            <g transform="translate(12, 330)">
+                <rect x="0" y="0" width="25" height="40" fill="#0a0a0a" rx="2" filter="url(#panelInset)" />
+                {[...Array(8)].map((_, i) => (
+                    <line key={i} x1="4" y1={5 + (i * 4.5)} x2="21" y2={5 + (i * 4.5)} stroke="#111" strokeWidth="2" strokeLinecap="round" />
+                ))}
+            </g>
+
+            {/* Existing Right Side: Ticket Printer Slot & Primary Keyhole */}
+            <g transform="translate(160, 235)">
+                <rect x="0" y="0" width="30" height="12" fill="#111" rx="1" stroke="#000" filter="url(#panelInset)" />
+                <rect x="2" y="5" width="26" height="2" fill="#000" />
+                <text x="15" y="10" textAnchor="middle" fill="#444" fontSize="3" fontWeight="bold">TICKET OUT</text>
+            </g>
+
             <g transform="translate(222, 130)">
                 <circle cx="6" cy="6" r="5" fill="url(#coldChrome)" stroke="#000" strokeWidth="1" filter="url(#panelInset)" />
                 <circle cx="6" cy="6" r="3" fill="#111" />
                 <rect x="5.5" y="5" width="1" height="4" fill="#000" />
             </g>
+            
+            <g transform="translate(210, 350)">
+                <circle cx="8" cy="8" r="6" fill="url(#matteGunmetal)" stroke="#000" strokeWidth="1" filter="url(#panelInset)" />
+                <circle cx="8" cy="8" r="3" fill="#000" />
+                <rect x="7" y="8" width="2" height="4" fill="#000" />
+            </g>
 
-            {/* Clean Japanese Corporate Decals (Replacing graffiti) */}
+            {/* Clean Japanese Corporate Decals */}
             <g transform="translate(210, 360)">
                 <rect width="20" height="8" fill="#e2e8f0" rx="1" />
                 <text x="10" y="6" textAnchor="middle" fill="#000" fontSize="4" fontWeight="900" fontFamily="sans-serif">管理ID</text>
             </g>
-            <g transform="translate(10, 360)">
-                <rect width="18" height="8" fill="#ef4444" rx="1" />
-                <text x="9" y="6" textAnchor="middle" fill="#fff" fontSize="4" fontWeight="900" fontFamily="sans-serif">警告</text>
-            </g>
         </g>
     );
 
-    // --- 3. HEAVY MATTE CHASSIS ---
+    // --- 3. PAINTED CULTURAL MOTIFS ---
+    const renderCulturalPaint = () => {
+        switch(safeIslandId) {
+            case 1: 
+                return (
+                    <g className="cultural-paint" opacity="0.6">
+                        <path d="M 40 220 C 10 170, 80 130, 100 180 C 110 200, 90 240, 50 220" fill="none" stroke="#000" strokeWidth="4" strokeLinecap="round" opacity="0.5" />
+                        <path d="M 20 300 L 25 250 L 22 200 M 35 320 L 38 240 L 32 180" fill="none" stroke="#111" strokeWidth="3" />
+                        <text x="25" y="380" fill="#000" fontSize="10" fontWeight="bold" transform="rotate(-10)" opacity="0.8" style={{fontFamily: 'serif'}}>京都</text>
+                    </g>
+                );
+            case 2: 
+                return (
+                    <g className="cultural-paint" opacity="0.4">
+                        <rect x="10" y="150" width="40" height="200" fill="url(#pat-seigaiha)" opacity="0.3" />
+                        <circle cx="30" cy="200" r="15" fill="#8B0000" opacity="0.5" />
+                        <path d="M 15 210 Q 30 190 45 210" fill="none" stroke="#111" strokeWidth="2" />
+                        <text x="-250" y="30" fill="#000" fontSize="24" fontWeight="900" transform="rotate(-90)" opacity="0.2">RYUKYU</text>
+                    </g>
+                );
+            case 3: 
+                return (
+                    <g className="cultural-paint" opacity="0.5">
+                        <path d="M 20 180 Q 40 200 25 240" fill="none" stroke="#8B0000" strokeWidth="6" strokeLinecap="round" />
+                        <path d="M 30 190 Q 45 205 35 230" fill="none" stroke="#111" strokeWidth="3" strokeLinecap="round" />
+                        <text x="20" y="300" fill="#000" fontSize="14" fontWeight="900" style={{fontFamily: 'serif', writingMode: 'vertical-rl'}}>浪速</text>
+                    </g>
+                );
+            case 4: 
+                return (
+                    <g className="cultural-paint" opacity="0.6">
+                        <rect x="15" y="150" width="30" height="100" fill="url(#pat-hex)" opacity="0.5" />
+                        <rect x="15" y="260" width="25" height="6" fill="#000" />
+                        <text x="27.5" y="264.5" textAnchor="middle" fill="#fff" fontSize="3" fontWeight="bold" fontFamily="monospace">CAUTION</text>
+                        <g transform="translate(20, 280)">
+                            <rect x="0" y="0" width="1" height="15" fill="#000"/><rect x="3" y="0" width="3" height="15" fill="#000"/><rect x="8" y="0" width="1" height="15" fill="#000"/><rect x="11" y="0" width="4" height="15" fill="#000"/>
+                        </g>
+                    </g>
+                );
+            case 5: 
+                return (
+                    <g className="cultural-paint" opacity="0.3">
+                        <path d="M 15 300 C 40 280, 10 200, 30 160" fill="none" stroke="#000" strokeWidth="2" />
+                        <path d="M 30 160 C 50 180, 20 250, 40 290" fill="none" stroke="#000" strokeWidth="1" />
+                        <text x="25" y="220" fill="#000" fontSize="18" fontWeight="bold" style={{fontFamily: 'serif'}}>金</text>
+                    </g>
+                );
+            default: return null;
+        }
+    };
+
+    // --- 4. HEAVY MATTE CHASSIS ---
     const renderChassis = () => {
-        // Uniform chassis shape. No crazy curves. Solid block of metal.
+        // Uniform chassis shape.
         const path = "M10,35 Q120,25 230,35 L235,395 L5,395 Z";
 
         return (
@@ -189,6 +299,7 @@ const CabinetSVG = ({
                 </g>
 
                 {renderHardwareGreebles()}
+                {renderCulturalPaint()}
 
                 {/* Industrial Speaker Grilles */}
                 <g transform="translate(0, 50)" filter="url(#panelInset)">
@@ -199,12 +310,14 @@ const CabinetSVG = ({
         );
     };
 
-    // --- 4. TOPPER (Embedded LCD style) ---
+    // --- 5. PHYSICAL TOPPER ---
     const renderTopper = () => {
         return (
             <g transform="translate(45, 0)">
                 {/* Heavy Frame */}
                 <path d="M 0 5 L 150 5 L 142 45 L 8 45 Z" fill="url(#coldChrome)" stroke="#000" strokeWidth="1.5" filter="url(#pbrNoise)" />
+                <circle cx="10" cy="10" r="1.5" fill="#222" /><circle cx="140" cy="10" r="1.5" fill="#222" />
+                <circle cx="15" cy="40" r="1.5" fill="#222" /><circle cx="135" cy="40" r="1.5" fill="#222" />
                 <path d="M 4 9 L 146 9 L 140 41 L 10 41 Z" fill="#050505" filter="url(#panelInset)" />
                 
                 {/* Screen */}
@@ -232,16 +345,13 @@ const CabinetSVG = ({
         );
     };
 
-    // --- 5. SCREEN BEZEL (Recessed Display) ---
+    // --- 6. SCREEN BEZEL (Recessed Display) ---
     const renderScreenArea = () => (
         <g transform="translate(0, 80)">
-            {/* Bezel Base */}
-            <path d="M 30 0 H 210 L 206 130 H 34 Z" fill="url(#matteGunmetal)" stroke="#000" strokeWidth="2" filter="url(#pbrNoise)" />
+            <path d="M 30 0 H 210 L 206 130 H 34 Z" fill="url(#matteGunmetal)" stroke="#000" strokeWidth="4" filter="url(#pbrNoise)" />
+            <path d="M 35 5 H 205 L 202 125 H 38 Z" fill="#050505" filter="url(#panelInset)" />
             
-            {/* Inner Recess */}
-            <path d="M 35 5 H 205 L 202 125 H 38 Z" fill="#000" filter="url(#panelInset)" />
-            
-            {/* Real Physical Frame Dividers (If Mode Game) */}
+            {/* Real Physical Frame Dividers */}
             {mode === 'game' && (
                 <g opacity="0.9">
                     <line x1="95.5" y1="5" x2="95.5" y2="125" stroke="url(#coldChrome)" strokeWidth="3" />
@@ -252,106 +362,93 @@ const CabinetSVG = ({
                 </g>
             )}
 
-            {/* Hardware Plaque */}
-            <g transform="translate(155, 10)">
-                <rect width="45" height="12" fill="url(#coldChrome)" rx="1" stroke="#000" strokeWidth="0.5" filter="url(#panelInset)" />
-                <rect width="43" height="10" x="1" y="1" fill="#111" rx="0.5" />
-                <text x="22.5" y="8" textAnchor="middle" fill="#94a3b8" fontSize="6" fontFamily="sans-serif" fontWeight="900" letterSpacing="1">V8-CORE</text>
+            {/* [NEW PART 5]: Heavy Screen Rivets */}
+            <g fill="url(#coldChrome)" stroke="#000" strokeWidth="0.5" filter="url(#pbrNoise)">
+                <circle cx="33" cy="3" r="2" />
+                <circle cx="207" cy="3" r="2" />
+                <circle cx="37" cy="127" r="2" />
+                <circle cx="203" cy="127" r="2" />
             </g>
-            
-            {/* Clean Glass Overlay */}
-            <path d="M 35 5 H 205 L 202 125 H 38 Z" fill="url(#sharpGlare)" pointerEvents="none" />
+
+            <g transform="translate(155, 10)">
+                <rect width="40" height="12" fill="#111" rx="1" stroke="#333" strokeWidth="1" filter="url(#panelInset)" />
+                <text x="20" y="8" textAnchor="middle" fill="#888" fontSize="5" fontFamily="monospace" fontWeight="bold" letterSpacing="1">SURO-OS</text>
+            </g>
         </g>
     );
 
-    // --- 6. EMBEDDED TELEMETRY LCD (Belly Glass) ---
+    // --- 7. EMBEDDED TELEMETRY LCD (Belly Glass) ---
     const renderTelemetryDashboard = () => {
+        let screenBg = '#0a0c10';
         return (
             <g transform="translate(25, 295)">
-                 {/* Matte Metal Frame */}
-                 <path d="M 0 0 L 190 0 L 180 80 L 10 80 Z" fill="url(#matteGunmetal)" stroke="#000" strokeWidth="2" filter="url(#pbrNoise)" />
-                 
-                 {/* LCD Recess */}
+                 <path d="M 0 0 L 190 0 L 180 80 L 10 80 Z" fill="url(#matteGunmetal)" stroke="#000" strokeWidth="3" filter="url(#pbrNoise)" />
                  <g clipPath="url(#screenClipLocal)">
-                     <rect x="0" y="0" width="190" height="80" fill="url(#darkAcrylic)" filter="url(#panelInset)" />
-                     
-                     {/* LCD Grid/Matrix background */}
-                     <g opacity="0.1">
-                        <line x1="0" y1="20" x2="190" y2="20" stroke="#fff" strokeWidth="0.5"/>
-                        <line x1="0" y1="40" x2="190" y2="40" stroke="#fff" strokeWidth="0.5"/>
-                        <line x1="0" y1="60" x2="190" y2="60" stroke="#fff" strokeWidth="0.5"/>
-                     </g>
+                     <rect x="0" y="0" width="190" height="80" fill={screenBg} />
+                     <rect x="0" y="0" width="190" height="80" fill="url(#pat-seigaiha)" opacity="0.05" />
+                     <rect x="0" y="0" width="190" height="80" fill="url(#crtScanline)" opacity="0.3" pointerEvents="none" />
+                     <polyline points={bellySparklinePoints} fill="none" stroke="#22c55e" strokeWidth="1" opacity="0.3" />
 
-                     {/* Clean Typography */}
-                     <g transform="translate(95, 35)">
-                         <text x="0" y="-12" textAnchor="middle" fill="#64748b" fontSize="6" fontWeight="bold" fontFamily="sans-serif" letterSpacing="2">
-                             {currentTheme.title}
+                     <g transform="translate(95, 45)">
+                         <rect x="-65" y="-22" width="130" height="34" rx="2" fill="#050505" stroke="#333" strokeWidth="1" filter="url(#panelInset)" />
+                         <text x="0" y="-14" textAnchor="middle" fill="#888" fontSize="5" fontWeight="bold" letterSpacing="2">
+                             [ {currentTheme.title} ]
                          </text>
-                         <text x="0" y="4" textAnchor="middle" fill="#f8fafc" fontSize="18" fontWeight="900" fontFamily="sans-serif" letterSpacing="1">
+                         <text x="0" y="2" textAnchor="middle" fill="#fff" fontSize="16" fontWeight="900" fontStyle="italic">
                              {currentTheme.name}
                          </text>
-                         <text x="0" y="18" textAnchor="middle" fill="#475569" fontSize="8" fontFamily="sans-serif" letterSpacing="4">
+                         <text x="0" y="16" textAnchor="middle" fill="#555" fontSize="6" letterSpacing="6">
                              {currentTheme.kanji}
                          </text>
                      </g>
 
-                     {/* Data Readouts (LCD Font Style) */}
-                     <g transform="translate(145, 8)">
-                         <text x="20" y="8" textAnchor="middle" fill="#0ea5e9" fontSize="6" fontFamily="monospace" fontWeight="bold">
-                             PAY: {(displayWins / 1000).toFixed(1)}k
+                     <g transform="translate(145, 5)">
+                         <rect width="40" height="12" fill="#111" rx="2" stroke="#333" strokeWidth="1" />
+                         <text x="20" y="8.5" textAnchor="middle" fill="#fff" fontSize="5" fontFamily="monospace" fontWeight="bold">
+                             W: {(displayWins / 1000).toFixed(1)}k
                          </text>
                      </g>
-
-                     <g transform="translate(10, 68)">
-                         <text x="0" y="0" fill="#64748b" fontSize="6" fontFamily="monospace" fontWeight="bold">
+                     <g transform="translate(5, 63)">
+                         <rect width="45" height="12" fill="#111" rx="2" stroke="#333" strokeWidth="1" />
+                         <text x="22.5" y="8.5" textAnchor="middle" fill="#888" fontSize="4.5" fontFamily="monospace" fontWeight="bold">
                              SYS: {visualState}
                          </text>
                      </g>
-                     
-                     <g transform="translate(140, 68)">
-                         <text x="40" y="0" textAnchor="end" fill="#0ea5e9" fontSize="6" fontFamily="monospace" fontWeight="bold">
+                     <g transform="translate(140, 63)">
+                         <rect width="45" height="12" fill="#111" rx="2" stroke="#333" strokeWidth="1" />
+                         <text x="20.5" y="8.5" textAnchor="middle" fill="#fff" fontSize="5" fontFamily="monospace" fontWeight="bold">
                              LAPS: {displayLaps.toString().padStart(4, '0')}
                          </text>
                      </g>
                  </g>
-                 
-                 {/* Glass Glare */}
-                 <path d="M 0 0 L 190 0 L 180 80 L 10 80 Z" fill="url(#sharpGlare)" pointerEvents="none" />
+                 <path d="M 0 0 L 190 0 L 180 80 L 10 80 Z" fill="none" stroke="#000" strokeWidth="4" opacity="0.8" pointerEvents="none" />
             </g>
         );
     };
 
-    // --- 7. SMART RFID DECK & TELEMETRY ---
+    // --- 8. SMART RFID DECK & ACOUSTIC CHUTE ---
     const renderRFIDDeck = () => (
         <g transform="translate(5, 380)">
              {/* Base Deck Plate */}
-             <path d="M 5 0 Q 115 15 225 0 L 230 20 Q 115 30 0 20 Z" fill="url(#matteGunmetal)" stroke="#111" strokeWidth="2" filter="url(#pbrNoise)" />
+             <path d="M 5 0 Q 115 15 225 0 L 230 20 Q 115 30 0 20 Z" fill="url(#matteGunmetal)" stroke="#111" strokeWidth="3" filter="url(#pbrNoise)" />
              
              {/* Recessed Black Acrylic Area */}
              <path d="M 12 4 Q 115 18 218 4 L 214 16 Q 115 26 16 16 Z" fill="#050505" filter="url(#panelInset)" />
              
-             {/* RFID Scanner Pad (Matte Black Glass) */}
+             {/* RFID Scanner Pad */}
              <g transform="translate(20, 6) rotate(-2)">
                 <rect width="50" height="12" rx="2" fill="#0a0a0c" stroke="#222" strokeWidth="1" />
                 <rect x="2" y="2" width="46" height="8" rx="1" fill="#020202" />
-                
-                {/* Physical NFC Icon */}
                 <path d="M 8 3 Q 12 3 14 6 M 6 5 Q 10 5 12 8 M 4 7 Q 8 7 10 10" fill="none" stroke="#333" strokeWidth="0.8" strokeLinecap="round" />
-                
                 <text x="25" y="7.5" textAnchor="middle" fill="#64748b" fontSize="4" fontFamily="sans-serif" fontWeight="900" letterSpacing="1">RFID SCAN</text>
-                
-                {/* Status LED */}
                 <circle cx="44" cy="6" r="1.5" fill={visualState === 'FREE' ? '#22c55e' : '#3b82f6'} opacity="0.8" />
              </g>
 
-             {/* Digital Operator Readout (Crisp VFD display look) */}
+             {/* Digital Operator Readout */}
              <g transform="translate(85, 7)">
                  <rect width="125" height="14" rx="1" fill="#020617" stroke="#1e293b" strokeWidth="1" />
-                 
                  <text x="5" y="9.5" fill="#0ea5e9" fontSize="5" fontFamily="monospace" fontWeight="bold">OP: {userName.substring(0, 8).toUpperCase()}</text>
                  <text x="65" y="9.5" fill="#0ea5e9" fontSize="5" fontFamily="monospace" fontWeight="bold">BET: {currentBet > 0 ? (currentBet >= 1000 ? `${currentBet/1000}k` : currentBet) : '---'}</text>
-                 
-                 {/* Connection Status Square */}
                  <rect x="115" y="4" width="6" height="6" fill={visualState !== 'FREE' ? '#0ea5e9' : '#334155'} rx="1" />
              </g>
         </g>
@@ -361,22 +458,30 @@ const CabinetSVG = ({
         <motion.svg 
             animate={animProfile.physics}
             width="100%" height="100%" 
-            viewBox="0 0 240 410" 
+            viewBox="0 0 240 415" 
             preserveAspectRatio="xMidYMid meet" 
             className={mode==='hall' ? 'transition-transform hover:-translate-y-1 cursor-pointer' : ''}
         >
             {renderDefs()}
             
             {/* Ground Shadow */}
-            <ellipse cx="120" cy="405" rx="100" ry="10" fill="#000" opacity="0.8" filter="blur(4px)" />
+            <ellipse cx="120" cy="410" rx="100" ry="8" fill="#000" opacity="0.9" filter="blur(6px)" />
             
             {renderChassis()}
             {renderTopper()}
             {renderScreenArea()} 
             {renderTelemetryDashboard()}
             {renderRFIDDeck()}
+
+            {/* [NEW PART 6]: Sub-Woofer / Acoustic Chute (Bottom Center Base) */}
+            <g transform="translate(80, 400)">
+                <path d="M 0 0 L 80 0 L 75 12 L 5 12 Z" fill="#050505" filter="url(#panelInset)" />
+                <rect x="5" y="2" width="70" height="1.5" fill="#111" />
+                <rect x="10" y="5" width="60" height="1.5" fill="#111" />
+                <rect x="15" y="8" width="50" height="1.5" fill="#111" />
+            </g>
             
-            {/* Master Environmental Glass Glare (Very subtle, ties everything together) */}
+            {/* Master Environmental Glass Glare */}
             <path d="M 15 40 L 225 40 L 230 395 L 10 395 Z" fill="url(#sharpGlare)" pointerEvents="none" />
         </motion.svg>
     );
