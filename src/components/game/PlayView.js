@@ -53,7 +53,6 @@ const RollupNumber = memo(({ value }) => {
         let start = count;
         const end = parseInt(value) || 0;
         if (start === end) return;
-        if (end === 0) { setCount(0); return; }
         
         let timer = setInterval(() => {
             const step = Math.ceil(Math.abs(end - start) / 20) || 1;
@@ -69,14 +68,19 @@ const RollupNumber = memo(({ value }) => {
     }, [value, count]);
     return <>{count.toLocaleString()}</>;
 });
+RollupNumber.displayName = 'RollupNumber';
 
 // --- AAA OPTIMIZATION: Memoized Reel Column with Flattened Props & 3D Curvature ---
 const ReelColumn = memo(({ isSpinning, s1, s2, s3, locked, isWinning, isTeaser, isReachEye, colIdx, isFreeze, islandId, isReady }) => {
-    const spinStrip = useMemo(() => {
-        const randomFill = Array.from({length: 3}, () => Math.floor(Math.random() * 6) + 2);
-        return [s1, s2, s3, ...randomFill];
-    }, [isSpinning, s1, s2, s3]);
+    const [randomFill, setRandomFill] = useState(() => Array.from({length: 3}, () => Math.floor(Math.random() * 6) + 2));
 
+    useEffect(() => {
+        if (isSpinning) {
+            setRandomFill(Array.from({length: 3}, () => Math.floor(Math.random() * 6) + 2));
+        }
+    }, [isSpinning]);
+
+    const spinStrip = [s1, s2, s3, ...randomFill];
     const displaySymbols = isSpinning ? spinStrip : [s1, s2, s3];
     const isReachReel = isReachEye && isSpinning && colIdx === 2;
 
@@ -112,6 +116,7 @@ const ReelColumn = memo(({ isSpinning, s1, s2, s3, locked, isWinning, isTeaser, 
         </div>
     );
 });
+ReelColumn.displayName = 'ReelColumn';
 
 // --- AAA OPTIMIZATION: Memoized Loader ---
 const SectorLoader = memo(({ progress, islandName }) => (
@@ -133,6 +138,7 @@ const SectorLoader = memo(({ progress, islandName }) => (
         </div>
     </motion.div>
 ));
+SectorLoader.displayName = 'SectorLoader';
 
 const PlayView = ({ machine, island, onLeave }) => {
     const router = useRouter();
@@ -166,7 +172,7 @@ const PlayView = ({ machine, island, onLeave }) => {
     const activeBetAmounts = useMemo(() => ISLAND_BET_AMOUNTS[island?.id] || ISLAND_BET_AMOUNTS.default, [island?.id]);
     const currentBet = activeBetAmounts[betIndex] || activeBetAmounts[0];
     
-    const isProcessing = useRef(false);
+    const [isProcessing, setIsProcessing] = useState(false);
     const winHandled = useRef(false); 
     const winTimeoutRef = useRef(null);
     
@@ -226,7 +232,7 @@ const PlayView = ({ machine, island, onLeave }) => {
         if (error) {
             addToast(`SYSTEM: ${error}`, 'error');
             setAutoPlay(false);
-            isProcessing.current = false;
+            setIsProcessing(false);
             if (isIdleKicked && onLeave) setTimeout(() => onLeave(), 2500);
         }
     }, [error, addToast, setAutoPlay, isIdleKicked, onLeave]);
@@ -268,30 +274,30 @@ const PlayView = ({ machine, island, onLeave }) => {
             }
         } 
         if (!isCurrentlySpinning) {
-            isProcessing.current = false;
+            setIsProcessing(false);
         }
         return () => { if (winTimeoutRef.current) clearTimeout(winTimeoutRef.current); };
     }, [lastWin, autoPlay, playSound, bonusMode, winStage, isCurrentlySpinning, winTier, isJackpot, setLastWin, soundEnabled]);
 
-    const handleSkipWin = () => {
+    const handleSkipWin = useCallback(() => {
         if (winStage === 'celebrating') {
             if (soundEnabled) playSound('click');
             if (winTimeoutRef.current) clearTimeout(winTimeoutRef.current);
             setWinStage('idle');
             setLastWin(0);
         }
-    };
+    }, [winStage, soundEnabled, playSound]);
 
     // --- CORE ACTION: SPIN ---
     const handleSpin = useCallback(async () => {
-        if (!assetsReady || !sessionReady || isProcessing.current || isCurrentlySpinning || winStage !== 'idle' || isFreeze || (levelUpData && levelUpData.length > 0)) return; 
+        if (!assetsReady || !sessionReady || isProcessing || isCurrentlySpinning || winStage !== 'idle' || isFreeze || (levelUpData && levelUpData.length > 0)) return; 
         if (parseFloat(user?.balance || 0) < currentBet && freeSpins === 0 && !bonusMode) {
             addToast("Insufficient Balance / လက်ကျန်ငွေ မလုံလောက်ပါ", "error"); 
             setAutoPlay(false);
             return;
         }
         
-        isProcessing.current = true;
+        setIsProcessing(true);
         winHandled.current = false; 
         setCharInteraction(null);
         
@@ -318,7 +324,7 @@ const PlayView = ({ machine, island, onLeave }) => {
         };
         window.addEventListener('keydown', handleKeyDown);
         return () => window.removeEventListener('keydown', handleKeyDown);
-    }, [handleSpin, isCurrentlySpinning, resetIdleTimer, winStage]);
+    }, [handleSpin, isCurrentlySpinning, resetIdleTimer, winStage, handleSkipWin]);
 
     const winDetails = useMemo(() => {
         const defaultWin = PAYTABLE_DATA[6]; 
@@ -547,9 +553,9 @@ const PlayView = ({ machine, island, onLeave }) => {
                             <div className="bg-[#111] p-1.5 sm:p-2 rounded-full border-t border-gray-600 border-x border-gray-800 shadow-[0_10px_30px_rgba(0,0,0,0.9)] backdrop-blur-md">
                                 <button 
                                     onClick={handleSpin} 
-                                    disabled={!assetsReady || !sessionReady || (isProcessing.current && !isCurrentlySpinning) || isFreeze || winStage !== 'idle' || isCurrentlySpinning} 
+                                    disabled={!assetsReady || !sessionReady || (isProcessing && !isCurrentlySpinning) || isFreeze || winStage !== 'idle' || isCurrentlySpinning} 
                                     className={`w-20 h-20 sm:w-24 sm:h-24 rounded-full flex flex-col items-center justify-center transition-all relative overflow-hidden outline-none
-                                    ${(!assetsReady || !sessionReady) || (isProcessing.current && !isCurrentlySpinning) ? 'bg-[#222] border-b-[6px] border-[#111] opacity-50 shadow-inner' : 
+                                    ${(!assetsReady || !sessionReady) || (isProcessing && !isCurrentlySpinning) ? 'bg-[#222] border-b-[6px] border-[#111] opacity-50 shadow-inner' : 
                                     isCurrentlySpinning ? 'bg-gradient-to-b from-red-800 to-red-950 border-b-0 translate-y-[6px] text-white/50 shadow-[inset_0_5px_15px_rgba(0,0,0,0.6)]' :
                                     bonusMode === 'HEAVEN' ? 'bg-gradient-to-b from-purple-500 to-purple-700 border-b-[6px] border-purple-950 text-white active:border-b-0 active:translate-y-[6px] shadow-[0_5px_20px_rgba(168,85,247,0.6)]' :
                                     'bg-gradient-to-b from-red-600 to-red-800 border-b-[6px] border-red-950 text-white active:border-b-0 active:translate-y-[6px] shadow-[0_5px_15px_rgba(220,38,38,0.5)]'}`}
