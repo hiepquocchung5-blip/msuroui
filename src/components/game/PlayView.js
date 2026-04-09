@@ -186,7 +186,7 @@ const PlayView = ({ machine, island, onLeave }) => {
         return () => clearInterval(sessionTimer);
     }, []);
 
-    // --- SAFETY FIX: Force Minimum Bet on Island Entry ---
+    // Force Minimum Bet on Island Entry
     useEffect(() => {
         setBetIndex(0);
     }, [island?.id]);
@@ -450,7 +450,7 @@ const PlayView = ({ machine, island, onLeave }) => {
                 </div>
 
                 {/* --- MAIN GAME STAGE (CABINET & CHARACTERS) --- */}
-                <div className="flex-1 flex items-center justify-center relative z-10 px-2 pt-28 pb-[20vh] transform-gpu will-change-transform" style={{ transform: 'translateZ(0)' }}>
+                <div className="flex-1 flex items-center justify-center relative z-10 px-2 pt-28 pb-[140px] transform-gpu will-change-transform" style={{ transform: 'translateZ(0)' }}>
                     
                     {assetsReady && hqEnabled && (
                         <div className="absolute top-[5%] right-[-10%] w-[50%] h-[60%] opacity-80 pointer-events-none z-0 transform-gpu transition-all duration-500" style={{ transform: isReachWaitState ? 'scale(1.1) translate(-5%, 5%)' : 'scale(1)' }}>
@@ -465,7 +465,7 @@ const PlayView = ({ machine, island, onLeave }) => {
                         </div>
                     )}
 
-                    <div className="relative w-full max-w-[320px] aspect-[0.6] flex items-center justify-center z-10 transform-gpu" style={{ filter: 'drop-shadow(0 20px 25px rgba(0,0,0,0.8))' }}>
+                    <div className="relative w-[90%] max-w-[280px] sm:max-w-[320px] aspect-[0.6] flex items-center justify-center z-10 transform-gpu" style={{ filter: 'drop-shadow(0 20px 25px rgba(0,0,0,0.8))' }}>
                         
                         {/* Physical Cabinet Render */}
                         <div className="absolute inset-0 w-full h-full pointer-events-none">
@@ -529,73 +529,89 @@ const PlayView = ({ machine, island, onLeave }) => {
                     </div>
                 </div>
 
-                {/* --- PHYSICAL ARCADE CONTROL DECK (RFID INTEGRATED) --- */}
-                <div className="absolute bottom-0 left-0 w-full bg-[#0a0a0a] border-t-4 border-[#222] px-2 py-4 z-40 transform-gpu shadow-[0_-10px_20px_rgba(0,0,0,0.8)] pb-8 will-change-transform">
-                    <div className="max-w-md mx-auto flex items-center justify-between gap-2 relative">
+                {/* --- MOBILE FIRST CONTROL CONSOLE (PROTRUDING) --- */}
+                <div className="absolute bottom-0 left-0 w-full z-40 transform-gpu will-change-transform">
+                    
+                    {/* Main Console Box */}
+                    <div className="bg-[#0a0c10] border-t border-cyan-500/20 rounded-t-[30px] px-3 sm:px-6 pb-6 pt-10 shadow-[0_-10px_40px_rgba(0,0,0,0.9)] relative backdrop-blur-xl">
                         
-                        {/* Left: Dynamic LED Bet Adjustment */}
-                        <div className="flex bg-[#111] p-1.5 rounded-xl border border-[#333] shadow-inner items-center gap-1 w-[40%]">
-                            <button 
-                                onClick={() => { if(soundEnabled) playSound('click'); setBetIndex(Math.max(0, betIndex - 1))}} 
-                                className="w-8 h-10 flex-shrink-0 bg-gradient-to-b from-[#444] to-[#222] border-b-4 border-[#111] rounded-lg active:border-b-0 active:translate-y-1 flex items-center justify-center text-white shadow-md transition-all"
-                            ><Minus size={14}/></button>
+                        {/* Glowing Edge Accent */}
+                        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-1/3 h-[2px] bg-gradient-to-r from-transparent via-cyan-500 to-transparent opacity-50"></div>
+
+                        {/* Center: Massive Protruding Spin Button (Top 1/2 outside) */}
+                        <div className="absolute left-1/2 -translate-x-1/2 top-0 -translate-y-1/2 z-50 flex flex-col items-center">
                             
-                            <div className="flex flex-col flex-1 mx-1">
-                                <div className="flex justify-between items-center px-1">
-                                    <span className="text-[7px] text-gray-500 font-bold uppercase tracking-widest">LEVEL</span>
-                                    <span className="text-[7px] text-yellow-500 font-black tracking-widest">LVL {betIndex + 1}</span>
-                                </div>
-                                {/* LED Segments */}
-                                <div className="flex gap-0.5 my-1 px-1">
-                                    {activeBetAmounts.map((amt, i) => (
-                                        <div key={i} className={`h-1 flex-1 rounded-sm transition-colors duration-300 ${i <= betIndex ? 'bg-yellow-400 shadow-[0_0_3px_yellow]' : 'bg-gray-700'}`}></div>
-                                    ))}
-                                </div>
-                                <div className="text-center font-mono font-black text-yellow-400 text-xs drop-shadow-[0_0_5px_rgba(234,179,8,0.5)] leading-none pt-0.5 truncate">
-                                    {currentBet >= 1000 ? `${currentBet/1000}k` : currentBet}
-                                </div>
+                            {/* Outer Armored Ring */}
+                            <div className="bg-[#050505] p-2 sm:p-2.5 rounded-full border border-cyan-500/20 shadow-[0_0_30px_rgba(0,0,0,0.8)] backdrop-blur-md">
+                                <button 
+                                    onClick={handleSpin} 
+                                    disabled={!assetsReady || !sessionReady || (isProcessing.current && !isCurrentlySpinning) || isFreeze || winStage !== 'idle' || isCurrentlySpinning} 
+                                    className={`w-20 h-20 sm:w-24 sm:h-24 rounded-full flex flex-col items-center justify-center transition-all relative overflow-hidden outline-none
+                                    ${(!assetsReady || !sessionReady) || (isProcessing.current && !isCurrentlySpinning) ? 'bg-[#222] border-b-[6px] border-[#111] opacity-50 shadow-inner' : 
+                                    isCurrentlySpinning ? 'bg-gradient-to-b from-red-800 to-red-950 border-b-0 translate-y-[6px] text-white/50 shadow-[inset_0_5px_15px_rgba(0,0,0,0.6)]' :
+                                    bonusMode === 'HEAVEN' ? 'bg-gradient-to-b from-purple-500 to-purple-700 border-b-[6px] border-purple-950 text-white active:border-b-0 active:translate-y-[6px] shadow-[0_5px_20px_rgba(168,85,247,0.6)]' :
+                                    'bg-gradient-to-b from-red-600 to-red-800 border-b-[6px] border-red-950 text-white active:border-b-0 active:translate-y-[6px] shadow-[0_5px_15px_rgba(220,38,38,0.5)]'}`}
+                                >
+                                    <div className="relative z-10 flex flex-col items-center mt-1">
+                                        {isCurrentlySpinning ? <Loader2 size={24} className="animate-spin mb-1 opacity-70" /> : <Gamepad2 size={28} strokeWidth={2.5} className="mb-1 drop-shadow-md" />}
+                                        <span className="text-[9px] sm:text-[10px] font-black tracking-widest uppercase drop-shadow-md">
+                                            {!assetsReady || !sessionReady ? 'စောင့်ပါ' : 'လှည့်မည်'}
+                                        </span>
+                                    </div>
+                                </button>
                             </div>
-                            
-                            <button 
-                                onClick={() => { if(soundEnabled) playSound('click'); setBetIndex(Math.min(activeBetAmounts.length - 1, betIndex + 1))}} 
-                                className="w-8 h-10 flex-shrink-0 bg-gradient-to-b from-[#444] to-[#222] border-b-4 border-[#111] rounded-lg active:border-b-0 active:translate-y-1 flex items-center justify-center text-white shadow-md transition-all"
-                            ><Plus size={14}/></button>
                         </div>
 
-                        {/* Center: Massive Spin Button */}
-                        <div className="relative w-[20%] flex justify-center -mt-8 z-50">
-                            <button 
-                                onClick={handleSpin} 
-                                disabled={!assetsReady || !sessionReady || (isProcessing.current && !isCurrentlySpinning) || isFreeze || winStage !== 'idle' || isCurrentlySpinning} 
-                                className={`w-20 h-20 sm:w-24 sm:h-24 rounded-full flex flex-col items-center justify-center transition-all relative overflow-hidden outline-none
-                                ${(!assetsReady || !sessionReady) || (isProcessing.current && !isCurrentlySpinning) ? 'bg-[#222] border-b-[6px] border-[#111] opacity-50 shadow-inner' : 
-                                  isCurrentlySpinning ? 'bg-gradient-to-b from-red-800 to-red-950 border-b-0 translate-y-[6px] text-white/50 shadow-[inset_0_5px_15px_rgba(0,0,0,0.6)]' :
-                                  bonusMode === 'HEAVEN' ? 'bg-gradient-to-b from-purple-500 to-purple-700 border-b-[6px] border-purple-950 text-white active:border-b-0 active:translate-y-[6px] shadow-[0_5px_20px_rgba(168,85,247,0.6)]' :
-                                  'bg-gradient-to-b from-red-600 to-red-800 border-b-[6px] border-red-950 text-white active:border-b-0 active:translate-y-[6px] shadow-[0_5px_15px_rgba(220,38,38,0.5)]'}`}
-                            >
-                                <div className="relative z-10 flex flex-col items-center mt-1">
-                                    {isCurrentlySpinning ? <Loader2 size={24} className="animate-spin mb-1 opacity-70" /> : <Gamepad2 size={28} strokeWidth={2.5} className="mb-1 drop-shadow-md" />}
-                                    <span className="text-[9px] sm:text-[10px] font-black tracking-widest uppercase drop-shadow-md">
-                                        {!assetsReady || !sessionReady ? 'စောင့်ပါ' : 'လှည့်မည်'}
-                                    </span>
+                        {/* Sub-Controls Flex Layout */}
+                        <div className="max-w-md mx-auto flex items-center justify-between gap-4 relative z-40 w-full pt-1">
+                            
+                            {/* Left: Bet Adjustment */}
+                            <div className="flex-1 max-w-[140px] flex bg-[#111] p-1.5 rounded-xl border border-[#333] shadow-[inset_0_2px_10px_rgba(0,0,0,1)] items-center">
+                                <button 
+                                    onClick={() => { if(soundEnabled) playSound('click'); setBetIndex(Math.max(0, betIndex - 1))}} 
+                                    className="w-7 h-10 sm:w-8 flex-shrink-0 bg-gradient-to-b from-[#444] to-[#222] border-b-[3px] border-[#111] rounded-lg active:border-b-0 active:translate-y-[3px] flex items-center justify-center text-white shadow-md transition-all"
+                                ><Minus size={14}/></button>
+                                
+                                <div className="flex flex-col flex-1 mx-1.5 overflow-hidden">
+                                    <div className="flex justify-between items-center">
+                                        <span className="text-[6px] sm:text-[7px] text-gray-500 font-bold uppercase tracking-widest">LVL</span>
+                                        <span className="text-[6px] sm:text-[7px] text-yellow-500 font-black tracking-widest">{betIndex + 1}</span>
+                                    </div>
+                                    <div className="flex gap-[1px] my-1">
+                                        {activeBetAmounts.map((amt, i) => (
+                                            <div key={i} className={`h-[3px] flex-1 rounded-sm transition-colors duration-300 ${i <= betIndex ? 'bg-yellow-400 shadow-[0_0_3px_yellow]' : 'bg-gray-700'}`}></div>
+                                        ))}
+                                    </div>
+                                    <div className="text-center font-mono font-black text-yellow-400 text-[10px] sm:text-xs drop-shadow-[0_0_5px_rgba(234,179,8,0.5)] leading-none pt-0.5 truncate">
+                                        {currentBet >= 1000 ? `${currentBet/1000}k` : currentBet}
+                                    </div>
                                 </div>
-                            </button>
-                        </div>
+                                
+                                <button 
+                                    onClick={() => { if(soundEnabled) playSound('click'); setBetIndex(Math.min(activeBetAmounts.length - 1, betIndex + 1))}} 
+                                    className="w-7 h-10 sm:w-8 flex-shrink-0 bg-gradient-to-b from-[#444] to-[#222] border-b-[3px] border-[#111] rounded-lg active:border-b-0 active:translate-y-[3px] flex items-center justify-center text-white shadow-md transition-all"
+                                ><Plus size={14}/></button>
+                            </div>
 
-                        {/* Right: Auto & Turbo */}
-                        <div className="flex gap-2 w-[35%] justify-end pr-1">
-                            <button 
-                                onClick={() => { if(soundEnabled) playSound('click'); setTurboMode(!turboMode)}} 
-                                className={`w-12 h-12 rounded-xl flex items-center justify-center transition-all outline-none ${turboMode ? 'bg-gradient-to-b from-yellow-400 to-yellow-600 border-b-0 translate-y-1 text-black shadow-[0_0_15px_gold]' : 'bg-gradient-to-b from-[#333] to-[#1a1a1a] border-b-4 border-[#0a0a0a] text-gray-500 active:border-b-0 active:translate-y-1 hover:brightness-125 shadow-md'}`}
-                            ><Zap size={18} fill={turboMode ? "currentColor" : "none"} className={turboMode ? 'drop-shadow-md' : ''} /></button>
-                            
-                            <button 
-                                onClick={toggleAutoPlay} 
-                                className={`w-12 h-12 rounded-xl flex flex-col items-center justify-center transition-all outline-none ${autoPlay ? 'bg-gradient-to-b from-green-500 to-green-700 border-b-0 translate-y-1 text-white shadow-[0_0_15px_lime]' : 'bg-gradient-to-b from-[#333] to-[#1a1a1a] border-b-4 border-[#0a0a0a] text-gray-500 active:border-b-0 active:translate-y-1 hover:brightness-125 shadow-md'}`}
-                            >
-                                <Repeat size={14} className={autoPlay ? "animate-spin-slow mb-0.5 drop-shadow-md" : "mb-0.5"} />
-                                <span className="text-[7px] font-bold tracking-wider">အော်တို</span>
-                            </button>
+                            {/* Center Spacer (Allows the button to drop down cleanly) */}
+                            <div className="w-[70px] sm:w-[100px] flex-shrink-0"></div>
+
+                            {/* Right: Auto & Turbo */}
+                            <div className="flex-1 max-w-[140px] flex justify-end gap-2">
+                                <button 
+                                    onClick={() => { if(soundEnabled) playSound('click'); setTurboMode(!turboMode)}} 
+                                    className={`flex-1 h-12 rounded-xl flex items-center justify-center transition-all outline-none border-b-[3px] ${turboMode ? 'bg-gradient-to-b from-yellow-400 to-yellow-600 border-b-0 translate-y-[3px] text-black shadow-[0_0_15px_gold]' : 'bg-gradient-to-b from-[#333] to-[#1a1a1a] border-[#0a0a0a] text-gray-500 active:border-b-0 active:translate-y-[3px] hover:brightness-125 shadow-md'}`}
+                                ><Zap size={16} fill={turboMode ? "currentColor" : "none"} className={turboMode ? 'drop-shadow-md' : ''} /></button>
+                                
+                                <button 
+                                    onClick={toggleAutoPlay} 
+                                    className={`flex-1 h-12 rounded-xl flex flex-col items-center justify-center transition-all outline-none border-b-[3px] ${autoPlay ? 'bg-gradient-to-b from-green-500 to-green-700 border-b-0 translate-y-[3px] text-white shadow-[0_0_15px_lime]' : 'bg-gradient-to-b from-[#333] to-[#1a1a1a] border-[#0a0a0a] text-gray-500 active:border-b-0 active:translate-y-[3px] hover:brightness-125 shadow-md'}`}
+                                >
+                                    <Repeat size={14} className={autoPlay ? "animate-spin-slow mb-0.5 drop-shadow-md" : "mb-0.5"} />
+                                    <span className="text-[7px] font-bold tracking-wider">အော်တို</span>
+                                </button>
+                            </div>
+
                         </div>
                     </div>
                 </div>
@@ -705,4 +721,4 @@ const PlayView = ({ machine, island, onLeave }) => {
     );
 };
 
-export default PlayView;
+export default memo(PlayView);
