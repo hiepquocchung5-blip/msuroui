@@ -53,6 +53,7 @@ const RollupNumber = memo(({ value }) => {
         let start = count;
         const end = parseInt(value) || 0;
         if (start === end) return;
+        if (end === 0) { setCount(0); return; }
         
         let timer = setInterval(() => {
             const step = Math.ceil(Math.abs(end - start) / 20) || 1;
@@ -68,19 +69,14 @@ const RollupNumber = memo(({ value }) => {
     }, [value, count]);
     return <>{count.toLocaleString()}</>;
 });
-RollupNumber.displayName = 'RollupNumber';
 
-// --- AAA OPTIMIZATION: Memoized Reel Column with Flattened Props & 3D Curvature ---
+// --- AAA OPTIMIZATION: Memoized Reel Column with Flattened Props ---
 const ReelColumn = memo(({ isSpinning, s1, s2, s3, locked, isWinning, isTeaser, isReachEye, colIdx, isFreeze, islandId, isReady }) => {
-    const [randomFill, setRandomFill] = useState(() => Array.from({length: 3}, () => Math.floor(Math.random() * 6) + 2));
+    const spinStrip = useMemo(() => {
+        const randomFill = Array.from({length: 3}, () => Math.floor(Math.random() * 6) + 2);
+        return [s1, s2, s3, ...randomFill];
+    }, [isSpinning, s1, s2, s3]);
 
-    useEffect(() => {
-        if (isSpinning) {
-            setRandomFill(Array.from({length: 3}, () => Math.floor(Math.random() * 6) + 2));
-        }
-    }, [isSpinning]);
-
-    const spinStrip = [s1, s2, s3, ...randomFill];
     const displaySymbols = isSpinning ? spinStrip : [s1, s2, s3];
     const isReachReel = isReachEye && isSpinning && colIdx === 2;
 
@@ -111,14 +107,12 @@ const ReelColumn = memo(({ isSpinning, s1, s2, s3, locked, isWinning, isTeaser, 
                 </div>
             </div>
             
-            {/* 3D Cylindrical Reel Shadow (Simulates Physical Curvature) */}
+            {/* 3D Cylindrical Reel Shadow */}
             <div className="absolute inset-0 bg-gradient-to-b from-black/95 via-transparent to-black/95 z-20 pointer-events-none shadow-[inset_0_20px_20px_-10px_rgba(0,0,0,0.8),inset_0_-20px_20px_-10px_rgba(0,0,0,0.8)]"></div>
         </div>
     );
 });
-ReelColumn.displayName = 'ReelColumn';
 
-// --- AAA OPTIMIZATION: Memoized Loader ---
 const SectorLoader = memo(({ progress, islandName }) => (
     <motion.div 
         initial={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.3, ease: "easeInOut" }}
@@ -138,7 +132,6 @@ const SectorLoader = memo(({ progress, islandName }) => (
         </div>
     </motion.div>
 ));
-SectorLoader.displayName = 'SectorLoader';
 
 const PlayView = ({ machine, island, onLeave }) => {
     const router = useRouter();
@@ -165,16 +158,25 @@ const PlayView = ({ machine, island, onLeave }) => {
     const [showSettings, setShowSettings] = useState(false);
     const [currentJackpot, setCurrentJackpot] = useState(3000000);
 
-    // --- LOCAL PREFERENCES ---
+    // Local Preferences
     const [soundEnabled, setSoundEnabled] = useState(true);
     const [hqEnabled, setHqEnabled] = useState(true);
 
     const activeBetAmounts = useMemo(() => ISLAND_BET_AMOUNTS[island?.id] || ISLAND_BET_AMOUNTS.default, [island?.id]);
     const currentBet = activeBetAmounts[betIndex] || activeBetAmounts[0];
     
-    const [isProcessing, setIsProcessing] = useState(false);
+    const isProcessing = useRef(false);
     const winHandled = useRef(false); 
     const winTimeoutRef = useRef(null);
+
+    // --- SAFETY REFS (Prevents React Update Loops) ---
+    const onLeaveRef = useRef(onLeave);
+    const playSoundRef = useRef(playSound);
+    const addToastRef = useRef(addToast);
+
+    useEffect(() => { onLeaveRef.current = onLeave; }, [onLeave]);
+    useEffect(() => { playSoundRef.current = playSound; }, [playSound]);
+    useEffect(() => { addToastRef.current = addToast; }, [addToast]);
     
     const isCurrentlySpinning = isSpinning.some(s => s);
     const isReachWaitState = isReachEye && isCurrentlySpinning && !isSpinning[0] && !isSpinning[1] && isSpinning[2];
@@ -184,7 +186,7 @@ const PlayView = ({ machine, island, onLeave }) => {
     const relativeNum = (((machine?.machine_number || 1) - 1) % MACHINES_PER_FLOOR) + 1;
     const displayId = `${currentFloor}-${relativeNum.toString().padStart(2, '0')}`;
 
-    // --- INITIALIZATION & SETTINGS ---
+    // Initialization
     useEffect(() => {
         if (typeof window !== 'undefined') {
             setSoundEnabled(localStorage.getItem('suro_sound') !== 'false');
@@ -195,9 +197,7 @@ const PlayView = ({ machine, island, onLeave }) => {
     }, []);
 
     // Force Minimum Bet on Island Entry
-    useEffect(() => {
-        setBetIndex(0);
-    }, [island?.id]);
+    useEffect(() => { setBetIndex(0); }, [island?.id]);
 
     const toggleSound = () => {
         const val = !soundEnabled;
@@ -211,7 +211,7 @@ const PlayView = ({ machine, island, onLeave }) => {
         localStorage.setItem('suro_hq', val);
     };
 
-    // --- JACKPOT POLLING ---
+    // Jackpot Polling
     useEffect(() => {
         const fetchJackpot = async () => {
             if (!island?.id) return;
@@ -227,15 +227,15 @@ const PlayView = ({ machine, island, onLeave }) => {
 
     useEffect(() => { if (isJackpot) setCurrentJackpot(3000000); }, [isJackpot]);
 
-    // --- ERROR HANDLING ---
+    // --- SAFE ERROR HANDLING (No Infinite Loops) ---
     useEffect(() => {
         if (error) {
-            addToast(`SYSTEM: ${error}`, 'error');
+            addToastRef.current(`SYSTEM: ${error}`, 'error');
             setAutoPlay(false);
-            setIsProcessing(false);
-            if (isIdleKicked && onLeave) setTimeout(() => onLeave(), 2500);
+            isProcessing.current = false;
+            if (isIdleKicked && onLeaveRef.current) setTimeout(() => onLeaveRef.current(), 2500);
         }
-    }, [error, addToast, setAutoPlay, isIdleKicked, onLeave]);
+    }, [error, setAutoPlay, isIdleKicked]);
 
     const getCabinetState = () => {
         if (isFreeze) return 'BROKEN';
@@ -246,9 +246,9 @@ const PlayView = ({ machine, island, onLeave }) => {
 
     const isOverheating = sessionWinStreak >= 3 || momentumMult > 1.2 || inZone || bonusMode;
 
-    // --- SOUND & FX TRIGGERS ---
-    useEffect(() => { if (isFreeze && soundEnabled) { playSound('bigwin'); } }, [isFreeze, playSound, soundEnabled]);
-    useEffect(() => { if (levelUpData && levelUpData.length > 0 && soundEnabled) { playSound('bigwin'); } }, [levelUpData, playSound, soundEnabled]);
+    // --- FX TRIGGERS ---
+    useEffect(() => { if (isFreeze && soundEnabled) playSoundRef.current('bigwin'); }, [isFreeze, soundEnabled]);
+    useEffect(() => { if (Array.isArray(levelUpData) && levelUpData.length > 0 && soundEnabled) playSoundRef.current('bigwin'); }, [levelUpData, soundEnabled]);
 
     useEffect(() => {
         if (isReachWaitState) setCharInteraction("🔥 GEKIATSU!");
@@ -258,57 +258,67 @@ const PlayView = ({ machine, island, onLeave }) => {
         else setCharInteraction(null);
     }, [isReachWaitState, inZone, momentumMult, sessionWinStreak, isCurrentlySpinning]);
 
-    // --- WIN CELEBRATION SEQUENCER ---
+    // --- SAFE WIN CELEBRATION STATE TRANSITION ---
     useEffect(() => {
         if (lastWin > 0 && winStage === 'idle' && !winHandled.current && !isCurrentlySpinning) {
             winHandled.current = true; 
             const isBigWin = winTier === 'BIG' || winTier === 'MEGA' || winTier === 'EPIC' || isJackpot;
-            if (soundEnabled) playSound(isBigWin ? 'bigwin' : 'win');
+            if (soundEnabled) playSoundRef.current(isBigWin ? 'bigwin' : 'win');
 
             if (!bonusMode && (!autoPlay || isBigWin)) {
                 setWinStage('celebrating');
-                winTimeoutRef.current = setTimeout(() => {
-                    setWinStage('idle');
-                    setLastWin(0); 
-                }, isJackpot ? 6000 : (winTier === 'EPIC' ? 4000 : 2500));
             }
         } 
         if (!isCurrentlySpinning) {
-            setIsProcessing(false);
+            isProcessing.current = false;
         }
-        return () => { if (winTimeoutRef.current) clearTimeout(winTimeoutRef.current); };
-    }, [lastWin, autoPlay, playSound, bonusMode, winStage, isCurrentlySpinning, winTier, isJackpot, setLastWin, soundEnabled]);
+    }, [lastWin, autoPlay, bonusMode, winStage, isCurrentlySpinning, winTier, isJackpot, soundEnabled]);
 
-    const handleSkipWin = useCallback(() => {
+    // --- ISOLATED TIMEOUT HANDLER (Prevents auto-cancellation bug) ---
+    useEffect(() => {
+        let timeout;
         if (winStage === 'celebrating') {
-            if (soundEnabled) playSound('click');
+            const delay = isJackpot ? 6000 : (winTier === 'EPIC' ? 4000 : 2500);
+            timeout = setTimeout(() => {
+                setWinStage('idle');
+                setLastWin(0); 
+            }, delay);
+            winTimeoutRef.current = timeout;
+        }
+        return () => { if (timeout) clearTimeout(timeout); };
+    }, [winStage, isJackpot, winTier, setLastWin]);
+
+    const handleSkipWin = () => {
+        if (winStage === 'celebrating') {
+            if (soundEnabled) playSoundRef.current('click');
             if (winTimeoutRef.current) clearTimeout(winTimeoutRef.current);
             setWinStage('idle');
             setLastWin(0);
         }
-    }, [winStage, soundEnabled, playSound]);
+    };
 
     // --- CORE ACTION: SPIN ---
     const handleSpin = useCallback(async () => {
-        if (!assetsReady || !sessionReady || isProcessing || isCurrentlySpinning || winStage !== 'idle' || isFreeze || (levelUpData && levelUpData.length > 0)) return; 
+        if (!assetsReady || !sessionReady || isProcessing.current || isCurrentlySpinning || winStage !== 'idle' || isFreeze || (Array.isArray(levelUpData) && levelUpData.length > 0)) return; 
+        
         if (parseFloat(user?.balance || 0) < currentBet && freeSpins === 0 && !bonusMode) {
-            addToast("Insufficient Balance / လက်ကျန်ငွေ မလုံလောက်ပါ", "error"); 
+            addToastRef.current("Insufficient Balance / လက်ကျန်ငွေ မလုံလောက်ပါ", "error"); 
             setAutoPlay(false);
             return;
         }
         
-        setIsProcessing(true);
+        isProcessing.current = true;
         winHandled.current = false; 
         setCharInteraction(null);
         
-        if (soundEnabled) playSound('spin');
+        if (soundEnabled) playSoundRef.current('spin');
         if (freeSpins === 0 && !bonusMode) setCurrentJackpot(prev => prev + (currentBet * 0.05));
         
         await spin(currentBet);
-    }, [user, currentBet, winStage, playSound, spin, freeSpins, bonusMode, isCurrentlySpinning, isFreeze, levelUpData, addToast, sessionReady, assetsReady, setAutoPlay, soundEnabled]);
+    }, [user, currentBet, winStage, spin, freeSpins, bonusMode, isCurrentlySpinning, isFreeze, levelUpData, sessionReady, assetsReady, setAutoPlay, soundEnabled]);
 
     const toggleAutoPlay = () => {
-        if (soundEnabled) playSound('click');
+        if (soundEnabled) playSoundRef.current('click');
         const nextState = !autoPlay;
         setAutoPlay(nextState);
     };
@@ -324,15 +334,21 @@ const PlayView = ({ machine, island, onLeave }) => {
         };
         window.addEventListener('keydown', handleKeyDown);
         return () => window.removeEventListener('keydown', handleKeyDown);
-    }, [handleSpin, isCurrentlySpinning, resetIdleTimer, winStage, handleSkipWin]);
+    }, [handleSpin, isCurrentlySpinning, resetIdleTimer, winStage]);
 
+    // Safe Win Detail Parsing
     const winDetails = useMemo(() => {
         const defaultWin = PAYTABLE_DATA[6]; 
         if (isJackpot) return PAYTABLE_DATA[0]; 
         if (!winningLines || winningLines.length === 0) return defaultWin;
+        
         const firstLine = winningLines[0];
         if (firstLine === 99) return PAYTABLE_DATA.find(p => p.id === reels[0]) || defaultWin;
-        const symId = reels[PAYLINES[firstLine][0]];
+        
+        const lineConfig = PAYLINES[firstLine];
+        if (!lineConfig) return defaultWin; // Boundary Safety Catch
+        
+        const symId = reels[lineConfig[0]];
         return PAYTABLE_DATA.find(p => p.id === symId) || defaultWin;
     }, [winningLines, reels, isJackpot]);
 
@@ -553,9 +569,9 @@ const PlayView = ({ machine, island, onLeave }) => {
                             <div className="bg-[#111] p-1.5 sm:p-2 rounded-full border-t border-gray-600 border-x border-gray-800 shadow-[0_10px_30px_rgba(0,0,0,0.9)] backdrop-blur-md">
                                 <button 
                                     onClick={handleSpin} 
-                                    disabled={!assetsReady || !sessionReady || (isProcessing && !isCurrentlySpinning) || isFreeze || winStage !== 'idle' || isCurrentlySpinning} 
+                                    disabled={!assetsReady || !sessionReady || (isProcessing.current && !isCurrentlySpinning) || isFreeze || winStage !== 'idle' || isCurrentlySpinning} 
                                     className={`w-20 h-20 sm:w-24 sm:h-24 rounded-full flex flex-col items-center justify-center transition-all relative overflow-hidden outline-none
-                                    ${(!assetsReady || !sessionReady) || (isProcessing && !isCurrentlySpinning) ? 'bg-[#222] border-b-[6px] border-[#111] opacity-50 shadow-inner' : 
+                                    ${(!assetsReady || !sessionReady) || (isProcessing.current && !isCurrentlySpinning) ? 'bg-[#222] border-b-[6px] border-[#111] opacity-50 shadow-inner' : 
                                     isCurrentlySpinning ? 'bg-gradient-to-b from-red-800 to-red-950 border-b-0 translate-y-[6px] text-white/50 shadow-[inset_0_5px_15px_rgba(0,0,0,0.6)]' :
                                     bonusMode === 'HEAVEN' ? 'bg-gradient-to-b from-purple-500 to-purple-700 border-b-[6px] border-purple-950 text-white active:border-b-0 active:translate-y-[6px] shadow-[0_5px_20px_rgba(168,85,247,0.6)]' :
                                     'bg-gradient-to-b from-red-600 to-red-800 border-b-[6px] border-red-950 text-white active:border-b-0 active:translate-y-[6px] shadow-[0_5px_15px_rgba(220,38,38,0.5)]'}`}
@@ -576,7 +592,7 @@ const PlayView = ({ machine, island, onLeave }) => {
                             {/* Left: Dynamic LED Bet Adjustment */}
                             <div className="flex-1 max-w-[140px] flex bg-[#111] p-1.5 rounded-xl border border-[#333] shadow-[inset_0_2px_10px_rgba(0,0,0,1)] items-center">
                                 <button 
-                                    onClick={() => { if(soundEnabled) playSound('click'); setBetIndex(Math.max(0, betIndex - 1))}} 
+                                    onClick={() => { if(soundEnabled) playSoundRef.current('click'); setBetIndex(Math.max(0, betIndex - 1))}} 
                                     className="w-7 h-10 sm:w-8 flex-shrink-0 bg-gradient-to-b from-[#444] to-[#222] border-b-[3px] border-[#111] rounded-lg active:border-b-0 active:translate-y-[3px] flex items-center justify-center text-white shadow-md transition-all outline-none"
                                 ><Minus size={14}/></button>
                                 
@@ -597,18 +613,18 @@ const PlayView = ({ machine, island, onLeave }) => {
                                 </div>
                                 
                                 <button 
-                                    onClick={() => { if(soundEnabled) playSound('click'); setBetIndex(Math.min(activeBetAmounts.length - 1, betIndex + 1))}} 
+                                    onClick={() => { if(soundEnabled) playSoundRef.current('click'); setBetIndex(Math.min(activeBetAmounts.length - 1, betIndex + 1))}} 
                                     className="w-7 h-10 sm:w-8 flex-shrink-0 bg-gradient-to-b from-[#444] to-[#222] border-b-[3px] border-[#111] rounded-lg active:border-b-0 active:translate-y-[3px] flex items-center justify-center text-white shadow-md transition-all outline-none"
                                 ><Plus size={14}/></button>
                             </div>
 
-                            {/* Center Spacer (Allows the button to drop down cleanly) */}
+                            {/* Center Spacer */}
                             <div className="w-[70px] sm:w-[100px] flex-shrink-0"></div>
 
                             {/* Right: Auto & Turbo (With Hardware LEDs) */}
                             <div className="flex-1 max-w-[140px] flex justify-end gap-2">
                                 <button 
-                                    onClick={() => { if(soundEnabled) playSound('click'); setTurboMode(!turboMode)}} 
+                                    onClick={() => { if(soundEnabled) playSoundRef.current('click'); setTurboMode(!turboMode)}} 
                                     className={`relative flex-1 h-12 rounded-xl flex items-center justify-center transition-all outline-none border-b-[3px] ${turboMode ? 'bg-gradient-to-b from-yellow-400 to-yellow-600 border-b-0 translate-y-[3px] text-black shadow-[0_0_15px_gold]' : 'bg-gradient-to-b from-[#333] to-[#1a1a1a] border-[#0a0a0a] text-gray-500 active:border-b-0 active:translate-y-[3px] hover:brightness-125 shadow-md'}`}
                                 >
                                     <div className={`absolute top-1.5 right-1.5 w-1.5 h-1.5 rounded-full border border-black/50 ${turboMode ? 'bg-white shadow-[0_0_5px_white]' : 'bg-gray-800 shadow-inner'}`}></div>
@@ -629,7 +645,7 @@ const PlayView = ({ machine, island, onLeave }) => {
                     </div>
                 </div>
 
-                {/* --- MODALS (SETTINGS / PAYTABLE / WIN CELEBRATION) --- */}
+                {/* --- MODALS --- */}
                 <AnimatePresence>
                     {showSettings && (
                         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[100] bg-black/90 flex items-center justify-center p-6 backdrop-blur-sm transform-gpu" onClick={() => setShowSettings(false)}>
@@ -640,7 +656,6 @@ const PlayView = ({ machine, island, onLeave }) => {
                                 </div>
                                 <div className="p-4 space-y-3 bg-black">
                                     
-                                    {/* Local Performance Toggles */}
                                     <div className="flex items-center justify-between bg-white/5 p-3 rounded-xl border border-white/10 hover:bg-white/10 transition-colors">
                                         <div className="flex items-center gap-3">
                                             {soundEnabled ? <Volume2 size={18} className="text-cyan-400"/> : <VolumeX size={18} className="text-gray-500"/>}
@@ -667,7 +682,7 @@ const PlayView = ({ machine, island, onLeave }) => {
                                         <HelpCircle className="text-yellow-400"/> ပေးချေမှုဇယား (PAYTABLE)
                                     </button>
                                     
-                                    <button onClick={onLeave} className="w-full bg-red-900/30 border border-red-500/50 p-3 rounded-xl text-red-400 font-black text-sm flex justify-center gap-2 mt-4 hover:bg-red-900/50 transition-colors tracking-widest shadow-[0_0_15px_rgba(239,68,68,0.2)]">
+                                    <button onClick={() => { if(onLeaveRef.current) onLeaveRef.current(); }} className="w-full bg-red-900/30 border border-red-500/50 p-3 rounded-xl text-red-400 font-black text-sm flex justify-center gap-2 mt-4 hover:bg-red-900/50 transition-colors tracking-widest shadow-[0_0_15px_rgba(239,68,68,0.2)]">
                                         <LogOut size={18}/> ထွက်မည် (SECURE LEAVE)
                                     </button>
                                 </div>
