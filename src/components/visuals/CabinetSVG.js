@@ -49,6 +49,23 @@ const CabinetSVG = ({
     const displayWins = machine?.total_payout || stats.wins || 0;
     const displayNum = machine?.machine_number || machineNumber || 0;
 
+    const bellySparklinePoints = useMemo(() => {
+        const rawValues = [
+            Number(machine?.total_laps ?? stats.laps ?? 0),
+            Number(machine?.total_payout ?? stats.wins ?? 0),
+            Number(currentJackpot ?? 0),
+            Number(displayLaps),
+            Number(displayWins)
+        ].map((value) => Number.isFinite(value) ? Math.max(0, value) : 0);
+
+        const maxValue = Math.max(...rawValues, 1);
+        return rawValues.map((value, index) => {
+            const x = 10 + (170 * index) / Math.max(rawValues.length - 1, 1);
+            const y = 72 - (value / maxValue) * 64;
+            return `${x},${y}`;
+        }).join(' ');
+    }, [machine, stats, currentJackpot, displayLaps, displayWins]);
+
     const islandThemes = {
         1: { name: 'KYOTO ZEN', title: "SECTOR 01", kanji: "京都" },
         2: { name: 'OKINAWA TROPIC', title: "SECTOR 02", kanji: "沖縄" },

@@ -469,7 +469,7 @@ export default function Lobby() {
                 </div>
             </div>
 
-            {/* --- 3D ISLAND CAROUSEL (CABINET-CENTRIC) --- */}
+            {/* --- 3D ISLAND CAROUSEL (CABINET SHOWROOM) --- */}
             <div className="flex-1 relative flex items-center justify-center perspective-1000 mt-2 sm:mt-4 mb-6 min-h-[45vh] z-10">
                 
                 {/* Seamless Background Crossfading */}
@@ -477,18 +477,18 @@ export default function Lobby() {
                     <motion.div 
                         key={`bg-${selectedIsland?.id}`}
                         initial={{ opacity: 0 }}
-                        animate={{ opacity: 0.4 }}
+                        animate={{ opacity: 0.2 }}
                         exit={{ opacity: 0 }}
                         transition={{ duration: 0.8 }}
                         className={`absolute inset-0 bg-gradient-to-b ${selectedIsland?.theme?.bgGrad || 'from-black'} via-transparent to-black pointer-events-none z-0`} 
                     />
                 </AnimatePresence>
 
-                <button onClick={() => paginate(-1)} className="absolute left-2 sm:left-6 z-40 p-3 bg-black/40 backdrop-blur-xl rounded-full text-white hover:bg-white/10 border border-white/10 active:scale-95 transition-all">
+                <button onClick={() => paginate(-1)} className="absolute left-2 sm:left-6 z-40 p-3 bg-black/40 backdrop-blur-xl rounded-full text-white hover:bg-white/10 border border-white/10 active:scale-95 transition-all shadow-[0_0_15px_rgba(0,0,0,0.5)]">
                     <ChevronLeft size={24} strokeWidth={1.5} />
                 </button>
                 
-                <button onClick={() => paginate(1)} className="absolute right-2 sm:right-6 z-40 p-3 bg-black/40 backdrop-blur-xl rounded-full text-white hover:bg-white/10 border border-white/10 active:scale-95 transition-all">
+                <button onClick={() => paginate(1)} className="absolute right-2 sm:right-6 z-40 p-3 bg-black/40 backdrop-blur-xl rounded-full text-white hover:bg-white/10 border border-white/10 active:scale-95 transition-all shadow-[0_0_15px_rgba(0,0,0,0.5)]">
                     <ChevronRight size={24} strokeWidth={1.5} />
                 </button>
 
@@ -536,8 +536,29 @@ export default function Lobby() {
                                     <div className="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-transparent opacity-90 mix-blend-overlay"></div>
                                     <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-transparent opacity-90"></div>
                                     
-                                    {/* Centered UHD Cabinet (Dynamically synced) */}
-                                    <div className="absolute left-1/2 top-[45%] transform -translate-x-1/2 -translate-y-1/2 scale-[1.3] sm:scale-[1.5] z-10 transition-transform duration-700 ease-out group-hover:scale-[1.35] sm:group-hover:scale-[1.55] group-hover:-translate-y-[48%]">
+                                    {/* Volumetric Spotlight overlaying the background, behind the cabinet */}
+                                    <div className={`absolute top-[-20%] left-1/2 -translate-x-1/2 w-[150%] h-[150%] bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] ${selectedIsland.theme.bgGrad.replace('/60', '/30').replace('/40', '/20')} via-transparent to-transparent opacity-60 z-0 pointer-events-none mix-blend-screen`}></div>
+
+                                    {/* 3D Exhibition Platform */}
+                                    <div className="absolute left-1/2 top-[80%] transform -translate-x-1/2 w-[70%] h-[12%] bg-gradient-to-b from-black/90 to-black/40 rounded-[100%] border-t border-white/10 shadow-[0_30px_60px_rgba(0,0,0,1)] z-0 backdrop-blur-xl">
+                                        <div className={`absolute inset-0 rounded-[100%] border-t-2 ${selectedIsland.theme.border} opacity-50 shadow-[0_0_30px_currentColor] blur-[3px]`}></div>
+                                    </div>
+
+                                    {/* Real-Time Glass Floor Reflection */}
+                                    <div className="absolute left-1/2 top-[45%] transform -translate-x-1/2 -translate-y-1/2 scale-[1.3] sm:scale-[1.5] z-0 opacity-30 blur-[4px] scale-y-[-1] translate-y-[85%] pointer-events-none" style={{ maskImage: 'linear-gradient(to bottom, rgba(0,0,0,1) 0%, transparent 40%)', WebkitMaskImage: 'linear-gradient(to bottom, rgba(0,0,0,1) 0%, transparent 40%)' }}>
+                                         <CabinetSVG 
+                                             islandId={selectedIsland.id} 
+                                             mode="hall" 
+                                             visualState={isJPCritical ? 'JACKPOT_HOT' : (activePlayers > 1000 ? 'BUSY' : 'FREE')} 
+                                             currentJackpot={jackpotAmount}
+                                             userName={user?.username || 'GUEST'}
+                                             machineNumber={`${selectedIsland.id}-000`}
+                                             stats={{ laps: selectedIsland.totalMachines * 10, wins: jackpotAmount * 0.1 }}
+                                         />
+                                    </div>
+
+                                    {/* Centered UHD Cabinet (Dynamically synced & elevated) */}
+                                    <div className="absolute left-1/2 top-[45%] transform -translate-x-1/2 -translate-y-1/2 scale-[1.3] sm:scale-[1.5] z-10 transition-all duration-700 ease-out group-hover:scale-[1.35] sm:group-hover:scale-[1.55] group-hover:-translate-y-[48%] drop-shadow-[0_30px_30px_rgba(0,0,0,0.8)]">
                                          <CabinetSVG 
                                              islandId={selectedIsland.id} 
                                              mode="hall" 
@@ -552,10 +573,10 @@ export default function Lobby() {
                                     {/* Clean Info Typography */}
                                     <div className="absolute bottom-6 left-6 right-6 z-30 text-center flex flex-col items-center">
                                         <div className="flex gap-2 mb-2">
-                                            <div className="bg-white/5 text-gray-300 border border-white/10 text-[9px] font-bold tracking-widest flex items-center gap-1.5 px-3 py-1 rounded-full backdrop-blur-md uppercase">
+                                            <div className="bg-white/5 text-gray-300 border border-white/10 text-[9px] font-bold tracking-widest flex items-center gap-1.5 px-3 py-1 rounded-full backdrop-blur-md uppercase shadow-lg">
                                                 <MapPin size={10}/> မြေပုံ
                                             </div>
-                                            <div className="bg-white/5 text-gray-300 border border-white/10 text-[9px] font-bold tracking-widest flex items-center gap-1 px-3 py-1 rounded-full backdrop-blur-md uppercase">
+                                            <div className="bg-white/5 text-gray-300 border border-white/10 text-[9px] font-bold tracking-widest flex items-center gap-1 px-3 py-1 rounded-full backdrop-blur-md uppercase shadow-lg">
                                                 <Layers size={10}/> {selectedIsland.totalMachines} MACHINES
                                             </div>
                                         </div>
@@ -593,3 +614,5 @@ export default function Lobby() {
         </div>
     );
 }
+
+
