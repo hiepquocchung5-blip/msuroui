@@ -13,25 +13,52 @@ import GlassCard from '../components/ui/GlassCard';
 import BottomDock from '../components/layout/BottomDock';
 import { useGameSound } from '../hooks/useGameSound';
 
-// --- LOCAL METADATA MAPPING (V10.x Circuit Chaos UI) ---
-const getCharMeta = (key) => {
-    const meta = {
-        luna: { rarity: 'R', color: 'text-blue-400', border: 'border-blue-500/50', bg: 'bg-blue-900/20', glow: 'shadow-[0_0_15px_rgba(59,130,246,0.5)]', element: 'Moon / 月' },
-        mika: { rarity: 'R', color: 'text-cyan-400', border: 'border-cyan-500/50', bg: 'bg-cyan-900/20', glow: 'shadow-[0_0_15px_rgba(34,211,238,0.5)]', element: 'Water / 水' },
-        kira: { rarity: 'SR', color: 'text-red-400', border: 'border-red-500/50', bg: 'bg-red-900/20', glow: 'shadow-[0_0_15px_rgba(248,113,113,0.5)]', element: 'Fire / 火' },
-        glacia: { rarity: 'SR', color: 'text-sky-300', border: 'border-sky-500/50', bg: 'bg-sky-900/20', glow: 'shadow-[0_0_15px_rgba(125,211,252,0.5)]', element: 'Ice / 氷' },
-        bio: { rarity: 'SR', color: 'text-green-400', border: 'border-green-500/50', bg: 'bg-green-900/20', glow: 'shadow-[0_0_15px_rgba(74,222,128,0.5)]', element: 'Nature / 森' },
-        gold: { rarity: 'SR', color: 'text-yellow-400', border: 'border-yellow-500/50', bg: 'bg-yellow-900/20', glow: 'shadow-[0_0_15px_rgba(250,204,21,0.5)]', element: 'Metal / 金' },
-        yami: { rarity: 'SSR', color: 'text-purple-400', border: 'border-purple-500/50', bg: 'bg-purple-900/20', glow: 'shadow-[0_0_15px_rgba(192,132,252,0.5)]', element: 'Dark / 闇' },
-        sky: { rarity: 'SSR', color: 'text-yellow-200', border: 'border-yellow-200/50', bg: 'bg-yellow-900/20', glow: 'shadow-[0_0_15px_rgba(254,240,138,0.5)]', element: 'Light / 光' },
-        cyber: { rarity: 'UR', color: 'text-emerald-400', border: 'border-emerald-500/50', bg: 'bg-emerald-900/20', glow: 'shadow-[0_0_15px_rgba(52,211,153,0.5)]', element: 'Tech / 電' },
-        void: { rarity: 'UR', color: 'text-fuchsia-500', border: 'border-fuchsia-500/50', bg: 'bg-fuchsia-900/20', glow: 'shadow-[0_0_15px_rgba(217,70,239,0.5)]', element: 'Void / 無' },
+// --- DYNAMIC DB METADATA PARSER (V11 Circuit Chaos) ---
+// Autonomously extracts JSON metadata from the database and maps it to UI themes.
+const parseCharMeta = (char) => {
+    // 1. Base Fallbacks (In case of missing DB data)
+    let meta = { 
+        rarity: char?.is_premium ? 'SR' : 'R', 
+        element: 'Unknown', 
+        desc: 'Classified Entity' 
     };
-    return meta[key] || meta['luna'];
+    
+    // 2. Parse DB JSON Payload
+    try {
+        if (char?.svg_data) {
+            const parsed = typeof char.svg_data === 'string' ? JSON.parse(char.svg_data) : char.svg_data;
+            meta = { ...meta, ...parsed };
+        }
+    } catch (e) {
+        console.warn(`[Inventory] Failed to parse metadata for ${char?.char_key}`);
+    }
+
+    // 3. Algorithmic Color/Neon Theming based on Element or Origin Island
+    let color = 'text-blue-400';
+    let border = 'border-blue-500/50';
+    let bg = 'bg-blue-900/20';
+    let glow = 'shadow-[0_0_15px_rgba(59,130,246,0.5)]';
+
+    const el = (meta.element || '').toLowerCase();
+    const islandId = parseInt(char?.island_id || 1);
+
+    if (el.includes('fire') || el.includes('magma') || el.includes('flame') || islandId === 3) {
+        color = 'text-red-400'; border = 'border-red-500/50'; bg = 'bg-red-900/20'; glow = 'shadow-[0_0_15px_rgba(248,113,113,0.5)]';
+    } else if (el.includes('water') || el.includes('ice') || el.includes('moon') || islandId === 1 || islandId === 2) {
+        color = 'text-cyan-400'; border = 'border-cyan-500/50'; bg = 'bg-cyan-900/20'; glow = 'shadow-[0_0_15px_rgba(34,211,238,0.5)]';
+    } else if (el.includes('tech') || el.includes('nature') || el.includes('bio') || islandId === 4) {
+        color = 'text-emerald-400'; border = 'border-emerald-500/50'; bg = 'bg-emerald-900/20'; glow = 'shadow-[0_0_15px_rgba(52,211,153,0.5)]';
+    } else if (el.includes('dark') || el.includes('void') || el.includes('shadow')) {
+        color = 'text-purple-400'; border = 'border-purple-500/50'; bg = 'bg-purple-900/20'; glow = 'shadow-[0_0_15px_rgba(168,85,247,0.5)]';
+    } else if (el.includes('metal') || el.includes('light') || el.includes('gold') || islandId === 5) {
+        color = 'text-yellow-400'; border = 'border-yellow-500/50'; bg = 'bg-yellow-900/20'; glow = 'shadow-[0_0_15px_rgba(250,204,21,0.5)]';
+    }
+
+    return { ...meta, color, border, bg, glow };
 };
 
 export default function InventoryPage() {
-    const { user, loading, updateBalance } = useAuth();
+    const { user, loading } = useAuth();
     const { addToast } = useToast();
     const router = useRouter();
     const { playSound } = useGameSound();
@@ -97,7 +124,7 @@ export default function InventoryPage() {
         );
     }
 
-    const meta = selectedChar ? getCharMeta(selectedChar.char_key) : null;
+    const meta = selectedChar ? parseCharMeta(selectedChar) : null;
 
     return (
         <div className="h-[100dvh] bg-[#050505] relative overflow-hidden flex flex-col font-sans selection:bg-pink-500 selection:text-white">
@@ -124,7 +151,7 @@ export default function InventoryPage() {
                 </div>
                 <div onClick={() => router.push('/wallet')} className="cursor-pointer bg-black/60 px-3 sm:px-4 py-1.5 sm:py-2 rounded-2xl border border-yellow-500/30 flex items-center gap-2 shadow-[0_0_15px_rgba(234,179,8,0.1)] hover:border-yellow-400 transition-colors">
                     <Coins size={14} className="text-yellow-400" />
-                    <span className="text-yellow-400 font-mono font-black text-xs sm:text-sm tracking-wide">{parseFloat(user.balance).toLocaleString()}</span>
+                    <span className="text-yellow-400 font-mono font-black text-xs sm:text-sm tracking-wide">{parseFloat(user.balance || 0).toLocaleString()}</span>
                 </div>
             </div>
 
@@ -243,6 +270,9 @@ export default function InventoryPage() {
                                         )}
                                     </div>
                                 </div>
+                                <div className="mt-3 pt-3 border-t border-white/10 text-xs text-gray-400 font-mono relative z-10 italic">
+                                    "{meta.desc}"
+                                </div>
                             </GlassCard>
                         )}
 
@@ -252,7 +282,7 @@ export default function InventoryPage() {
                                 {isLoading ? (
                                     <div className="col-span-full text-center text-cyan-500 py-10 font-mono text-xs animate-pulse">Syncing Database... / ဒေတာချိတ်ဆက်နေသည်...</div>
                                 ) : roster.map(char => {
-                                    const cMeta = getCharMeta(char.char_key);
+                                    const cMeta = parseCharMeta(char);
                                     const isSelected = selectedChar?.char_key === char.char_key;
                                     
                                     return (
@@ -356,6 +386,7 @@ export default function InventoryPage() {
                 <BottomDock 
                     activeCharId={user?.active_pet_id} 
                     onNavigate={(path) => router.push(`/${path}`)} 
+                    onOpenBank={() => router.push('/wallet')}
                 />
             </div>
         </div>
